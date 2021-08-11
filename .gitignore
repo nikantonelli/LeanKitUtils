@@ -1,0 +1,8 @@
+.vscode
+!lkutility/target
+lkutility/target/*
+!lkutility/target/*.jar
+.settings
+.classpath
+.project
+
