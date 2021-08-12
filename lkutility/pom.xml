@@ -23,7 +23,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>target/</classpathPrefix>
-                            <mainClass>com.planview.app.Main</mainClass>
+                            <mainClass>com.planview.lkutility.Main</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
