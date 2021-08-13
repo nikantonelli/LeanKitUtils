@@ -1,7 +1,8 @@
-package com.planview.lkutility.Leankit;
+package com.planview.lkutility.leankit;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -37,7 +38,6 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
-import java.net.URI;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -52,11 +52,13 @@ public class LeanKitAccess {
     ArrayList<NameValuePair> reqParams = new ArrayList<>();
     Board[] boards = null;
     PoolingHttpClientConnectionManager cm = null;
-    Integer debugPrint = 0;
+    Debug d = new Debug();
 
-    public LeanKitAccess(Configuration configp, Integer dbp, PoolingHttpClientConnectionManager cmp) {
+    public LeanKitAccess(Configuration configp, Integer debugLevel, PoolingHttpClientConnectionManager cmp) {
         config = configp;
         cm = cmp;
+        d.setLevel(debugLevel);
+
         // Check URL has a trailing '/'
         if (config.url.endsWith("/")) {
             config.url = config.url.substring(0, config.url.length() - 1);
@@ -65,40 +67,10 @@ public class LeanKitAccess {
         if (config.url.startsWith("https://")) {
             config.url = config.url.substring(8);
         } else if (config.url.startsWith("http://")) {
-            dpf(Debug.WARN, "http access to leankit not supported. Switching to https");
+            d.p(Debug.WARN, "http access to leankit not supported. Switching to https");
             config.url = config.url.substring(7);
         }
 
-        debugPrint = dbp;
-    }
-
-    private void dpf(Integer level, String fmt, Object... parms) {
-        String lp = null;
-        switch (level) {
-            case 0: {
-                lp = "INFO: ";
-                break;
-            }
-            case 1: {
-                lp = "ERROR: ";
-                break;
-            }
-            case 2: {
-                lp = "WARN: ";
-                break;
-            }
-            case 3: {
-                lp = "DEBUG: ";
-                break;
-            }
-            case 4: {
-                lp = "VERBOSE: ";
-                break;
-            }
-        }
-        if (level <= debugPrint) {
-            System.out.printf(lp + fmt, parms);
-        }
     }
 
     public <T> ArrayList<T> read(Class<T> expectedResponseType) {
@@ -113,12 +85,12 @@ public class LeanKitAccess {
         // Convert to a type to return to caller.
         if (bd != null) {
             if (jresp.has("error") || jresp.has("statusCode")) {
-                dpf(Debug.ERROR, "\"%s\" gave response: \"%s\"\n", reqUrl, jresp.toString());
+                d.p(Debug.ERROR, "\"%s\" gave response: \"%s\"\n", reqUrl, jresp.toString());
                 System.exit(1);
             } else if (jresp.has("pageMeta")) {
                 JSONObject pageMeta = new JSONObject(jresp.get("pageMeta").toString());
 
-                int totalReturned = pageMeta.getInt("totalRecords");
+                int totalRecords = pageMeta.getInt("totalRecords");
                 // Unfortunately, we need to know what sort of item to get out of the json
                 // object. Doh!
                 String fieldName = null;
@@ -138,7 +110,7 @@ public class LeanKitAccess {
                         fieldName = "comments";
                         break;
                     default:
-                        dpf(Debug.ERROR, "Unsupported item type returned from server API: %s\n", bd);
+                        d.p(Debug.ERROR, "Unsupported item type returned from server API: %s\n", bd);
                         return null;
 
                 }
@@ -147,16 +119,43 @@ public class LeanKitAccess {
                     ObjectMapper om = new ObjectMapper();
                     om.configure(DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY, true);
                     JSONArray p = (JSONArray) jresp.get(fieldName);
-                    // Length here may be limited to 200 by the API paging.
-                    if (totalReturned != p.length()) {
-                        dpf(Debug.WARN, "Paging required for \"%s\" call. Processing %d when %d available\n", reqUrl,
-                                p.length(), totalReturned);
-                    }
+                    Integer accumulatedCount = pageMeta.getInt("endRow");
+
+                    // Add the returned items to the array
                     for (int i = 0; i < p.length(); i++) {
                         try {
                             items.add(om.readValue(p.get(i).toString(), expectedResponseType));
                         } catch (JsonProcessingException | JSONException e) {
                             e.printStackTrace();
+                        }
+                    }
+                    /**
+                     * We start off assuming that we begin at zero. If we find that there are less
+                     * than there are available, we have to redo the processRequest with new offset
+                     * and limit params
+                     */
+                    // Length here may be limited to 200 by the API paging.
+                    while (totalRecords > accumulatedCount) {
+
+                        Iterator<NameValuePair> it = reqParams.iterator();
+                        int acc = 0, offsetIdx = -1;
+                        while (it.hasNext()){
+                            NameValuePair vp = it.next();
+                            if (vp.getName() == "offset"){
+                                offsetIdx = acc;
+                                break;
+                            }
+                            acc++;
+                        }
+
+                        if (offsetIdx >= 0) {
+                            reqParams.remove(offsetIdx);
+                            reqParams.add(new BasicNameValuePair("offset", accumulatedCount.toString()));
+                            /**
+                             * This is slightly dangerous as it is a recursive call to get more stuff.
+                             */
+                            items.addAll(read(expectedResponseType));
+                            accumulatedCount = items.size();
                         }
                     }
                     return items;
@@ -198,7 +197,7 @@ public class LeanKitAccess {
                         break;
                     }
                     default: {
-                        dpf(Debug.ERROR, "oops! don't recognise requested item type\n");
+                        d.p(Debug.ERROR, "oops! don't recognise requested item type\n");
                         System.exit(2);
                     }
                 }
@@ -216,6 +215,8 @@ public class LeanKitAccess {
      * 
      *         Create something and return just the id to it.
      */
+    NameValuePair p;
+
     public <T> T execute(Class<T> expectedResponseType) {
         reqHdrs.clear();
         reqHdrs.add(new BasicNameValuePair("Accept", "application/json"));
@@ -279,12 +280,18 @@ public class LeanKitAccess {
             for (int i = 0; i < reqHdrs.size(); i++) {
                 request.addHeader(reqHdrs.get(i).getName(), reqHdrs.get(i).getValue());
             }
-            URIBuilder bldr = new URIBuilder();
-            bldr.setParameters(reqParams);
-            request.setURI(new URI("https://" + config.url + "/"+ reqUrl + bldr.toString()));
-            dpf(Debug.VERBOSE, "%s\n", request.toString());
+            String bldr = "";
+            Iterator<NameValuePair> rpi = reqParams.iterator();
+            while (rpi.hasNext()) {
+                bldr = bldr + "&" + rpi.next().toString();
+            }
+            if (bldr.length() > 0) {
+                bldr = "?" + bldr.substring(1);
+            }
+            request.setURI(new URI("https://" + config.url + "/" + reqUrl + bldr));
+            d.p(Debug.VERBOSE, "%s\n", request.toString());
             httpResponse = client.execute(request);
-            dpf(Debug.VERBOSE, "%s\n", httpResponse.toString());
+            d.p(Debug.VERBOSE, "%s\n", httpResponse.toString());
 
             Boolean entityTaken = false;
             switch (httpResponse.getStatusLine().getStatusCode()) {
@@ -300,15 +307,15 @@ public class LeanKitAccess {
                     break;
                 }
                 case 400: {
-                    dpf(Debug.ERROR, "Bad request: %s\n", request.toString());
+                    d.p(Debug.ERROR, "Bad request: %s\n", request.toString());
                     break;
                 }
                 case 401: {
-                    dpf(Debug.ERROR, "Unauthorised. Check Credentials in spreadsheet: %s\n", request.toString());
+                    d.p(Debug.ERROR, "Unauthorised. Check Credentials in spreadsheet: %s\n", request.toString());
                     break;
                 }
                 case 403: {
-                    dpf(Debug.ERROR, "Forbidden by server: %s\n", request.toString());
+                    d.p(Debug.ERROR, "Forbidden by server: %s\n", request.toString());
                     break;
                 }
                 case 429: { // Flow control
@@ -317,44 +324,44 @@ public class LeanKitAccess {
                     LocalDateTime serverTime = LocalDateTime.parse(httpResponse.getHeaders("date")[0].getValue(),
                             DateTimeFormatter.RFC_1123_DATE_TIME);
                     Long timeDiff = ChronoUnit.MILLIS.between(serverTime, retryAfter);
-                    dpf(Debug.INFO, "Received 429 status. waiting %.2f seconds\n", ((1.0 * timeDiff) / 1000.0));
+                    d.p(Debug.INFO, "Received 429 status. waiting %.2f seconds\n", ((1.0 * timeDiff) / 1000.0));
                     EntityUtils.consumeQuietly(httpResponse.getEntity());
                     try {
                         TimeUnit.MILLISECONDS.sleep(timeDiff);
                     } catch (InterruptedException e) {
-                        dpf(Debug.ERROR, "(L2) %s\n", e.getMessage());
+                        d.p(Debug.ERROR, "(L2) %s\n", e.getMessage());
                     }
                     result = processRequest();
                     break;
                 }
                 case 422: { // Unprocessable Parameter
-                    dpf(Debug.WARN, "Parameter Error in request: %s (%s)\n", request.toString(),
+                    d.p(Debug.WARN, "Parameter Error in request: %s (%s)\n", request.toString(),
                             httpResponse.toString());
                     break;
                 }
                 case 404: { // Item not found
-                    dpf(Debug.WARN, "Item not found: %s\n", httpResponse.toString());
+                    d.p(Debug.WARN, "Item not found: %s\n", httpResponse.toString());
                     break;
                 }
-                case 408: //Request timeout - try your luck with another one....
+                case 408: // Request timeout - try your luck with another one....
                 case 500: // Server fault
                 case 502: // Bad Gateway
-                case 503:  // Service unavailable
-                case 504:   // Gateway timeout
+                case 503: // Service unavailable
+                case 504: // Gateway timeout
                 {
-                    dpf(Debug.ERROR, "Received %d status. retrying in 5 seconds\n",
+                    d.p(Debug.ERROR, "Received %d status. retrying in 5 seconds\n",
                             httpResponse.getStatusLine().getStatusCode());
                     try {
                         EntityUtils.consumeQuietly(httpResponse.getEntity());
                         Thread.sleep(5000);
                     } catch (InterruptedException e) {
-                        dpf(Debug.ERROR, "(L1) %s\n", e.getMessage());
+                        d.p(Debug.ERROR, "(L1) %s\n", e.getMessage());
                     }
                     result = processRequest();
                     break;
                 }
                 default: {
-                    dpf(Debug.ERROR, "Network fault: %s\n", httpResponse.toString());
+                    d.p(Debug.ERROR, "Network fault: %s\n", httpResponse.toString());
                     break;
                 }
             }
@@ -363,7 +370,7 @@ public class LeanKitAccess {
                                                                       // 'feature'
             }
         } catch (IOException e) {
-            dpf(Debug.ERROR, "(L3) %s\n", e.getMessage());
+            d.p(Debug.ERROR, "(L3) %s\n", e.getMessage());
             System.exit(3);
         } catch (URISyntaxException e1) {
             // Should never happen, but to keep the compiler happy.....
@@ -415,7 +422,7 @@ public class LeanKitAccess {
 
     public void deleteCards(ArrayList<Card> cards) {
         for (int i = 0; i < cards.size(); i++) {
-            dpf(Debug.INFO, "Deleting card %s\n", cards.get(i).id);
+            d.p(Debug.INFO, "Deleting card %s\n", cards.get(i).id);
 
             reqType = "DELETE";
             reqHdrs.clear();
@@ -432,19 +439,30 @@ public class LeanKitAccess {
         reqUrl = "io/card/" + cd.id + "/comment";
         return read(Comment.class);
     }
+    public ArrayList<Card> fetchCardsFromBoard(String id, Boolean includeArchived) {
+        return fetchCardsFromBoard(id, includeArchived, false);
+    }
 
-    public ArrayList<Card> fetchCardIDsFromBoard(String id, Integer rewind) {
-        LocalDateTime sinceDate = LocalDateTime.now();
-        sinceDate.minus(rewind, ChronoUnit.DAYS);
+    public ArrayList<Card> fetchCardsFromBoard(String id, Boolean includeArchived, Boolean includeTasks) {
         reqParams.clear();
+        reqParams.add(new BasicNameValuePair("board", id));
+        reqParams.add(new BasicNameValuePair("limit", "5"));
+        reqParams.add(new BasicNameValuePair("offset", "0"));
+        if (includeTasks) {
+            reqParams.add(new BasicNameValuePair("select", "both"));
+        }
+        else {
+            reqParams.add(new BasicNameValuePair("select", "cards"));
+        }
         reqHdrs.clear();
-        if (rewind >= 0) {
-            reqType = "GET";
-            reqUrl = "io/card?board=" + id + "&deleted=0&only=id&since="
-                    + sinceDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")) + "T00:00:00Z";
+        reqType = "GET";
+        reqUrl = "io/card";
+        if (includeArchived) {
+            reqParams.add(new BasicNameValuePair("lane_class_types", "backlog,active,archive"));
+            reqParams.add(new BasicNameValuePair("deleted", "0"));
         } else {
-            reqType = "GET";
-            reqUrl = "io/card?board=" + id + "&deleted=0&only=id";
+            reqParams.add(new BasicNameValuePair("lane_class_types", "backlog,active"));
+            reqParams.add(new BasicNameValuePair("deleted", "0"));
         }
         // Once you get the boards, you could cache them. There may be loads, but
         // shouldn't max
@@ -629,7 +647,7 @@ public class LeanKitAccess {
                 case "Parent": {
                     if ((values.get("value1") == null) || (values.get("value1").toString() == "")
                             || (values.get("value1").toString() == "0")) {
-                        dpf(Debug.ERROR, "Trying to set parent of %s to value \"%s\"\n", card.id,
+                        d.p(Debug.ERROR, "Trying to set parent of %s to value \"%s\"\n", card.id,
                                 values.get("value1").toString());
                     } else if (values.get("value1").toString().startsWith("-")) {
                         JSONObject upd2 = new JSONObject();
@@ -706,7 +724,7 @@ public class LeanKitAccess {
                     JSONObject upd = new JSONObject();
                     String[] bits = values.get("value1").toString().split(",");
                     if (bits.length != 2) {
-                        dpf(Debug.WARN, "Could not extract externalLink from %s (possible ',' in label?)",
+                        d.p(Debug.WARN, "Could not extract externalLink from %s (possible ',' in label?)",
                                 values.get("value1").toString());
                         break;
                     }

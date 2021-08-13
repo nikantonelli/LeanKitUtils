@@ -1,9 +1,9 @@
-package com.planview.lkutility.Importer;
+package com.planview.lkutility.importer;
 
 import com.planview.lkutility.InternalConfig;
 
 public class Importer {
-    public void go(InternalConfig cfg, Integer debugLevel) {
+    public void go(InternalConfig cfg) {
 
     }
 }

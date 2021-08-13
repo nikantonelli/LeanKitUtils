@@ -9,9 +9,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 
-import com.planview.lkutility.Exporter.Exporter;
-import com.planview.lkutility.Importer.Importer;
-import com.planview.lkutility.Transporter.Transporter;
+import com.planview.lkutility.exporter.Exporter;
+import com.planview.lkutility.importer.Importer;
+import com.planview.lkutility.transporter.Transporter;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -26,7 +26,6 @@ import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class Main {
-    static Integer debugPrint = -1;
     static Debug d = null;
 
     /**
@@ -62,16 +61,20 @@ public class Main {
         if (setToExport == true) {
             if (dualFlow == false) {
                 Exporter expt = new Exporter();
-                expt.go(config, debugPrint);
+                expt.go(config);
             } else {
                 Transporter trpt = new Transporter();
-                trpt.go(config, debugPrint);
+                trpt.go(config);
             }
         } else {
             Importer impt = new Importer();
-            impt.go(config, debugPrint);
+            impt.go(config);
         }
-
+        try {
+            config.wb.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void getCommandLine(String[] args) {
@@ -102,7 +105,7 @@ public class Main {
 
         } catch (ParseException e) {
             // Not expecting to ever come here, but compiler needs something....
-            d.p(Debug.ERROR, "(3): %s\n", e.getMessage());
+            d.p(Debug.ERROR, "(13): %s\n", e.getMessage());
             hf.printHelp(" ", impExpOpt);
             System.exit(5);
         }
@@ -127,33 +130,51 @@ public class Main {
         if (impExpCl.hasOption("debug")) {
             String optVal = impExpCl.getOptionValue("debug");
             if (optVal != null) {
-                debugPrint = Integer.parseInt(optVal);
+                config.debugLevel = Integer.parseInt(optVal);
             } else {
-                debugPrint = 99;
+                config.debugLevel = 99;
             }
         }
 
         // We now need to check for all the other unique options
-        Options impOpts = new Options();
 
-        if (setToExport == false) {
+        if (dualFlow == false) {
             Option groupOpt = new Option("g", "group", true, "Identifier of group to process (if present)");
             groupOpt.setRequired(false);
-            impOpts.addOption(groupOpt);
+            impExpOpt.addOption(groupOpt);
 
-            CommandLine impCl = null;
+            CommandLine cl = null;
+
+            if (setToExport == true) {
+                Option archiveOpt = new Option("a", "archived", false, "Include Archived cards in export (if present)");
+                archiveOpt.setRequired(false);
+                impExpOpt.addOption(archiveOpt);
+                Option tasksOpt = new Option("t", "tasks", false, "Include Task cards in export (if present)");
+                tasksOpt.setRequired(false);
+                impExpOpt.addOption(tasksOpt);
+            }
 
             try {
-                impCl = p.parse(impOpts, args);
+                cl = p.parse(impExpOpt, args);
             } catch (ParseException e) {
-                d.p(Debug.ERROR, "(3): %s", e.getMessage());
-                d.p(Debug.INFO, "Importer Options (with -i as first option)\n");
-                hf.printHelp(" ", impOpts);
+                d.p(Debug.ERROR, "(23): %s", e.getMessage());
+                d.p(Debug.INFO, "Exporter Options (with -e as first option)\n");
+                hf.printHelp(" ", impExpOpt);
                 System.exit(5);
             }
-            if (impCl.hasOption("group")) {
-                group = Integer.parseInt(impCl.getOptionValue("group"));
+
+            if (cl.hasOption("group")) {
+                group = Integer.parseInt(cl.getOptionValue("group"));
             }
+            if (cl.hasOption("archived")) {
+                config.exportArchived = true;
+            }
+            if (cl.hasOption("tasks")) {
+                config.exportTasks = true;
+            }
+
+        } else {
+            //TODO: Set transfer opts here
         }
     }
 
@@ -191,6 +212,48 @@ public class Main {
         /**
          * Check Config sheet has the correct columns and data in them
          */
+    }
+
+    private static Boolean parseRow(Row drRow, Configuration cfg, Field[] p, HashMap<String, Object> fieldMap,
+            ArrayList<String> cols) {
+        String cv = drRow.getCell((int) (fieldMap.get(cols.get(0)))).getStringCellValue();
+        if (cv != null) {
+
+            for (int i = 0; i < cols.size(); i++) {
+                String idx = cols.get(i);
+                Object obj = fieldMap.get(idx);
+                String val = obj.toString();
+                try {
+                    Cell cell = drRow.getCell(Integer.parseInt(val));
+
+                    if (cell != null) {
+                        switch (cell.getCellType()) {
+                            case STRING:
+                                p[i].set(cfg, (cell != null ? drRow.getCell(Integer.parseInt(val)).getStringCellValue()
+                                        : ""));
+                                break;
+                            case NUMERIC:
+                                p[i].set(cfg, (cell != null ? drRow.getCell(Integer.parseInt(val)).getNumericCellValue()
+                                        : ""));
+                                break;
+                            default:
+                                break;
+                        }
+                    } else {
+                        p[i].set(cfg, (p[i].getType().equals(String.class)) ? "" : 0.0);
+                    }
+
+                } catch (IllegalArgumentException | IllegalAccessException e) {
+                    d.p(Debug.ERROR, "Conversion error on \"%s\": Verify cell type in Excel\n %s\n", idx,
+                            e.getMessage());
+                    System.exit(12);
+                }
+
+            }
+            return true;
+        }
+
+        return false;
     }
 
     private static void getConfigFromFile() {
@@ -234,45 +297,19 @@ public class Main {
         }
         // Now we know which columns contain the data, scan down the sheet looking for a
         // row with data in the 'url' cell
-        while (ri.hasNext()) {
-            Row drRow = ri.next();
-            String cv = drRow.getCell((int) (fieldMap.get(cols.get(0)))).getStringCellValue();
-            if (cv != null) {
+        Configuration cfg = config.source;
+        if (!setToExport) {
+            cfg = config.destination;
+        }
+        Row drRow = ri.next();
+        while (!parseRow(drRow, cfg, p, fieldMap, cols)) {
+            drRow = ri.next();
+        }
 
-                for (int i = 0; i < cols.size(); i++) {
-                    String idx = cols.get(i);
-                    Object obj = fieldMap.get(idx);
-                    String val = obj.toString();
-                    try {
-                        Cell cell = drRow.getCell(Integer.parseInt(val));
-
-                        if (cell != null) {
-                            switch (cell.getCellType()) {
-                                case STRING:
-                                    p[i].set(config,
-                                            (cell != null ? drRow.getCell(Integer.parseInt(val)).getStringCellValue()
-                                                    : ""));
-                                    break;
-                                case NUMERIC:
-                                    p[i].set(config,
-                                            (cell != null ? drRow.getCell(Integer.parseInt(val)).getNumericCellValue()
-                                                    : ""));
-                                    break;
-                                default:
-                                    break;
-                            }
-                        } else {
-                            p[i].set(config, (p[i].getType().equals(String.class)) ? "" : 0.0);
-                        }
-
-                    } catch (IllegalArgumentException | IllegalAccessException e) {
-                        d.p(Debug.ERROR, "(6) Conversion error on \"%s\": Verify cell type in Excel\n %s\n", idx, e.getMessage());
-                        System.exit(12);
-                    }
-
-                }
-
-                break; // Exit out of while loop as we are only interested in the first one we find
+        if (dualFlow) {
+            cfg = config.destination;
+            while (!parseRow(drRow, cfg, p, fieldMap, cols)) {
+                drRow = ri.next();
             }
         }
 
@@ -283,7 +320,7 @@ public class Main {
          * the Configuration class.
          **/
 
-        if ((config.apiKey == null) && ((config.username == null) || (config.password == null))) {
+        if ((cfg.apiKey == null) && ((cfg.username == null) || (cfg.password == null))) {
             d.p(Debug.ERROR, "%s", "Did not detect enough user info: apikey or username/password pair");
             System.exit(13);
         }

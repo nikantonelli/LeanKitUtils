@@ -9,8 +9,18 @@ public class Debug {
     
     private Integer debugPrint = 0;
     
+    public Debug() {};
+    
+    public  Debug(Integer lvl) {
+        debugPrint = lvl;
+    }
+
     public void p(Integer level, String fmt, String str) {
         p(level, fmt, (Object) str);
+    }
+
+    public void setLevel(Integer lvl){
+        debugPrint = lvl;
     }
 
     public void p(Integer level, String fmt, Object... parms) {

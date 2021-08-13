@@ -1,4 +1,4 @@
-package com.planview.lkutility.Leankit;
+package com.planview.lkutility.leankit;
 
 public class CustomIcon {
     public String  id,
