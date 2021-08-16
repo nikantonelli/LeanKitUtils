@@ -222,7 +222,6 @@ public class LeanKitAccess {
      * 
      *         Create something and return just the id to it.
      */
-    NameValuePair p;
 
     public <T> T execute(Class<T> expectedResponseType) {
         reqHdrs.clear();

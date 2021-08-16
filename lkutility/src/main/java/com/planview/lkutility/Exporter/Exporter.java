@@ -15,11 +15,13 @@ import com.planview.lkutility.leankit.Card;
 import com.planview.lkutility.leankit.CustomId;
 import com.planview.lkutility.leankit.ExternalLink;
 import com.planview.lkutility.leankit.ItemType;
+import com.planview.lkutility.leankit.CardType;
 import com.planview.lkutility.leankit.Lane;
 import com.planview.lkutility.leankit.Task;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 
@@ -47,6 +49,10 @@ public class Exporter {
     int itmRowIdx = 0;
     int chgRowIdx = 0;
 
+    XSSFSheet changeSht = null;
+    Integer chShtIdx = -1; // Set to invalid as a precaution for misuse.
+    XSSFSheet itemSht = null;
+
     public void go(InternalConfig config) {
 
         /**
@@ -54,43 +60,43 @@ public class Exporter {
          */
 
         cfg = config;
+
         Integer chShtIdx = cfg.wb.getSheetIndex(InternalConfig.CHANGES_SHEET_NAME);
         if (chShtIdx >= 0) {
             cfg.wb.removeSheetAt(chShtIdx);
         }
+        changeSht = cfg.wb.createSheet(InternalConfig.CHANGES_SHEET_NAME);
 
         Integer itemShtIdx = cfg.wb.getSheetIndex(cfg.source.boardId);
         if (itemShtIdx >= 0) {
             cfg.wb.removeSheetAt(itemShtIdx);
         }
+        itemSht = cfg.wb.createSheet(cfg.source.boardId);
 
         /**
          * Create the Changes Sheet layout
          */
 
-        int chgRowIdx = 0;
         int chgCellIdx = 0;
 
-        XSSFSheet chgSht = cfg.wb.createSheet(InternalConfig.CHANGES_SHEET_NAME);
-        Row nextChgRow = chgSht.createRow(chgRowIdx++);
+        Row chgHdrRow = changeSht.createRow(chgRowIdx++);
 
         // These next lines are the fixed format of the Changes sheet
-        nextChgRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Group");
-        nextChgRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Item Sheet");
-        nextChgRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Item Row");
-        nextChgRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Action");
-        nextChgRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Field");
-        nextChgRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Value");
+        chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Group");
+        chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Item Sheet");
+        chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Item Row");
+        chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Action");
+        chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Field");
+        chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Value");
 
         /**
          * Now create the Item Sheet layout
          */
 
-        XSSFSheet itemSht = cfg.wb.createSheet(cfg.source.boardId);
-        Row nextItemRow = itemSht.createRow(itmRowIdx++);
+        Row itmHdrRow = itemSht.createRow(itmRowIdx++);
 
         int itmCellIdx = 0;
-        nextItemRow.createCell(itmCellIdx, CellType.STRING).setCellValue("ID");
+        itmHdrRow.createCell(itmCellIdx, CellType.STRING).setCellValue("ID");
         // Put all the fields into a map for later on
         HashMap<String, Object> fieldMap = new HashMap<>();
         fieldMap.put("ID", itmCellIdx++);
@@ -99,7 +105,7 @@ public class Exporter {
         Field[] pbFields = (new SupportedXlsxFields()).getClass().getFields();
 
         for (int i = 0; i < pbFields.length; i++) {
-            nextItemRow.createCell(itmCellIdx, CellType.STRING).setCellValue(pbFields[i].getName());
+            itmHdrRow.createCell(itmCellIdx, CellType.STRING).setCellValue(pbFields[i].getName());
             fieldMap.put(pbFields[i].getName(), itmCellIdx++);
         }
         /**
@@ -115,18 +121,14 @@ public class Exporter {
             Card c = ic.next();
 
             /* Write a 'Create' line to the changes sheet */
+            // We can only write out cards here. Tasks are handled differently
 
-            nextChgRow = chgSht.createRow(chgRowIdx);
+            createChangeRow(chgRowIdx, itmRowIdx, "Create", "", "");
+            createItemRowFromCard(chgRowIdx, itmRowIdx, c, pbFields);
 
-            // These next lines are the fixed format of the Changes sheet
-            chgCellIdx = 0;
-
-            // We can only write out cards directly. Tasks are handled differently
-
-            createChangeRow(chgSht, chgRowIdx, itmRowIdx + 1, "Create", "", "");
-            chgRowIdx++; // Do this after because we might have changed the index in the subr call
-            createItemRowFromCard(chgSht, chgRowIdx, itemSht, itmRowIdx, c, pbFields);
-            itmRowIdx++; // Do this after because we might have changed the index in the subr call
+            // Do these after because we might have changed the index in the subr calls
+            chgRowIdx++;
+            itmRowIdx++;
 
             /**
              * Open the output stream and send the file back out.
@@ -135,16 +137,17 @@ public class Exporter {
         }
     }
 
-    /** All fields handled here must have mirror in createItemRowFromTask (which probably does nothing)
-     * This is because we use the one list of fields from SupportedXlsxField.java
-     * The importer will select the fields correctly for the type of item
+    /**
+     * All fields handled here must have mirror in createItemRowFromTask (which
+     * probably does nothing) This is because we use the one list of fields from
+     * SupportedXlsxField.java The importer will select the fields correctly for the
+     * type of item
      */
-    public static void createItemRowFromCard(XSSFSheet chgSht, Integer chgRowIdx, XSSFSheet itemSht, Integer itmRowIdx,
-            Card c, Field[] pbFields) {
+    public void createItemRowFromCard(Integer CRIdx, Integer IRIdx, Card c, Field[] pbFields) {
 
         Integer chrRowIncr = 0;
         Integer itmRowIncr = 0;
-        Row itmRow = itemSht.createRow(itmRowIdx);
+        Row itmRow = itemSht.createRow(IRIdx);
         for (int i = 0; i < pbFields.length; i++) {
             chrRowIncr = 0;
             itmRowIncr = 0;
@@ -193,7 +196,7 @@ public class Exporter {
                         itmRow.createCell(i + 1, CellType.STRING).setCellValue(c.id);
                         if (cfg.addComment) {
                             chrRowIncr++;
-                            createChangeRow(chgSht, chgRowIdx + chrRowIncr, itmRowIdx, "Modify", "Comment",
+                            createChangeRow(CRIdx + chrRowIncr, IRIdx, "Modify", "Comment",
                                     Utils.getUrl(cfg, cfg.source) + "/card/" + c.id);
                         }
                         break;
@@ -209,15 +212,15 @@ public class Exporter {
                         // If the task count is non zero, get the tasks for this card and
                         // resolve the lanes for the tasks,
                         // Add the tasks to the items and put some Modify statements in.
-                        if (c.taskBoardStats != null) {
+                        if (cfg.exportTasks && (c.taskBoardStats != null)) {
                             ArrayList<Task> tasks = Utils.readTasksFromCard(cfg, cfg.source, c.id);
                             for (int j = 0; j < tasks.size(); j++) {
                                 chrRowIncr++;
                                 itmRowIncr++;
-                                createChangeRow(chgSht, chgRowIdx + chrRowIncr, itmRowIdx, "Modify", "Comment",
-                                        "='" + cfg.source.boardId + "'!A" + (itmRowIdx + itmRowIncr));
-                                // Now create the item row itself 
-                                createItemRowFromTask(chgSht, chgRowIdx, itemSht, itmRowIdx + itmRowIncr, tasks.get(i), pbFields);
+                                createChangeRow(CRIdx + chrRowIncr, IRIdx, "Modify", "Task",
+                                        "='" + cfg.source.boardId + "'!A" + (IRIdx + itmRowIncr + 1));
+                                // Now create the item row itself
+                                createItemRowFromTask(CRIdx + chrRowIncr, IRIdx + itmRowIncr, tasks.get(j), pbFields);
                             }
                         }
 
@@ -267,13 +270,15 @@ public class Exporter {
         chgRowIdx += chrRowIncr;
     }
 
-    /** All fields handled here must have mirror in createItemRowFromCard (which probably does nothing) */
-    public static void createItemRowFromTask(XSSFSheet chgSht, Integer chgRowIdx, XSSFSheet itemSht, Integer itmRowIdx,
-            Task c, Field[] pbFields) {
+    /**
+     * All fields handled here must have mirror in createItemRowFromCard (which
+     * probably does nothing)
+     */
+    public void createItemRowFromTask(Integer CRIdx, Integer IRIdx, Task c, Field[] pbFields) {
 
         Integer chrRowIncr = 0;
         Integer itmRowIncr = 0;
-        Row itmRow = itemSht.createRow(itmRowIdx);
+        Row itmRow = itemSht.createRow(IRIdx);
         for (int i = 0; i < pbFields.length; i++) {
             chrRowIncr = 0;
             itmRowIncr = 0;
@@ -322,7 +327,7 @@ public class Exporter {
                         itmRow.createCell(i + 1, CellType.STRING).setCellValue(c.id);
                         if (cfg.addComment) {
                             chrRowIncr++;
-                            createChangeRow(chgSht, chgRowIdx + chrRowIncr, itmRowIdx, "Modify", "Comment",
+                            createChangeRow(CRIdx + chrRowIncr, IRIdx, "Modify", "Comment",
                                     Utils.getUrl(cfg, cfg.source) + "/card/" + c.id);
                         }
                         break;
@@ -336,6 +341,14 @@ public class Exporter {
                     }
                     case "taskBoardStats": {
                         break;
+                    }
+
+                    case "type": {
+                        Object fv = c.getClass().getField("cardType").get(c);
+                        if (fv != null) {
+                            itmRow.createCell(i + 1, CellType.STRING).setCellValue(((CardType) fv).name);
+                            break;
+                        }
                     }
                     default: {
                         Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
@@ -353,10 +366,7 @@ public class Exporter {
                                     itmRow.createCell(i + 1, CellType.NUMERIC).setCellValue(((Integer) fv));
                                     break;
                                 }
-                                case "ItemType": {
-                                    itmRow.createCell(i + 1, CellType.STRING).setCellValue(((ItemType) fv).title);
-                                    break;
-                                }
+
                                 case "Date": {
                                     SimpleDateFormat dtf = new SimpleDateFormat("yyyy-MM-dd");
                                     Cell cl = itmRow.createCell(i + 1);
@@ -381,16 +391,23 @@ public class Exporter {
         chgRowIdx += chrRowIncr;
     }
 
-    public static void createChangeRow(XSSFSheet chgSht, Integer chgRowIdx, Integer itmRowIdx, String action,
-            String field, String value) {
+    private void createChangeRow(Integer CRIdx, Integer IRIdx, String action, String field, String value) {
         Integer localCellIdx = 0;
-        Row chgRow = chgSht.createRow(chgRowIdx);
+        Row chgRow = changeSht.createRow(CRIdx);
         chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(cfg.group);
         chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(cfg.source.boardId);
-        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(itmRowIdx);
+        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(IRIdx + 1);
         chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(action); // "Action"
         chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(field); // "Field"
-        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(value); // "Value"
+        
+        if (value.startsWith("=")){
+            FormulaEvaluator evaluator = cfg.wb.getCreationHelper().createFormulaEvaluator();  
+            Cell cell = chgRow.createCell(localCellIdx++);
+            cell.setCellFormula(value.substring(1));
+            evaluator.evaluateFormulaCell(cell);
+        } else {
+            chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(value); // "Value"
+        }
     }
 
 }
