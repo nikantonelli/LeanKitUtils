@@ -46,8 +46,6 @@ public class Main {
      * Therefore this is extracted once and passed to all sub tasks
      */
     static InternalConfig config = new InternalConfig();
-
-    static Integer group = 0;
     static Boolean dualFlow = false;
 
     public static void main(String[] args) {
@@ -101,7 +99,7 @@ public class Main {
         impExpOpt.addOption(dbp);
 
         try {
-            impExpCl = p.parse(impExpOpt, args);
+            impExpCl = p.parse(impExpOpt, args, true);
 
         } catch (ParseException e) {
             // Not expecting to ever come here, but compiler needs something....
@@ -146,14 +144,22 @@ public class Main {
             CommandLine cl = null;
 
             if (setToExport == true) {
-                Option archiveOpt = new Option("a", "archived", false, "Include Archived cards in export (if present)");
+                Option archiveOpt = new Option("oo", "archived", false, "Include older Archived cards in export (if present)");
                 archiveOpt.setRequired(false);
                 impExpOpt.addOption(archiveOpt);
-                Option tasksOpt = new Option("t", "tasks", false, "Include Task cards in export (if present)");
+                Option tasksOpt = new Option("ot", "tasks", false, "Include Task cards in export (if present)");
                 tasksOpt.setRequired(false);
                 impExpOpt.addOption(tasksOpt);
+                Option attsOpt = new Option("oa", "attachments", false, "Export card attachments in local filesystem (if present)");
+                attsOpt.setRequired(false);
+                impExpOpt.addOption(attsOpt);            
+                Option comsOpt = new Option("oc", "comments", false, "Export card comments in local filesystem (if present)");
+                comsOpt.setRequired(false);
+                impExpOpt.addOption(comsOpt);   
+                Option originOpt = new Option("os", "origin", false, "Add comment for source artifact recording");
+                originOpt.setRequired(false);
+                impExpOpt.addOption(originOpt);            
             }
-
             try {
                 cl = p.parse(impExpOpt, args);
             } catch (ParseException e) {
@@ -164,13 +170,22 @@ public class Main {
             }
 
             if (cl.hasOption("group")) {
-                group = Integer.parseInt(cl.getOptionValue("group"));
+                config.group = Integer.parseInt(cl.getOptionValue("group"));
             }
             if (cl.hasOption("archived")) {
                 config.exportArchived = true;
             }
             if (cl.hasOption("tasks")) {
                 config.exportTasks = true;
+            }
+            if (cl.hasOption("comments")) {
+                config.exportComments = true;
+            }
+            if (cl.hasOption("attachments")) {
+                config.exportAttachments = true;
+            }
+            if (cl.hasOption("origin")) {
+                config.addComment = true;
             }
 
         } else {

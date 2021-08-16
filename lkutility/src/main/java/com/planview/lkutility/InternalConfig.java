@@ -22,5 +22,9 @@ public class InternalConfig {
     public Configuration destination = new Configuration();
     public Boolean exportArchived = false;
     public Boolean exportTasks = false;
+    public Boolean exportAttachments = false;
+    public Boolean exportComments = false;
+    public Boolean addComment = false;
+    public Integer group = 0;
 }
 

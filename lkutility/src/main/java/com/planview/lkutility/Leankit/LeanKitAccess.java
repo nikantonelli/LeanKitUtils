@@ -27,7 +27,6 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
@@ -64,13 +63,17 @@ public class LeanKitAccess {
             config.url = config.url.substring(0, config.url.length() - 1);
         }
         // We need to set to https later on
-        if (config.url.startsWith("https://")) {
-            config.url = config.url.substring(8);
+        if (!config.url.startsWith("http")) {
+            config.url = "https://" + config.url;
         } else if (config.url.startsWith("http://")) {
             d.p(Debug.WARN, "http access to leankit not supported. Switching to https");
-            config.url = config.url.substring(7);
+            config.url = "https://" + config.url.substring(7);
         }
 
+    }
+
+    public String getCurrentUrl() {
+        return config.url;
     }
 
     public <T> ArrayList<T> read(Class<T> expectedResponseType) {
@@ -105,6 +108,9 @@ public class LeanKitAccess {
                         break;
                     case "Card":
                         fieldName = "cards";
+                        break;
+                    case "Lane":
+                        fieldName = "lanes";
                         break;
                     case "Comment":
                         fieldName = "comments";
@@ -288,7 +294,7 @@ public class LeanKitAccess {
             if (bldr.length() > 0) {
                 bldr = "?" + bldr.substring(1);
             }
-            request.setURI(new URI("https://" + config.url + "/" + reqUrl + bldr));
+            request.setURI(new URI(config.url + "/" + reqUrl + bldr));
             d.p(Debug.VERBOSE, "%s\n", request.toString());
             httpResponse = client.execute(request);
             d.p(Debug.VERBOSE, "%s\n", httpResponse.toString());
@@ -407,6 +413,24 @@ public class LeanKitAccess {
         return null;
     }
 
+    public ArrayList<Lane> fetchTaskLanes(String cardId) {
+        reqType = "GET";
+        reqUrl = "io/card/" + cardId + "/taskboard";
+        reqParams.clear();
+        reqHdrs.clear();
+        ArrayList<Lane> lanes = read(Lane.class);
+        return lanes;
+    }
+    
+    public ArrayList<Card> fetchTasks(String cardId) {
+        reqType = "GET";
+        reqUrl = "io/card/" + cardId + "/tasks";
+        reqParams.clear();
+        reqHdrs.clear();
+        ArrayList<Card> tasks= read(Card.class);
+        return tasks;
+    }
+
     private ArrayList<Board> fetchBoardsFromName(String name) {
         reqParams.clear();
         reqHdrs.clear();
@@ -448,12 +472,8 @@ public class LeanKitAccess {
         reqParams.add(new BasicNameValuePair("board", id));
         reqParams.add(new BasicNameValuePair("limit", "5"));
         reqParams.add(new BasicNameValuePair("offset", "0"));
-        if (includeTasks) {
-            reqParams.add(new BasicNameValuePair("select", "both"));
-        }
-        else {
-            reqParams.add(new BasicNameValuePair("select", "cards"));
-        }
+        //We handle tasks by getting them on a card by card basis
+        reqParams.add(new BasicNameValuePair("select", "cards"));
         reqHdrs.clear();
         reqType = "GET";
         reqUrl = "io/card";
