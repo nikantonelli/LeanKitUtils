@@ -107,6 +107,7 @@ public class LeanKitAccess {
                         fieldName = "users";
                         break;
                     case "Card":
+                    case "Task":
                         fieldName = "cards";
                         break;
                     case "Lane":
@@ -422,12 +423,12 @@ public class LeanKitAccess {
         return lanes;
     }
     
-    public ArrayList<Card> fetchTasks(String cardId) {
+    public ArrayList<Task> fetchTasks(String cardId) {
         reqType = "GET";
         reqUrl = "io/card/" + cardId + "/tasks";
         reqParams.clear();
         reqHdrs.clear();
-        ArrayList<Card> tasks= read(Card.class);
+        ArrayList<Task> tasks= read(Task.class);
         return tasks;
     }
 

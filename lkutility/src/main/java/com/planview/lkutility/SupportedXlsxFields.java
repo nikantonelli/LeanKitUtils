@@ -21,6 +21,7 @@ public class SupportedXlsxFields {
     public CustomId customId; 
     public String color, blockReason;
     public Integer index; 
+    public TaskBoardStats taskBoardStats;
     
     /**
      * Unsupported or unsupportable

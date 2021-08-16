@@ -10,6 +10,7 @@ import com.planview.lkutility.leankit.Card;
 import com.planview.lkutility.leankit.CardType;
 import com.planview.lkutility.leankit.Lane;
 import com.planview.lkutility.leankit.LeanKitAccess;
+import com.planview.lkutility.leankit.Task;
 
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -106,10 +107,10 @@ public class Utils {
         return cards;
     }
 
-    public static ArrayList<Card> readTasksFromCard(InternalConfig iCfg, Configuration accessCfg, String cardId) {
+    public static ArrayList<Task> readTasksFromCard(InternalConfig iCfg, Configuration accessCfg, String cardId) {
         LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
-        ArrayList<Card> cards = lka.fetchTasks(cardId); 
-        return cards;
+        ArrayList<Task> tasks = lka.fetchTasks(cardId); 
+        return tasks;
     }
 
     public static ArrayList<CardType> readCardsTypesFromBoard(InternalConfig iCfg, Configuration accessCfg) {
