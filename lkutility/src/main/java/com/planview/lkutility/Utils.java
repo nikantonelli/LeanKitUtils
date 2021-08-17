@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Iterator;
 
+import com.planview.lkutility.leankit.Board;
 import com.planview.lkutility.leankit.Card;
 import com.planview.lkutility.leankit.CardType;
 import com.planview.lkutility.leankit.Lane;
@@ -72,10 +73,24 @@ public class Utils {
     }
 
     public static String getLanePathFromId(InternalConfig iCfg, Configuration accessCfg, String laneId){
-        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
-        Lane[] lanes = lka.fetchLanes(accessCfg.boardId);
+        
+        Lane[] lanes = null;
+        if (iCfg.cache != null) {
+            Board brd = iCfg.cache.getBoard() ;
+            if (brd != null){
+                lanes = brd.lanes;
+            }
+        }
+
         Lane lane = findLaneFromId(lanes, laneId);
-        String lanePath = lane.name;
+        String lanePath = "";
+        if (lane == null) {
+            return lanePath;
+        }
+        else {
+            lanePath = lane.name;
+        }
+
         while (lane.parentLaneId != null) {
             Lane parentLane = findLaneFromId(lanes, lane.parentLaneId);
             if (parentLane != null) {
@@ -101,9 +116,20 @@ public class Utils {
         return lka.getCurrentUrl();
     }
 
+    public static Card getCard(InternalConfig iCfg, Configuration accessCfg, String id) {
+        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+        return lka.fetchCard(id);
+    }
+
     public static ArrayList<Card> readCardsFromBoard(InternalConfig iCfg, Configuration accessCfg) {
         LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
         ArrayList<Card> cards = lka.fetchCardsFromBoard(accessCfg.boardId, iCfg.exportArchived, iCfg.exportTasks); 
+        return cards;
+    }
+
+    public static ArrayList<Card> readCardIdsFromBoard(InternalConfig iCfg, Configuration accessCfg) {
+        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+        ArrayList<Card> cards = lka.fetchCardIdsFromBoard(accessCfg.boardId, iCfg.exportArchived, iCfg.exportTasks); 
         return cards;
     }
 

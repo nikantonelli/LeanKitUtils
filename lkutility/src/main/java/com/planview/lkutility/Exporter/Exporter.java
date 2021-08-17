@@ -7,9 +7,11 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import com.planview.lkutility.Debug;
 import com.planview.lkutility.InternalConfig;
 import com.planview.lkutility.SupportedXlsxFields;
 import com.planview.lkutility.Utils;
+import com.planview.lkutility.leankit.AccessCache;
 import com.planview.lkutility.leankit.BlockedStatus;
 import com.planview.lkutility.leankit.Card;
 import com.planview.lkutility.leankit.CustomId;
@@ -17,6 +19,8 @@ import com.planview.lkutility.leankit.ExternalLink;
 import com.planview.lkutility.leankit.ItemType;
 import com.planview.lkutility.leankit.CardType;
 import com.planview.lkutility.leankit.Lane;
+import com.planview.lkutility.leankit.ParentCard;
+import com.planview.lkutility.leankit.ParentChild;
 import com.planview.lkutility.leankit.Task;
 
 import org.apache.poi.ss.usermodel.Cell;
@@ -53,6 +57,9 @@ public class Exporter {
     Integer chShtIdx = -1; // Set to invalid as a precaution for misuse.
     XSSFSheet itemSht = null;
 
+    ArrayList<ParentChild> parentChild = new ArrayList<>();
+    Debug d = new Debug();
+
     public void go(InternalConfig config) {
 
         /**
@@ -60,12 +67,13 @@ public class Exporter {
          */
 
         cfg = config;
+        cfg.cache = new AccessCache(cfg, cfg.source);
 
-        Integer chShtIdx = cfg.wb.getSheetIndex(InternalConfig.CHANGES_SHEET_NAME);
+        Integer chShtIdx = cfg.wb.getSheetIndex(InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.source.boardId);
         if (chShtIdx >= 0) {
             cfg.wb.removeSheetAt(chShtIdx);
         }
-        changeSht = cfg.wb.createSheet(InternalConfig.CHANGES_SHEET_NAME);
+        changeSht = cfg.wb.createSheet(InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.source.boardId);
 
         Integer itemShtIdx = cfg.wb.getSheetIndex(cfg.source.boardId);
         if (itemShtIdx >= 0) {
@@ -102,16 +110,17 @@ public class Exporter {
         fieldMap.put("ID", itmCellIdx++);
 
         // Now write out the fields
-        Field[] pbFields = (new SupportedXlsxFields()).getClass().getFields();
+        Field[] outFields = (new SupportedXlsxFields()).getClass().getFields();
+        Field[] checkFields = (new SupportedXlsxFields()).getClass().getDeclaredFields();
 
-        for (int i = 0; i < pbFields.length; i++) {
-            itmHdrRow.createCell(itmCellIdx, CellType.STRING).setCellValue(pbFields[i].getName());
-            fieldMap.put(pbFields[i].getName(), itmCellIdx++);
+        for (int i = 0; i < outFields.length; i++) {
+            itmHdrRow.createCell(itmCellIdx, CellType.STRING).setCellValue(outFields[i].getName());
+            fieldMap.put(outFields[i].getName(), itmCellIdx++);
         }
         /**
          * Read all the normal cards on the board - up to a limit?
          */
-        ArrayList<Card> cards = Utils.readCardsFromBoard(cfg, cfg.source);
+        ArrayList<Card> cards = Utils.readCardIdsFromBoard(cfg, cfg.source);
 
         /**
          * Write all the cards out to the itemSht
@@ -120,21 +129,62 @@ public class Exporter {
         while (ic.hasNext()) {
             Card c = ic.next();
 
+            /**
+             * Due to the seemingly brain-dead api, we have to re-fetch the cards to get the
+             * relevant parent information.
+             */
+            c = Utils.getCard(cfg, cfg.source, c.id);
+
             /* Write a 'Create' line to the changes sheet */
             // We can only write out cards here. Tasks are handled differently
 
             createChangeRow(chgRowIdx, itmRowIdx, "Create", "", "");
-            createItemRowFromCard(chgRowIdx, itmRowIdx, c, pbFields);
+            createItemRowFromCard(chgRowIdx, itmRowIdx, c, checkFields); // checkFields contains extra that indicate
+                                                                         // that we
 
             // Do these after because we might have changed the index in the subr calls
             chgRowIdx++;
             itmRowIdx++;
 
-            /**
-             * Open the output stream and send the file back out.
-             */
-            Utils.writeFile(cfg.xlsxfn, cfg.wb);
         }
+
+        /**
+         * Now scan the parent/child register and add "Modify" lines
+         */
+
+        // ArrayList<Connection> Utils.getConnectionsForThisBoard(cfg.source.boardId);
+
+        Iterator<ParentChild> pci = parentChild.iterator();
+        while (pci.hasNext()) {
+            ParentChild pc = pci.next();
+            Integer parentRow = findRowBySourceId(itemSht, pc.parentId);
+            Integer childRow = findRowBySourceId(itemSht, pc.childId);
+
+            if ((parentRow == null) || (childRow == null)) {
+                d.p(Debug.WARN, "Unexpected row result from %s/%s. Is parent archived?", pc.parentId, pc.childId);
+            } else {
+                createChangeRow(chgRowIdx, childRow, "Modify", "Parent",
+                        "='" + cfg.source.boardId + "'!A" + (parentRow + 1));
+                chgRowIdx++;
+            }
+        }
+
+        /**
+         * Open the output stream and send the file back out.
+         */
+        Utils.writeFile(cfg.xlsxfn, cfg.wb);
+    }
+
+    public Integer findRowBySourceId(XSSFSheet itemSht, String cardId) {
+        for (int rowIndex = 0; rowIndex < itemSht.getLastRowNum(); rowIndex++) {
+            Row row = itemSht.getRow(rowIndex);
+            // Aargh! Embedded number alert
+            // TODO: Fix this to be more generic
+            if (row != null && row.getCell(1).getStringCellValue().equals(cardId)) {
+                return rowIndex;
+            }
+        }
+        return null;
     }
 
     /**
@@ -192,6 +242,23 @@ public class Exporter {
                         }
                         break;
                     }
+                    case "parentCards": {
+                        Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
+                        if (fv != null) {
+                            /**
+                             * We will only worry about parents on the same board. We cannot deal with
+                             * parents on other boards here. At some future date, we could add a comment to
+                             * indicate this
+                             */
+                            ParentCard[] pcs = (ParentCard[]) fv;
+                            for (int j = 0; j < pcs.length; j++) {
+                                if (pcs[j].boardId.equals(cfg.source.boardId)) {
+                                    parentChild.add(new ParentChild(pcs[j].cardId, c.id));
+                                }
+                            }
+                        }
+                        break;
+                    }
                     case "srcID": {
                         itmRow.createCell(i + 1, CellType.STRING).setCellValue(c.id);
                         if (cfg.addComment) {
@@ -208,6 +275,8 @@ public class Exporter {
                         }
                         break;
                     }
+
+                    // Pseudo-field that does something different
                     case "taskBoardStats": {
                         // If the task count is non zero, get the tasks for this card and
                         // resolve the lanes for the tasks,
@@ -399,9 +468,9 @@ public class Exporter {
         chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(IRIdx + 1);
         chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(action); // "Action"
         chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(field); // "Field"
-        
-        if (value.startsWith("=")){
-            FormulaEvaluator evaluator = cfg.wb.getCreationHelper().createFormulaEvaluator();  
+
+        if (value.startsWith("=")) {
+            FormulaEvaluator evaluator = cfg.wb.getCreationHelper().createFormulaEvaluator();
             Cell cell = chgRow.createCell(localCellIdx++);
             cell.setCellFormula(value.substring(1));
             evaluator.evaluateFormulaCell(cell);

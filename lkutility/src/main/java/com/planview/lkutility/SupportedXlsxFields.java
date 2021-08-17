@@ -21,7 +21,12 @@ public class SupportedXlsxFields {
     public CustomId customId; 
     public String color, blockReason;
     public Integer index; 
-    public TaskBoardStats taskBoardStats;
+    /**
+     * These are pseudo-fields. When these are seen, some extra
+     * activity needs to take place and not be sent to the spreadsheet
+     */
+    private TaskBoardStats taskBoardStats;
+    private ParentCard parentCards; //Should be an array of ParentCards, but who cares!
     
     /**
      * Unsupported or unsupportable
@@ -34,7 +39,8 @@ public class SupportedXlsxFields {
 
     public CustomField[] customFields;
     public CustomIcon customIcon;
-    public ParentCard[] parentCards;
+    public ParentCard[] parentCards;    //Seems to be unpopulated in the /io/card?board= call
+                                        //so we had to make a call per card to get the parents
     public User[] assignedUsers;
     public Board board;
     public Boolean isBlocked;
@@ -42,4 +48,15 @@ public class SupportedXlsxFields {
     public Comment[] comments;
     */
 
+    /**
+     * Add code to shut up the VS Code compiler warnings
+     * about the private class members. Don't want to turn the warning
+     * off as it is quite useful.
+     */
+    public SupportedXlsxFields() {
+        taskBoardStats = new TaskBoardStats();
+        taskBoardStats.totalCount = 0;
+        parentCards = new ParentCard();
+        parentCards.cardId = "";
+    }
 }

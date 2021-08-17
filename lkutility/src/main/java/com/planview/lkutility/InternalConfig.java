@@ -1,5 +1,7 @@
 package com.planview.lkutility;
 
+import com.planview.lkutility.leankit.AccessCache;
+
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -26,5 +28,6 @@ public class InternalConfig {
     public Boolean exportComments = false;
     public Boolean addComment = false;
     public Integer group = 0;
+    public AccessCache cache = null;    //Set later.
 }
 

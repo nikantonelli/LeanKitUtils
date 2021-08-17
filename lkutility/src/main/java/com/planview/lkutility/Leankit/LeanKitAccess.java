@@ -94,6 +94,7 @@ public class LeanKitAccess {
                 JSONObject pageMeta = new JSONObject(jresp.get("pageMeta").toString());
 
                 int totalRecords = pageMeta.getInt("totalRecords");
+                
                 // Unfortunately, we need to know what sort of item to get out of the json
                 // object. Doh!
                 String fieldName = null;
@@ -142,6 +143,7 @@ public class LeanKitAccess {
                      * and limit params
                      */
                     // Length here may be limited to 200 by the API paging.
+                    d.p(Debug.VERBOSE, "Received %d %s (out of %d)\n", accumulatedCount, fieldName.substring(0, ((accumulatedCount>1)?fieldName.length():fieldName.length()-1)), totalRecords);
                     while (totalRecords > accumulatedCount) {
 
                         Iterator<NameValuePair> it = reqParams.iterator();
@@ -161,7 +163,10 @@ public class LeanKitAccess {
                             /**
                              * This is slightly dangerous as it is a recursive call to get more stuff.
                              */
-                            items.addAll(read(expectedResponseType));
+                            ArrayList<T> childItems = read(expectedResponseType);
+                            if (childItems != null) {
+                                items.addAll(childItems);
+                            }
                             accumulatedCount = items.size();
                         }
                     }
@@ -463,17 +468,24 @@ public class LeanKitAccess {
         reqUrl = "io/card/" + cd.id + "/comment";
         return read(Comment.class);
     }
+    
     public ArrayList<Card> fetchCardsFromBoard(String id, Boolean includeArchived) {
         return fetchCardsFromBoard(id, includeArchived, false);
+    }
+
+    public ArrayList<Card> fetchCardIdsFromBoard(String id, Boolean includeArchived, Boolean includeTasks) {
+        reqParams.add(new BasicNameValuePair("only", "id"));
+        return fetchCardsFromBoard(id, includeArchived, includeTasks);
     }
 
     public ArrayList<Card> fetchCardsFromBoard(String id, Boolean includeArchived, Boolean includeTasks) {
         reqParams.clear();
         reqParams.add(new BasicNameValuePair("board", id));
-        reqParams.add(new BasicNameValuePair("limit", "5"));
+        reqParams.add(new BasicNameValuePair("limit", "200"));
         reqParams.add(new BasicNameValuePair("offset", "0"));
         //We handle tasks by getting them on a card by card basis
         reqParams.add(new BasicNameValuePair("select", "cards"));
+
         reqHdrs.clear();
         reqType = "GET";
         reqUrl = "io/card";
