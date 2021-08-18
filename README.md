@@ -1,6 +1,6 @@
 # Overview
 
-Currently this is limited to an exporter/importer app. THe same app will do both direction independently. Future development may make it do both at once, i.e 'transfer'
+Currently this is limited to an exporter/importer app. The same app will do both directions independently. Future development may make it do both at once, i.e 'simultaneous transfer'
 
 # Setup
 
@@ -21,7 +21,7 @@ Option | Argument | Description
 -x | \<level\> |  Output levels of debug statements: 0 = Errors, 1 = +Info, 2 = +Warnings, 3 = +Debug, 4 = +Verbose
 -i |  | Run importer only
 -e |  | Run exporter only 
--t |  | Run importer and exporter together (Currently NOT IMPLEMENTED and does nothing)
+-t |  | Run importer and exporter sequentially
 -g | \<group\> | Mark exported items with this groupId ready for selection on import. Select only items marked with this group for import
 -oo |  | Include older archived items during export
 -oa |  | Include attachments for export - these get placed in your current working directory 
