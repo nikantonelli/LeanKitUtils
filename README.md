@@ -12,9 +12,9 @@ You need to provide either a username/password pair or apiKey that is valid for 
 
 # Command Line Options
 
- -f <file>    Name of the Xlsx file to use for reading/writing
+ -f \<file\>    Name of the Xlsx file to use for reading/writing
  
- -x <level>   Output levels of debug statements: 0 = Errors, 1 = +Info, 2 = +Warnings, 3 = +Debug, 4 = +Verbose
+ -x \<level\>   Output levels of debug statements: 0 = Errors, 1 = +Info, 2 = +Warnings, 3 = +Debug, 4 = +Verbose
  
  -i           Run importer only
  
@@ -22,7 +22,7 @@ You need to provide either a username/password pair or apiKey that is valid for 
  
  -t           Run importer and exporter together (Currently NOT IMPLEMENTED and does nothing)
  
- -g <group>   Mark exported items with this groupId ready for selection on import. Select only items marked with this group for import
+ -g \<group\>   Mark exported items with this groupId ready for selection on import. Select only items marked with this group for import
  
  -oo          Include older archived items during export
  
