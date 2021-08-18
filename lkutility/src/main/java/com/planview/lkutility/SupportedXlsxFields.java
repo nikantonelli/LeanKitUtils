@@ -26,10 +26,11 @@ public class SupportedXlsxFields {
      * activity needs to take place and not be sent to the spreadsheet
      * Compiler gives warning which we will ignore.
      */
-    private TaskBoardStats taskBoardStats;
+    
     private ParentCard[] parentCards;
     private Comment[] comments;
     private Attachment[] attachments;
+    private TaskBoardStats taskBoardStats;
     
     /**
      * Unsupported or unsupportable

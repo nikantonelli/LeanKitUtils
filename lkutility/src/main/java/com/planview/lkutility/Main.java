@@ -141,22 +141,22 @@ public class Main {
             CommandLine cl = null;
 
             if (setToExport == true) {
-                Option archiveOpt = new Option("oO", "archived", false,
+                Option archiveOpt = new Option("O", "archived", false,
                         "Include older Archived cards in export (if present)");
                 archiveOpt.setRequired(false);
                 impExpOpt.addOption(archiveOpt);
-                Option tasksOpt = new Option("oT", "tasks", false, "Include Task cards in export (if present)");
+                Option tasksOpt = new Option("T", "tasks", false, "Include Task cards in export (if present)");
                 tasksOpt.setRequired(false);
                 impExpOpt.addOption(tasksOpt);
-                Option attsOpt = new Option("oA", "attachments", false,
+                Option attsOpt = new Option("A", "attachments", false,
                         "Export card attachments in local filesystem (if present)");
                 attsOpt.setRequired(false);
                 impExpOpt.addOption(attsOpt);
-                Option comsOpt = new Option("oC", "comments", false,
+                Option comsOpt = new Option("C", "comments", false,
                         "Export card comments in local filesystem (if present)");
                 comsOpt.setRequired(false);
                 impExpOpt.addOption(comsOpt);
-                Option originOpt = new Option("oS", "origin", false, "Add comment for source artifact recording");
+                Option originOpt = new Option("S", "origin", false, "Add comment for source artifact recording");
                 originOpt.setRequired(false);
                 impExpOpt.addOption(originOpt);
             }

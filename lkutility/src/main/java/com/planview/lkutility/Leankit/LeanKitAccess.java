@@ -446,6 +446,16 @@ public class LeanKitAccess {
         return tasks;
     }
 
+    public ArrayList<Task> fetchTaskIds(String cardId) {
+        reqType = "GET";
+        reqUrl = "io/card/" + cardId + "/tasks";
+        reqParams.clear();
+        reqParams.add(new BasicNameValuePair("only", "id"));
+        reqHdrs.clear();
+        ArrayList<Task> tasks= read(Task.class);
+        return tasks;
+    }
+
     private ArrayList<Board> fetchBoardsFromName(String name) {
         reqParams.clear();
         reqHdrs.clear();

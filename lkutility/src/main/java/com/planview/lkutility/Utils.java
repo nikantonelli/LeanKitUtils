@@ -148,6 +148,12 @@ public class Utils {
         return cards;
     }
 
+    public static ArrayList<Task> readTaskIdsFromCard(InternalConfig iCfg, Configuration accessCfg, String cardId) {
+        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+        ArrayList<Task> tasks = lka.fetchTaskIds(cardId); 
+        return tasks;
+    }
+
     public static ArrayList<Task> readTasksFromCard(InternalConfig iCfg, Configuration accessCfg, String cardId) {
         LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
         ArrayList<Task> tasks = lka.fetchTasks(cardId); 

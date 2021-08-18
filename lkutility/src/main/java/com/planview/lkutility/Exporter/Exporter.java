@@ -11,6 +11,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import com.planview.lkutility.Changes;
 import com.planview.lkutility.Debug;
 import com.planview.lkutility.InternalConfig;
 import com.planview.lkutility.SupportedXlsxFields;
@@ -23,7 +24,6 @@ import com.planview.lkutility.leankit.Comment;
 import com.planview.lkutility.leankit.CustomId;
 import com.planview.lkutility.leankit.ExternalLink;
 import com.planview.lkutility.leankit.ItemType;
-import com.planview.lkutility.leankit.CardType;
 import com.planview.lkutility.leankit.Lane;
 import com.planview.lkutility.leankit.ParentCard;
 import com.planview.lkutility.leankit.ParentChild;
@@ -150,10 +150,12 @@ public class Exporter {
             // We can only write out cards here. Tasks are handled differently
 
             createChangeRow(chgRowIdx, itmRowIdx, "Create", "", "");
-            createItemRowFromCard(c, checkFields); // checkFields contains extra that indicate
-                                                                         // that we
+            Changes changeTotal = createItemRowFromCard(chgRowIdx, itmRowIdx, c, checkFields); // checkFields contains extra
 
-            // Do these after because we might have changed the index in the subr calls
+            chgRowIdx = changeTotal.currChgRow;
+            itmRowIdx = changeTotal.currItmRow;
+
+            // Do these after because we have changed the index in the subr calls
             chgRowIdx++;
             itmRowIdx++;
 
@@ -203,12 +205,14 @@ public class Exporter {
      * probably does nothing) This is because we use the one list of fields from
      * SupportedXlsxField.java The importer will select the fields correctly for the
      * type of item
+     * 
+     * Got a chick-and-egg situation with the indexes.
      */
-    public void createItemRowFromCard(Card c, Field[] pbFields) {
+    public Changes createItemRowFromCard( Integer chgRow, Integer itmRow, Card c, Field[] pbFields) {
 
-        Integer chrRowIncr = 0;
-        Integer itmRowIncr = 0;
-        Row itmRow = itemSht.createRow(itmRowIdx);
+        Integer item = itmRow;
+
+        Row iRow = itemSht.createRow(itmRow);
         for (int i = 0; i < pbFields.length; i++) {
             try {
                 switch (pbFields[i].getName()) {
@@ -233,8 +237,8 @@ public class Exporter {
                                 fw.write(data, 0, data.length);
                                 fw.flush();
                                 fw.close();
-                                chrRowIncr++;
-                                createChangeRow(chgRowIdx + chrRowIncr, itmRowIdx, "Modify", "Attachment", af.getPath());
+                                chgRow++;
+                                createChangeRow(chgRow, item, "Modify", "Attachment", af.getPath());
                             }
                         }
                         break;
@@ -244,8 +248,8 @@ public class Exporter {
                         if ((fv != null) && cfg.exportComments) {
                             Comment[] cmts = (Comment[]) fv;
                             for (int j = 0; j < cmts.length; j++) {
-                                chrRowIncr++;
-                                createChangeRow(chgRowIdx + chrRowIncr, itmRowIdx, "Modify", "Comment",
+                                chgRow++;
+                                createChangeRow(chgRow, item, "Modify", "Comment",
                                         String.format("%s : %s wrote: \n", cmts[j].createdOn,
                                                 cmts[j].createdBy.fullName) + cmts[j].text);
                             }
@@ -260,9 +264,9 @@ public class Exporter {
                         Object fv = c.getClass().getField("blockedStatus").get(c);
                         if (fv != null) {
                             if (((BlockedStatus) fv).isBlocked) {
-                                itmRow.createCell(i + 1, CellType.STRING).setCellValue(((BlockedStatus) fv).reason);
+                                iRow.createCell(i + 1, CellType.STRING).setCellValue(((BlockedStatus) fv).reason);
                             } else {
-                                itmRow.createCell(i + 1, CellType.STRING).setCellValue("");
+                                iRow.createCell(i + 1, CellType.STRING).setCellValue("");
                             }
                         }
                         break;
@@ -270,7 +274,7 @@ public class Exporter {
                     case "customId": {
                         Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
                         if (fv != null) {
-                            itmRow.createCell(i + 1, CellType.STRING).setCellValue(((CustomId) fv).value);
+                            iRow.createCell(i + 1, CellType.STRING).setCellValue(((CustomId) fv).value);
                         }
                         break;
                     }
@@ -278,7 +282,7 @@ public class Exporter {
                     case "externalLinks": {
                         Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
                         if (fv != null) {
-                            itmRow.createCell(i + 1, CellType.STRING).setCellValue(
+                            iRow.createCell(i + 1, CellType.STRING).setCellValue(
                                     ((ExternalLink) fv).label.replace(",", " ") + "," + ((ExternalLink) fv).url);
                         }
                         break;
@@ -286,7 +290,7 @@ public class Exporter {
                     case "lane": {
                         Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
                         if (fv != null) {
-                            itmRow.createCell(i + 1, CellType.STRING)
+                            iRow.createCell(i + 1, CellType.STRING)
                                     .setCellValue(Utils.getLanePathFromId(cfg, cfg.source, ((Lane) fv).id));
                         }
                         break;
@@ -309,10 +313,10 @@ public class Exporter {
                         break;
                     }
                     case "srcID": {
-                        itmRow.createCell(i + 1, CellType.STRING).setCellValue(c.id);
+                        iRow.createCell(i + 1, CellType.STRING).setCellValue(c.id);
                         if (cfg.addComment) {
-                            chrRowIncr++;
-                            createChangeRow(chgRowIdx + chrRowIncr, itmRowIdx, "Modify", "Comment",
+                            chgRow++;
+                            createChangeRow(chgRow, item, "Modify", "Comment",
                                     Utils.getUrl(cfg, cfg.source) + "/card/" + c.id);
                         }
                         break;
@@ -320,7 +324,7 @@ public class Exporter {
                     case "tags": {
                         Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
                         if (fv != null) {
-                            itmRow.createCell(i + 1, CellType.STRING).setCellValue(String.join(",", ((String[]) fv)));
+                            iRow.createCell(i + 1, CellType.STRING).setCellValue(String.join(",", ((String[]) fv)));
                         }
                         break;
                     }
@@ -331,15 +335,24 @@ public class Exporter {
                         // resolve the lanes for the tasks,
                         // Add the tasks to the items and put some Modify statements in.
                         if (cfg.exportTasks && (c.taskBoardStats != null)) {
-                            ArrayList<Task> tasks = Utils.readTasksFromCard(cfg, cfg.source, c.id);
+                            ArrayList<Task> tasks = Utils.readTaskIdsFromCard(cfg, cfg.source, c.id);
                             for (int j = 0; j < tasks.size(); j++) {
-                                chrRowIncr++;
-                                itmRowIncr++;
-                                createChangeRow(chgRowIdx + chrRowIncr, itmRowIdx, "Modify", "Task",
-                                        "='" + cfg.source.boardId + "'!A" + (itmRowIdx + itmRowIncr + 1));
+                                chgRow++;
+                                Card task = Utils.getCard(cfg, tasks.get(j).id);
+                                //Increment the row index ready for the item row create
+                                createChangeRow(chgRow, item, "Modify", "Task",
+                                        "='" + cfg.source.boardId + "'!A" + (itmRow + 1));
+                                
                                 // Now create the item row itself
-                                createItemRowFromTask(chgRowIdx + chrRowIncr, itmRowIdx + itmRowIncr, tasks.get(j), pbFields);
+                                //Changes changesMade = new Changes(0,0); //Testing!
+                                itmRow++;
+                                Changes childChanges = createItemRowFromCard(chgRow, itmRow, task, pbFields);
+                                // Need to pick up the indexes again as we might have created task entries
+                                
+                                chgRow = childChanges.currChgRow;
+                                itmRow = childChanges.currItmRow;
                             }
+                            //itmRowIncr += tasks.size();
                         }
 
                         break;
@@ -349,24 +362,24 @@ public class Exporter {
                         if (fv != null) {
                             switch (fv.getClass().getSimpleName()) {
                                 case "String": {
-                                    itmRow.createCell(i + 1, CellType.STRING).setCellValue(fv.toString());
+                                    iRow.createCell(i + 1, CellType.STRING).setCellValue(fv.toString());
                                     break;
                                 }
                                 case "Boolean": {
-                                    itmRow.createCell(i + 1, CellType.BOOLEAN).setCellValue(((Boolean) fv));
+                                    iRow.createCell(i + 1, CellType.BOOLEAN).setCellValue(((Boolean) fv));
                                     break;
                                 }
                                 case "Integer": {
-                                    itmRow.createCell(i + 1, CellType.NUMERIC).setCellValue(((Integer) fv));
+                                    iRow.createCell(i + 1, CellType.NUMERIC).setCellValue(((Integer) fv));
                                     break;
                                 }
                                 case "ItemType": {
-                                    itmRow.createCell(i + 1, CellType.STRING).setCellValue(((ItemType) fv).title);
+                                    iRow.createCell(i + 1, CellType.STRING).setCellValue(((ItemType) fv).title);
                                     break;
                                 }
                                 case "Date": {
                                     SimpleDateFormat dtf = new SimpleDateFormat("yyyy-MM-dd");
-                                    Cell cl = itmRow.createCell(i + 1);
+                                    Cell cl = iRow.createCell(i + 1);
                                     cl.setCellValue(dtf.format(((Date) fv)).toString());
 
                                     break;
@@ -387,132 +400,10 @@ public class Exporter {
                 e.printStackTrace();
             }
         }
-        itmRowIdx += itmRowIncr;
-        chgRowIdx += chrRowIncr;
-    }
-
-    /**
-     * All fields handled here must have mirror in createItemRowFromCard (which
-     * probably does nothing)
-     */
-    public void createItemRowFromTask(Integer CRIdx, Integer IRIdx, Task c, Field[] pbFields) {
-
-        Integer chrRowIncr = 0;
-        Integer itmRowIncr = 0;
-        Row itmRow = itemSht.createRow(IRIdx);
-        for (int i = 0; i < pbFields.length; i++) {
-            chrRowIncr = 0;
-            itmRowIncr = 0;
-            try {
-                switch (pbFields[i].getName()) {
-                    /**
-                     * We need to extract the blockedStatus type and re-create a blockReason
-                     */
-                    case "blockReason": {
-                        // Get blockedStatus from card
-                        Object fv = c.getClass().getField("blockedStatus").get(c);
-                        if (fv != null) {
-                            if (((BlockedStatus) fv).isBlocked) {
-                                itmRow.createCell(i + 1, CellType.STRING).setCellValue(((BlockedStatus) fv).reason);
-                            } else {
-                                itmRow.createCell(i + 1, CellType.STRING).setCellValue("");
-                            }
-                        }
-                        break;
-                    }
-                    case "customId": {
-                        Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
-                        if (fv != null) {
-                            itmRow.createCell(i + 1, CellType.STRING).setCellValue(((CustomId) fv).value);
-                        }
-                        break;
-                    }
-                    // Not sure why this is in the plural as I have only ever seen one
-                    case "externalLinks": {
-                        Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
-                        if (fv != null) {
-                            itmRow.createCell(i + 1, CellType.STRING).setCellValue(
-                                    ((ExternalLink) fv).label.replace(",", " ") + "," + ((ExternalLink) fv).url);
-                        }
-                        break;
-                    }
-                    case "lane": {
-                        Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
-                        if (fv != null) {
-                            itmRow.createCell(i + 1, CellType.STRING)
-                                    .setCellValue(Utils.getLanePathFromId(cfg, cfg.source, ((Lane) fv).id));
-                        }
-                        break;
-                    }
-                    case "parentCards": {
-                        break;
-                    }
-                    case "srcID": {
-                        itmRow.createCell(i + 1, CellType.STRING).setCellValue(c.id);
-                        if (cfg.addComment) {
-                            chrRowIncr++;
-                            createChangeRow(CRIdx + chrRowIncr, IRIdx, "Modify", "Comment",
-                                    Utils.getUrl(cfg, cfg.source) + "/card/" + c.id);
-                        }
-                        break;
-                    }
-                    case "tags": {
-                        Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
-                        if (fv != null) {
-                            itmRow.createCell(i + 1, CellType.STRING).setCellValue(String.join(",", ((String[]) fv)));
-                        }
-                        break;
-                    }
-                    case "taskBoardStats": {
-                        break;
-                    }
-
-                    case "type": {
-                        Object fv = c.getClass().getField("cardType").get(c);
-                        if (fv != null) {
-                            itmRow.createCell(i + 1, CellType.STRING).setCellValue(((CardType) fv).name);
-                            break;
-                        }
-                    }
-                    default: {
-                        Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
-                        if (fv != null) {
-                            switch (fv.getClass().getSimpleName()) {
-                                case "String": {
-                                    itmRow.createCell(i + 1, CellType.STRING).setCellValue(fv.toString());
-                                    break;
-                                }
-                                case "Boolean": {
-                                    itmRow.createCell(i + 1, CellType.BOOLEAN).setCellValue(((Boolean) fv));
-                                    break;
-                                }
-                                case "Integer": {
-                                    itmRow.createCell(i + 1, CellType.NUMERIC).setCellValue(((Integer) fv));
-                                    break;
-                                }
-
-                                case "Date": {
-                                    SimpleDateFormat dtf = new SimpleDateFormat("yyyy-MM-dd");
-                                    Cell cl = itmRow.createCell(i + 1);
-                                    cl.setCellValue(dtf.format(((Date) fv)).toString());
-
-                                    break;
-                                }
-
-                                default: {
-                                    System.out.printf("Unknown class: %s", fv.getClass().getSimpleName());
-                                }
-                            }
-
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        itmRowIdx += itmRowIncr;
-        chgRowIdx += chrRowIncr;
+        Changes changeTotal = new Changes();
+        changeTotal.currChgRow = chgRow;
+        changeTotal.currItmRow = itmRow;
+        return changeTotal;
     }
 
     private void createChangeRow(Integer CRIdx, Integer IRIdx, String action, String field, String value) {
