@@ -16,7 +16,6 @@ Option | Argument | Description
 -f | \<file\> | Name of the Xlsx file to use for reading/writing
 -x | \<level\> |  Output levels of debug statements: 0 = Errors, 1 = +Info, 2 = +Warnings, 3 = +Debug, 4 = +Verbose
 -i |  | Run importer only
-
 -e |  | Run exporter only 
 -t |  | Run importer and exporter together (Currently NOT IMPLEMENTED and does nothing)
 -g | \<group\> | Mark exported items with this groupId ready for selection on import. Select only items marked with this group for import
