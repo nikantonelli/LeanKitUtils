@@ -8,7 +8,7 @@ The app does its work through the medium of an Excel spreadsheet. This has more 
 
 The app may also require you to have read/write access on the directory you are running it from. This is to store the attachment files if you have asked for them to be exported.
 
-The basic requirement to fire off the app is a file with a single sheet in it. The columns of the sheet must be: 'direction', 'url', 'username', 'password', 'apiKey' and 'boardId'. The first row found with 'src' as the entry under direction will be used by the exporter. The first row found with 'dst' will be used be the importer.
+The basic requirement to fire off the app is a file with a single sheet in it. The columns of the sheet must be: 'direction', 'url', 'username', 'password', 'apiKey' and 'boardId'. The first row found with 'src' as the entry under direction will be used by the exporter. The first row found with 'dst' will be used by the importer.
 
 You need to provide either a username/password pair or apiKey that is valid for the url you wish to access. 
 
@@ -23,11 +23,11 @@ Option | Argument | Description
 -e |  | Run exporter only 
 -t |  | Run importer and exporter sequentially
 -g | \<group\> | Mark exported items with this groupId ready for selection on import. Select only items marked with this group for import
--oO |  | Include _Older_ archived items during export
--oA |  | Include _Attachments_ in export - these get placed in your current working directory 
--oT |  | Include _Tasks_ in export (does not export task attachments or comments! ....yet) 
--oC |  | Include  _Comments_ in export
--oS |  | Include a comment in export containing link to original _Source_
+-O |  | Include _Older_ archived items during export
+-A |  | Include _Attachments_ in export - these get placed in your current working directory 
+-T |  | Include _Tasks_ in export
+-C |  | Include  _Comments_ in export
+-S |  | Include a comment in export containing link to original _Source_
  
 # Features and Usage
  
