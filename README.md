@@ -14,8 +14,6 @@ You need to provide either a username/password pair or apiKey that is valid for 
 
 To get the board id, log into the system at the url, navigate to the board of interest and take the digit string from the end of the URL in the browser address bar.
 
-The exporter will create sheets in the Xlsx file that correspond to the boardId that will be needed by the importer (if you progress to that stage). The exporter does not export any history information and takes a snapshot of what is there right now.
-
 # Command Line Options
 Option | Argument | Description 
 ------ | -------- | -----------
@@ -29,4 +27,14 @@ Option | Argument | Description
 -oa |  | Include attachments for export - these get placed in your current working directory 
 -ot |  | Export tasks (does not export task attachments or comments! ....yet) 
 -oc |  | Include comments in export
+ 
+# Features and Usage
+ 
+The exporter will create sheets in the Xlsx file that correspond to the boardId that will be needed by the importer (if you progress to that stage). The exporter does not export any history information and takes a snapshot of what is there right now.
+ 
+You can re-use the same spreadsheet to export multiple boards as each one is saved under a different sheet name
+
+If you are running the export in order to run the importer, you must copy (or rename) the sheet entitled Changes_<boardid> to a sheet called just Changes. 
+ 
+If you want to merge boards together into one destination board, you can concatenate multiple changes sheet together, leaving the board item sheets as they are. E.g. merge sheets called "Changes_1598676317" and "Changes_1606150498" (created by the exporter) into one sheet called "Changes" and then run the importer. Remember! You will have issues with Lanes if the layouts of the boards are imcompatible. All items that cannot be put into a correct lane will end up in the default drop lane - this can get messy. To recover, you can delete all the items in the default drop lane that aren't supposed to be there and set the value in the Group column in the Changes sheet to something memorable (e.g. 99) for those items you want to recreate and modify. Then rerun the importer with the -g option with that group number.
  
