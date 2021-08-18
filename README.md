@@ -11,10 +11,10 @@ The basic requirement to fire off the app is a file with a single sheet in it. T
 You need to provide either a username/password pair or apiKey that is valid for the url you wish to access. To get the board id, log into the system at the url, navigate to the board of interest and take the digit string from the end of the URL in the browser address bar.
 
 # Command Line Options
-
-* -f \<file\>    Name of the Xlsx file to use for reading/writing
-* -x \<level\>   Output levels of debug statements: 0 = Errors, 1 = +Info, 2 = +Warnings, 3 = +Debug, 4 = +Verbose
-* -i           Run importer only
+ | | 
+-f | \<file\> | Name of the Xlsx file to use for reading/writing
+-x | \<level\> |  Output levels of debug statements: 0 = Errors, 1 = +Info, 2 = +Warnings, 3 = +Debug, 4 = +Verbose
+-i |  | Run importer only
 * -e           Run exporter only 
 * -t           Run importer and exporter together (Currently NOT IMPLEMENTED and does nothing)
 * -g \<group\>   Mark exported items with this groupId ready for selection on import. Select only items marked with this group for import
