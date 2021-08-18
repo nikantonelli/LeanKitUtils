@@ -7,6 +7,8 @@ import com.planview.lkutility.InternalConfig;
 
 public class AccessCache {
     HashMap<String, Board> boardMap = new HashMap<>();
+    HashMap<String, Card> cardMap = new HashMap<>();
+    HashMap<String, Task> taskMap = new HashMap<>();
     InternalConfig iCfg;
     Configuration accessCfg;
     
@@ -32,5 +34,24 @@ public class AccessCache {
             }
         }
         return brd;
+    }
+    
+    public void setCard(Card card) {
+        if (cardMap.get(card.id) != null){
+            cardMap.remove(card.id);
+        }
+        cardMap.put(card.id, card);
+    }
+
+    public Card getCard(String cardId){
+        Card card = cardMap.get(cardId);
+        if (card == null) {
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+        card = lka.fetchCard(cardId);
+            if (card != null) {
+                setCard(card);
+            }
+        }
+        return card;
     }
 }

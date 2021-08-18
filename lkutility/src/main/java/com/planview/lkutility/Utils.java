@@ -1,11 +1,13 @@
 package com.planview.lkutility;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Iterator;
 
+import com.planview.lkutility.leankit.Attachment;
 import com.planview.lkutility.leankit.Board;
 import com.planview.lkutility.leankit.Card;
 import com.planview.lkutility.leankit.CardType;
@@ -116,11 +118,26 @@ public class Utils {
         return lka.getCurrentUrl();
     }
 
-    public static Card getCard(InternalConfig iCfg, Configuration accessCfg, String id) {
-        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
-        return lka.fetchCard(id);
+    public static Card getCard(InternalConfig iCfg, String id) {
+        Card card = null;
+        if (iCfg.cache != null) {
+            card = iCfg.cache.getCard(id) ;  
+        }
+        return card;
     }
 
+    public static byte[] getAttachment(InternalConfig iCfg, Configuration accessCfg, String cardId, String attId) {
+        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+        return lka.fetchAttachment(cardId, attId);
+    }
+
+    /**
+     * BEWARE: reading cards from a board will give you a reduced field set - BUT WON'T TELL YOU!
+     * 
+     * @param iCfg
+     * @param accessCfg
+     * @return ArrayList<Card>
+     */
     public static ArrayList<Card> readCardsFromBoard(InternalConfig iCfg, Configuration accessCfg) {
         LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
         ArrayList<Card> cards = lka.fetchCardsFromBoard(accessCfg.boardId, iCfg.exportArchived, iCfg.exportTasks); 

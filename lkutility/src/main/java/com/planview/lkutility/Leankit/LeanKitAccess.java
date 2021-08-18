@@ -21,6 +21,7 @@ import com.planview.lkutility.Debug;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
+import org.apache.http.ParseException;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
@@ -246,6 +247,16 @@ public class LeanKitAccess {
     }
 
     private String processRequest() {
+        try {
+            return EntityUtils.toString(processRawRequest());
+        } catch (ParseException | IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private HttpEntity processRawRequest() {
 
         // Deal with delays, retries and timeouts
         HttpClientBuilder cbldr = HttpClients.custom().setConnectionManager(cm);
@@ -256,7 +267,7 @@ public class LeanKitAccess {
         cbldr.setDefaultRequestConfig(configBuilder.build());
         CloseableHttpClient client = cbldr.build();
         HttpResponse httpResponse = null;
-        String result = null;
+        HttpEntity result = null;
         try {
             // Add the user credentials to the request
             if (config.apiKey != null) {
@@ -309,7 +320,7 @@ public class LeanKitAccess {
                 case 200: // Card updated
                 case 201: // Card created
                 {
-                    result = EntityUtils.toString(httpResponse.getEntity());
+                    result = httpResponse.getEntity();
                     entityTaken = true;
                     break;
                 }
@@ -342,7 +353,7 @@ public class LeanKitAccess {
                     } catch (InterruptedException e) {
                         d.p(Debug.ERROR, "(L2) %s\n", e.getMessage());
                     }
-                    result = processRequest();
+                    result = processRawRequest();
                     break;
                 }
                 case 422: { // Unprocessable Parameter
@@ -368,7 +379,7 @@ public class LeanKitAccess {
                     } catch (InterruptedException e) {
                         d.p(Debug.ERROR, "(L1) %s\n", e.getMessage());
                     }
-                    result = processRequest();
+                    result = processRawRequest();
                     break;
                 }
                 default: {
@@ -512,6 +523,29 @@ public class LeanKitAccess {
         ArrayList<Board> results = read(Board.class);
         if (results != null) {
             return results.get(0);
+        }
+        return null;
+    }
+    public byte[] fetchAttachment(String cardId, String attId) {
+        reqType = "GET";
+        reqParams.clear();
+        reqHdrs.clear();
+        reqUrl = "io/card/" + cardId + "/attachment/" + attId + "/content";
+
+        HttpEntity he = processRawRequest();
+        String[] typeStr = he.getContentType().getValue().split(";");
+        switch (typeStr[0]) {
+            case "image/jpeg":
+            default: {
+                d.p(Debug.INFO, "Downloaded attachment type: %s\n", typeStr[0]);
+                try {
+                    return EntityUtils.toByteArray(he);
+                } catch (IOException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+                break;
+            }
         }
         return null;
     }

@@ -1,6 +1,11 @@
 package com.planview.lkutility.exporter;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -12,8 +17,10 @@ import com.planview.lkutility.InternalConfig;
 import com.planview.lkutility.SupportedXlsxFields;
 import com.planview.lkutility.Utils;
 import com.planview.lkutility.leankit.AccessCache;
+import com.planview.lkutility.leankit.Attachment;
 import com.planview.lkutility.leankit.BlockedStatus;
 import com.planview.lkutility.leankit.Card;
+import com.planview.lkutility.leankit.Comment;
 import com.planview.lkutility.leankit.CustomId;
 import com.planview.lkutility.leankit.ExternalLink;
 import com.planview.lkutility.leankit.ItemType;
@@ -73,7 +80,12 @@ public class Exporter {
         if (chShtIdx >= 0) {
             cfg.wb.removeSheetAt(chShtIdx);
         }
-        changeSht = cfg.wb.createSheet(InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.source.boardId);
+
+        if (!cfg.dualFlow) {
+            changeSht = cfg.wb.createSheet(InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.source.boardId);
+        } else {
+            changeSht = cfg.wb.createSheet(InternalConfig.CHANGES_SHEET_NAME);
+        }
 
         Integer itemShtIdx = cfg.wb.getSheetIndex(cfg.source.boardId);
         if (itemShtIdx >= 0) {
@@ -133,7 +145,7 @@ public class Exporter {
              * Due to the seemingly brain-dead api, we have to re-fetch the cards to get the
              * relevant parent information.
              */
-            c = Utils.getCard(cfg, cfg.source, c.id);
+            c = Utils.getCard(cfg, c.id);
 
             /* Write a 'Create' line to the changes sheet */
             // We can only write out cards here. Tasks are handled differently
@@ -203,6 +215,46 @@ public class Exporter {
             itmRowIncr = 0;
             try {
                 switch (pbFields[i].getName()) {
+
+                    case "attachments": {
+                        Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
+                        if ((fv != null) && cfg.exportAttachments) {
+                            Attachment[] atts = ((Attachment[]) fv);
+                            if (atts.length > 0) {
+                                /**
+                                 * If the attachments length is greater than zero, try to create a sub folder in
+                                 * the current directory called attachments. Then try to make a sub-subfolder
+                                 * based on the card id. Then add a file entitled based on the attachment of
+                                 */
+                                Files.createDirectories(Paths.get("attachments/" + c.id));
+
+                            }
+                            for (int j = 0; j < atts.length; j++) {
+                                File af = new File("attachments/" + c.id + "/" + atts[j].name);
+                                FileOutputStream fw = new FileOutputStream(af);
+                                byte[] data = (byte[]) Utils.getAttachment(cfg, cfg.source, c.id, atts[j].id);
+                                fw.write(data, 0, data.length);
+                                fw.flush();
+                                fw.close();
+                                chrRowIncr++;
+                                createChangeRow(CRIdx + chrRowIncr, IRIdx, "Modify", "Attachment", af.getPath());
+                            }
+                        }
+                        break;
+                    }
+                    case "comments": {
+                        Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
+                        if ((fv != null) && cfg.exportComments) {
+                            Comment[] cmts = (Comment[]) fv;
+                            for (int j = 0; j < cmts.length; j++) {
+                                chrRowIncr++;
+                                createChangeRow(CRIdx + chrRowIncr, IRIdx, "Modify", "Comment",
+                                        String.format("%s : %s wrote: \n", cmts[j].createdOn,
+                                                cmts[j].createdBy.fullName) + cmts[j].text);
+                            }
+                        }
+                        break;
+                    }
                     /**
                      * We need to extract the blockedStatus type and re-create a blockReason
                      */
@@ -322,7 +374,10 @@ public class Exporter {
 
                                     break;
                                 }
-
+                                // Ignore these pseudo-fields
+                                case "ParentCard": {
+                                    break;
+                                }
                                 default: {
                                     System.out.printf("Unknown class: %s", fv.getClass().getSimpleName());
                                 }
@@ -390,6 +445,9 @@ public class Exporter {
                             itmRow.createCell(i + 1, CellType.STRING)
                                     .setCellValue(Utils.getLanePathFromId(cfg, cfg.source, ((Lane) fv).id));
                         }
+                        break;
+                    }
+                    case "parentCards": {
                         break;
                     }
                     case "srcID": {

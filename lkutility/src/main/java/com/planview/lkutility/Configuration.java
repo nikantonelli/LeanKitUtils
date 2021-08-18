@@ -9,6 +9,7 @@ import java.util.Base64;
  */
 
 public class Configuration {
+    public String direction;
     public String url;  //Must be first in this object.
     public String username;
     public String password;

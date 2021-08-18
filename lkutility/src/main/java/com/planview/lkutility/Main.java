@@ -46,7 +46,6 @@ public class Main {
      * Therefore this is extracted once and passed to all sub tasks
      */
     static InternalConfig config = new InternalConfig();
-    static Boolean dualFlow = false;
 
     public static void main(String[] args) {
         d = new Debug();
@@ -57,12 +56,11 @@ public class Main {
         config.cm.setMaxTotal(5); // Recommendation fron LeanKit
 
         if (setToExport == true) {
-            if (dualFlow == false) {
-                Exporter expt = new Exporter();
-                expt.go(config);
-            } else {
-                Transporter trpt = new Transporter();
-                trpt.go(config);
+            Exporter expt = new Exporter();
+            expt.go(config);
+            if (config.dualFlow == true) {
+                Importer impt = new Importer();
+                impt.go(config);
             }
         } else {
             Importer impt = new Importer();
@@ -119,7 +117,7 @@ public class Main {
                 d.p(Debug.INFO, "Defaulting to Export mode\n");
             } else {
                 d.p(Debug.INFO, "Setting to Dual mode\n");
-                dualFlow = true;
+                config.dualFlow = true;
             }
         }
 
@@ -136,7 +134,7 @@ public class Main {
 
         // We now need to check for all the other unique options
 
-        if (dualFlow == false) {
+        if (config.dualFlow == false) {
             Option groupOpt = new Option("g", "group", true, "Identifier of group to process (if present)");
             groupOpt.setRequired(false);
             impExpOpt.addOption(groupOpt);
@@ -144,21 +142,24 @@ public class Main {
             CommandLine cl = null;
 
             if (setToExport == true) {
-                Option archiveOpt = new Option("oo", "archived", false, "Include older Archived cards in export (if present)");
+                Option archiveOpt = new Option("oo", "archived", false,
+                        "Include older Archived cards in export (if present)");
                 archiveOpt.setRequired(false);
                 impExpOpt.addOption(archiveOpt);
                 Option tasksOpt = new Option("ot", "tasks", false, "Include Task cards in export (if present)");
                 tasksOpt.setRequired(false);
                 impExpOpt.addOption(tasksOpt);
-                Option attsOpt = new Option("oa", "attachments", false, "Export card attachments in local filesystem (if present)");
+                Option attsOpt = new Option("oa", "attachments", false,
+                        "Export card attachments in local filesystem (if present)");
                 attsOpt.setRequired(false);
-                impExpOpt.addOption(attsOpt);            
-                Option comsOpt = new Option("oc", "comments", false, "Export card comments in local filesystem (if present)");
+                impExpOpt.addOption(attsOpt);
+                Option comsOpt = new Option("oc", "comments", false,
+                        "Export card comments in local filesystem (if present)");
                 comsOpt.setRequired(false);
-                impExpOpt.addOption(comsOpt);   
+                impExpOpt.addOption(comsOpt);
                 Option originOpt = new Option("os", "origin", false, "Add comment for source artifact recording");
                 originOpt.setRequired(false);
-                impExpOpt.addOption(originOpt);            
+                impExpOpt.addOption(originOpt);
             }
             try {
                 cl = p.parse(impExpOpt, args);
@@ -189,7 +190,7 @@ public class Main {
             }
 
         } else {
-            //TODO: Set transfer opts here
+            // TODO: Set transfer opts here
         }
     }
 
@@ -310,21 +311,18 @@ public class Main {
                     "Did not detect any field info on Config sheet (first cell must be non-blank, e.g. url to a real host)");
             System.exit(11);
         }
-        // Now we know which columns contain the data, scan down the sheet looking for a
-        // row with data in the 'url' cell
-        Configuration cfg = config.source;
-        if (!setToExport) {
-            cfg = config.destination;
-        }
-        Row drRow = ri.next();
-        while (!parseRow(drRow, cfg, p, fieldMap, cols)) {
-            drRow = ri.next();
-        }
 
-        if (dualFlow) {
-            cfg = config.destination;
-            while (!parseRow(drRow, cfg, p, fieldMap, cols)) {
-                drRow = ri.next();
+        while (ri.hasNext() && ((config.source.url == null) || (config.destination.url == null))) {
+            Row rtc = ri.next();
+            if (rtc.getCell(0).getStringCellValue().equals("src")) {
+                if (config.source.url == null) {
+                    parseRow(rtc, config.source, p, fieldMap, cols);
+                }
+            }
+            if (rtc.getCell(0).getStringCellValue().equals("dst")) {
+                if (config.destination.url == null) {
+                    parseRow(rtc, config.destination, p, fieldMap, cols);
+                }
             }
         }
 
@@ -334,10 +332,19 @@ public class Main {
          * code the field names in here, even though I was trying to use the fields from
          * the Configuration class.
          **/
-
-        if ((cfg.apiKey == null) && ((cfg.username == null) || (cfg.password == null))) {
-            d.p(Debug.ERROR, "%s", "Did not detect enough user info: apikey or username/password pair");
-            System.exit(13);
+        if ((config.source.url != null) && (setToExport || config.dualFlow)){
+            if (((config.source.apiKey == null) || (config.source.boardId == null))
+                    && ((config.source.username == null) || (config.source.password == null))) {
+                d.p(Debug.ERROR, "%s", "Did not detect enough source info: apikey or username/password pair");
+                System.exit(13);
+            }
+        }
+        if ((config.destination.url != null) && ((!setToExport) || config.dualFlow)){
+            if (((config.destination.apiKey == null) || (config.destination.boardId == null))
+                    && ((config.destination.username == null) || (config.destination.password == null))) {
+                d.p(Debug.ERROR, "%s", "Did not detect enough destination info: apikey or username/password pair");
+                System.exit(13);
+            }
         }
 
         return;

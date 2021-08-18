@@ -29,5 +29,6 @@ public class InternalConfig {
     public Boolean addComment = false;
     public Integer group = 0;
     public AccessCache cache = null;    //Set later.
+    public Boolean dualFlow = false;
 }
 

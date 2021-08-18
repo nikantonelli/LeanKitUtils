@@ -24,9 +24,12 @@ public class SupportedXlsxFields {
     /**
      * These are pseudo-fields. When these are seen, some extra
      * activity needs to take place and not be sent to the spreadsheet
+     * Compiler gives warning which we will ignore.
      */
     private TaskBoardStats taskBoardStats;
-    private ParentCard parentCards; //Should be an array of ParentCards, but who cares!
+    private ParentCard[] parentCards;
+    private Comment[] comments;
+    private Attachment[] attachments;
     
     /**
      * Unsupported or unsupportable
@@ -45,18 +48,5 @@ public class SupportedXlsxFields {
     public Board board;
     public Boolean isBlocked;
     public Attachment[] attachments;
-    public Comment[] comments;
     */
-
-    /**
-     * Add code to shut up the VS Code compiler warnings
-     * about the private class members. Don't want to turn the warning
-     * off as it is quite useful.
-     */
-    public SupportedXlsxFields() {
-        taskBoardStats = new TaskBoardStats();
-        taskBoardStats.totalCount = 0;
-        parentCards = new ParentCard();
-        parentCards.cardId = "";
-    }
 }
