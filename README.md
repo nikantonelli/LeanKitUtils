@@ -14,6 +14,8 @@ You need to provide either a username/password pair or apiKey that is valid for 
 
 To get the board id, log into the system at the url, navigate to the board of interest and take the digit string from the end of the URL in the browser address bar.
 
+The exporter will create sheets in the Xlsx file that correspond to the boardId that will be needed by the importer (if you progress to that stage). The exporter does not export any history information and takes a snapshot of what is there right now.
+
 # Command Line Options
 Option | Argument | Description 
 ------ | -------- | -----------
