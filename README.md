@@ -23,11 +23,11 @@ Option | Argument | Description
 -e |  | Run exporter only 
 -t |  | Run importer and exporter sequentially
 -g | \<group\> | Mark exported items with this groupId ready for selection on import. Select only items marked with this group for import
--oO |  | Include _Older_ archived items during export
--oA |  | Include _Attachments_ in export - these get placed in your current working directory 
--oT |  | Include _Tasks_ in export
--oC |  | Include  _Comments_ in export
--oS |  | Include a comment in export containing link to original _Source_
+-O |  | Include _Older_ archived items during export
+-A |  | Include _Attachments_ in export - these get placed in your current working directory 
+-T |  | Include _Tasks_ in export
+-C |  | Include  _Comments_ in export
+-S |  | Include a comment in export containing link to original _Source_
  
 # Features and Usage
  
