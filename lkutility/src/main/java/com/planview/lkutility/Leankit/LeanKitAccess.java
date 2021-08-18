@@ -250,7 +250,6 @@ public class LeanKitAccess {
         try {
             return EntityUtils.toString(processRawRequest());
         } catch (ParseException | IOException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
         return null;
@@ -479,17 +478,13 @@ public class LeanKitAccess {
         reqUrl = "io/card/" + cd.id + "/comment";
         return read(Comment.class);
     }
-    
-    public ArrayList<Card> fetchCardsFromBoard(String id, Boolean includeArchived) {
-        return fetchCardsFromBoard(id, includeArchived, false);
-    }
 
-    public ArrayList<Card> fetchCardIdsFromBoard(String id, Boolean includeArchived, Boolean includeTasks) {
+    public ArrayList<Card> fetchCardIdsFromBoard(String id, Boolean includeArchived) {
         reqParams.add(new BasicNameValuePair("only", "id"));
-        return fetchCardsFromBoard(id, includeArchived, includeTasks);
+        return fetchCardsFromBoard(id, includeArchived);
     }
 
-    public ArrayList<Card> fetchCardsFromBoard(String id, Boolean includeArchived, Boolean includeTasks) {
+    public ArrayList<Card> fetchCardsFromBoard(String id, Boolean includeArchived) {
         reqParams.clear();
         reqParams.add(new BasicNameValuePair("board", id));
         reqParams.add(new BasicNameValuePair("limit", "200"));
@@ -541,7 +536,6 @@ public class LeanKitAccess {
                 try {
                     return EntityUtils.toByteArray(he);
                 } catch (IOException e) {
-                    // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
                 break;

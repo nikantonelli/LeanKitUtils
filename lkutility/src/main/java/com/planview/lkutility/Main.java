@@ -11,7 +11,6 @@ import java.util.Iterator;
 
 import com.planview.lkutility.exporter.Exporter;
 import com.planview.lkutility.importer.Importer;
-import com.planview.lkutility.transporter.Transporter;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -142,22 +141,22 @@ public class Main {
             CommandLine cl = null;
 
             if (setToExport == true) {
-                Option archiveOpt = new Option("oo", "archived", false,
+                Option archiveOpt = new Option("oO", "archived", false,
                         "Include older Archived cards in export (if present)");
                 archiveOpt.setRequired(false);
                 impExpOpt.addOption(archiveOpt);
-                Option tasksOpt = new Option("ot", "tasks", false, "Include Task cards in export (if present)");
+                Option tasksOpt = new Option("oT", "tasks", false, "Include Task cards in export (if present)");
                 tasksOpt.setRequired(false);
                 impExpOpt.addOption(tasksOpt);
-                Option attsOpt = new Option("oa", "attachments", false,
+                Option attsOpt = new Option("oA", "attachments", false,
                         "Export card attachments in local filesystem (if present)");
                 attsOpt.setRequired(false);
                 impExpOpt.addOption(attsOpt);
-                Option comsOpt = new Option("oc", "comments", false,
+                Option comsOpt = new Option("oC", "comments", false,
                         "Export card comments in local filesystem (if present)");
                 comsOpt.setRequired(false);
                 impExpOpt.addOption(comsOpt);
-                Option originOpt = new Option("os", "origin", false, "Add comment for source artifact recording");
+                Option originOpt = new Option("oS", "origin", false, "Add comment for source artifact recording");
                 originOpt.setRequired(false);
                 impExpOpt.addOption(originOpt);
             }
@@ -188,9 +187,6 @@ public class Main {
             if (cl.hasOption("origin")) {
                 config.addComment = true;
             }
-
-        } else {
-            // TODO: Set transfer opts here
         }
     }
 

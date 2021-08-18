@@ -2,7 +2,6 @@ package com.planview.lkutility.exporter;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -151,7 +150,7 @@ public class Exporter {
             // We can only write out cards here. Tasks are handled differently
 
             createChangeRow(chgRowIdx, itmRowIdx, "Create", "", "");
-            createItemRowFromCard(chgRowIdx, itmRowIdx, c, checkFields); // checkFields contains extra that indicate
+            createItemRowFromCard(c, checkFields); // checkFields contains extra that indicate
                                                                          // that we
 
             // Do these after because we might have changed the index in the subr calls
@@ -205,14 +204,12 @@ public class Exporter {
      * SupportedXlsxField.java The importer will select the fields correctly for the
      * type of item
      */
-    public void createItemRowFromCard(Integer CRIdx, Integer IRIdx, Card c, Field[] pbFields) {
+    public void createItemRowFromCard(Card c, Field[] pbFields) {
 
         Integer chrRowIncr = 0;
         Integer itmRowIncr = 0;
-        Row itmRow = itemSht.createRow(IRIdx);
+        Row itmRow = itemSht.createRow(itmRowIdx);
         for (int i = 0; i < pbFields.length; i++) {
-            chrRowIncr = 0;
-            itmRowIncr = 0;
             try {
                 switch (pbFields[i].getName()) {
 
@@ -237,7 +234,7 @@ public class Exporter {
                                 fw.flush();
                                 fw.close();
                                 chrRowIncr++;
-                                createChangeRow(CRIdx + chrRowIncr, IRIdx, "Modify", "Attachment", af.getPath());
+                                createChangeRow(chgRowIdx + chrRowIncr, itmRowIdx, "Modify", "Attachment", af.getPath());
                             }
                         }
                         break;
@@ -248,7 +245,7 @@ public class Exporter {
                             Comment[] cmts = (Comment[]) fv;
                             for (int j = 0; j < cmts.length; j++) {
                                 chrRowIncr++;
-                                createChangeRow(CRIdx + chrRowIncr, IRIdx, "Modify", "Comment",
+                                createChangeRow(chgRowIdx + chrRowIncr, itmRowIdx, "Modify", "Comment",
                                         String.format("%s : %s wrote: \n", cmts[j].createdOn,
                                                 cmts[j].createdBy.fullName) + cmts[j].text);
                             }
@@ -315,7 +312,7 @@ public class Exporter {
                         itmRow.createCell(i + 1, CellType.STRING).setCellValue(c.id);
                         if (cfg.addComment) {
                             chrRowIncr++;
-                            createChangeRow(CRIdx + chrRowIncr, IRIdx, "Modify", "Comment",
+                            createChangeRow(chgRowIdx + chrRowIncr, itmRowIdx, "Modify", "Comment",
                                     Utils.getUrl(cfg, cfg.source) + "/card/" + c.id);
                         }
                         break;
@@ -338,10 +335,10 @@ public class Exporter {
                             for (int j = 0; j < tasks.size(); j++) {
                                 chrRowIncr++;
                                 itmRowIncr++;
-                                createChangeRow(CRIdx + chrRowIncr, IRIdx, "Modify", "Task",
-                                        "='" + cfg.source.boardId + "'!A" + (IRIdx + itmRowIncr + 1));
+                                createChangeRow(chgRowIdx + chrRowIncr, itmRowIdx, "Modify", "Task",
+                                        "='" + cfg.source.boardId + "'!A" + (itmRowIdx + itmRowIncr + 1));
                                 // Now create the item row itself
-                                createItemRowFromTask(CRIdx + chrRowIncr, IRIdx + itmRowIncr, tasks.get(j), pbFields);
+                                createItemRowFromTask(chgRowIdx + chrRowIncr, itmRowIdx + itmRowIncr, tasks.get(j), pbFields);
                             }
                         }
 
