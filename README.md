@@ -21,6 +21,6 @@ Option | Argument | Description
 -g | \<group\> | Mark exported items with this groupId ready for selection on import. Select only items marked with this group for import
 -oo |  | Include older archived items during export
 -oa |  | Include attachments for export - these get placed in your current working directory 
--ot |  | Export tasks (does not export task attachments or comments!) 
+-ot |  | Export tasks (does not export task attachments or comments! ....yet) 
 -oc |  | Include comments in export
  
