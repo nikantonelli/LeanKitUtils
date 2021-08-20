@@ -73,6 +73,7 @@ public class Exporter {
          */
 
         cfg = config;
+        d.setLevel(config.debugLevel);
         cfg.cache = new AccessCache(cfg, cfg.source);
 
         Integer chShtIdx = cfg.wb.getSheetIndex(InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.source.boardId);
@@ -185,7 +186,7 @@ public class Exporter {
         /**
          * Open the output stream and send the file back out.
          */
-        Utils.writeFile(cfg.xlsxfn, cfg.wb);
+        Utils.writeFile(cfg, cfg.xlsxfn, cfg.wb);
     }
 
     public Integer findRowBySourceId(XSSFSheet itemSht, String cardId) {

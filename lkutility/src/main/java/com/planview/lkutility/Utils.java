@@ -16,8 +16,9 @@ import com.planview.lkutility.leankit.Task;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class Utils {
-    static public void writeFile(String xlsxfn, XSSFWorkbook wb) {
-        Debug d = new Debug();
+    static Debug d = new Debug();
+    static public void writeFile(InternalConfig iCfg, String xlsxfn, XSSFWorkbook wb) {
+        d.setLevel(iCfg.debugLevel);
         Boolean donePrint = true;
         Integer loopCnt = 12;
         while (loopCnt > 0) {
@@ -108,6 +109,7 @@ public class Utils {
                 return lanes[i];
             }
         }
+        d.p(Debug.WARN, "Failed to find lane %s in board\n", id);
         return null;
     }
 
@@ -174,6 +176,7 @@ public class Utils {
                 return ct;
             }
         }
+        d.p(Debug.WARN, "Failed to find CardType %s in board\n", id);
         return null;
     }
 }

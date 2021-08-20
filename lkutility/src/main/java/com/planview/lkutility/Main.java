@@ -91,7 +91,7 @@ public class Main {
         impExpOpt.addRequiredOption("f", "filename", true, "XLSX Spreadsheet (must contain API config!)");
 
         Option dbp = new Option("x", "debug", true,
-                "Print out loads of helpful stuff: 0 - Info, 1 - And Errors, 2 - And Warnings, 3 - And Debugging, 4 - Verbose");
+                "Print out loads of helpful stuff: 0 - Error, 1 - And Info, 2 - And Warnings, 3 - And Debugging, 4 - Verbose");
         dbp.setRequired(false);
         impExpOpt.addOption(dbp);
 
@@ -104,6 +104,17 @@ public class Main {
             hf.printHelp(" ", impExpOpt);
             System.exit(5);
         }
+
+        if (impExpCl.hasOption("debug")) {
+            String optVal = impExpCl.getOptionValue("debug");
+            if (optVal != null) {
+                config.debugLevel = Integer.parseInt(optVal);
+                d.setLevel(config.debugLevel);
+            } else {
+                config.debugLevel = 99;
+            }
+        }
+
 
         /**
          * Import takes precedence if option present, then export, then transfer
