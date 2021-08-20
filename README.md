@@ -18,7 +18,7 @@ To get the board id, log into the system at the url, navigate to the board of in
 Option | Argument | Description 
 ------ | -------- | -----------
 -f | \<file\> | Name of the Xlsx file to use for reading/writing
--x | \<level\> |  Output levels of debug statements: 0 = Errors, 1 = +Info, 2 = +Warnings, 3 = +Debug, 4 = +Verbose
+-x | \<level\> |  Output levels of debug statements: 0 = Errors, 1 = +Warnings, 2 = +Info, 3 = +Debug, 4 = +Verbose
 -i |  | Run importer only
 -e |  | Run exporter only 
 -t |  | Run importer and exporter sequentially
