@@ -3,6 +3,7 @@ package com.planview.lkutility;
 import com.planview.lkutility.leankit.AccessCache;
 
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class InternalConfig {
@@ -30,5 +31,7 @@ public class InternalConfig {
     public Integer group = 0;
     public AccessCache cache = null;    //Set later.
     public Boolean dualFlow = false;
+    public XSSFSheet changesSheet = null;
+    public XSSFSheet itemSheet = null;
 }
 

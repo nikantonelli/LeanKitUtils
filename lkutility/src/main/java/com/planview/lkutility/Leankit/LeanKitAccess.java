@@ -679,7 +679,7 @@ public class LeanKitAccess {
             JSONObject values = (JSONObject) updates.get(key);
             switch (key) {
                 case "blockReason": {
-                    if (values.get("value1").toString().length() <= 1) {
+                    if (values.get("value").toString().length() <= 1) {
 
                         JSONObject upd = new JSONObject();
                         upd.put("op", "replace");
@@ -687,7 +687,7 @@ public class LeanKitAccess {
                         upd.put("value", false);
                         jsa.put(upd);
 
-                    } else if (values.get("value1").toString().startsWith("-")) {
+                    } else if (values.get("value").toString().startsWith("-")) {
                         // Make it startsWith rather than equals just
                         // in case user forgets
                         JSONObject upd1 = new JSONObject();
@@ -698,7 +698,7 @@ public class LeanKitAccess {
                         JSONObject upd2 = new JSONObject();
                         upd2.put("op", "add");
                         upd2.put("path", "/blockReason");
-                        upd2.put("value", values.get("value1").toString().substring(1));
+                        upd2.put("value", values.get("value").toString().substring(1));
                         jsa.put(upd2);
                     } else {
                         JSONObject upd1 = new JSONObject();
@@ -709,27 +709,27 @@ public class LeanKitAccess {
                         JSONObject upd2 = new JSONObject();
                         upd2.put("op", "add");
                         upd2.put("path", "/blockReason");
-                        upd2.put("value", values.get("value1").toString());
+                        upd2.put("value", values.get("value").toString());
                         jsa.put(upd2);
                     }
                     break;
                 }
                 case "Parent": {
-                    if ((values.get("value1") == null) || (values.get("value1").toString() == "")
-                            || (values.get("value1").toString() == "0")) {
+                    if ((values.get("value") == null) || (values.get("value").toString() == "")
+                            || (values.get("value").toString() == "0")) {
                         d.p(Debug.ERROR, "Trying to set parent of %s to value \"%s\"\n", card.id,
-                                values.get("value1").toString());
-                    } else if (values.get("value1").toString().startsWith("-")) {
+                                values.get("value").toString());
+                    } else if (values.get("value").toString().startsWith("-")) {
                         JSONObject upd2 = new JSONObject();
                         upd2.put("op", "remove");
                         upd2.put("path", "/parentCardId");
-                        upd2.put("value", values.get("value1").toString().substring(1));
+                        upd2.put("value", values.get("value").toString().substring(1));
                         jsa.put(upd2);
                     } else {
                         JSONObject upd2 = new JSONObject();
                         upd2.put("op", "add");
                         upd2.put("path", "/parentCardId");
-                        upd2.put("value", values.get("value1").toString());
+                        upd2.put("value", values.get("value").toString());
                         jsa.put(upd2);
                     }
                     break;
@@ -739,7 +739,7 @@ public class LeanKitAccess {
                     JSONObject upd1 = new JSONObject();
                     upd1.put("op", "replace");
                     upd1.put("path", "/laneId");
-                    upd1.put("value", values.get("value1").toString());
+                    upd1.put("value", values.get("value").toString());
                     jsa.put(upd1);
                     if (values.has("value2")) {
                         JSONObject upd2 = new JSONObject();
@@ -753,8 +753,8 @@ public class LeanKitAccess {
                 case "tags": {
                     // Need to add or remove based on what we already have?
                     // Or does add/remove ignore duplicate calls. Trying this first.....
-                    if (values.get("value1").toString().toString().startsWith("-")) {
-                        Integer tIndex = findTagIndex(card, values.get("value1").toString().substring(1));
+                    if (values.get("value").toString().toString().startsWith("-")) {
+                        Integer tIndex = findTagIndex(card, values.get("value").toString().substring(1));
                         // If we found it, we can remove it
                         if (tIndex >= 0) {
                             JSONObject upd = new JSONObject();
@@ -766,7 +766,7 @@ public class LeanKitAccess {
                         JSONObject upd = new JSONObject();
                         upd.put("op", "add");
                         upd.put("path", "/tags/-");
-                        upd.put("value", values.get("value1").toString());
+                        upd.put("value", values.get("value").toString());
                         jsa.put(upd);
                     }
                     break;
@@ -774,17 +774,17 @@ public class LeanKitAccess {
                 case "assignedUsers": {
                     // Need to add or remove based on what we already have?
                     // Or does add/remove ignore duplicate calls. Trying this first.....
-                    if (values.get("value1").toString().startsWith("-")) {
+                    if (values.get("value").toString().startsWith("-")) {
                         JSONObject upd = new JSONObject();
                         upd.put("op", "remove");
                         upd.put("path", "/assignedUserIds");
-                        upd.put("value", fetchUserId(values.get("value1").toString().substring(1)));
+                        upd.put("value", fetchUserId(values.get("value").toString().substring(1)));
                         jsa.put(upd);
                     } else {
                         JSONObject upd = new JSONObject();
                         upd.put("op", "add");
                         upd.put("path", "/assignedUserIds/-");
-                        upd.put("value", fetchUserId(values.get("value1").toString()));
+                        upd.put("value", fetchUserId(values.get("value").toString()));
                         jsa.put(upd);
                     }
                     break;
@@ -792,10 +792,10 @@ public class LeanKitAccess {
                 case "externalLink": {
                     JSONObject link = new JSONObject();
                     JSONObject upd = new JSONObject();
-                    String[] bits = values.get("value1").toString().split(",");
+                    String[] bits = values.get("value").toString().split(",");
                     if (bits.length != 2) {
                         d.p(Debug.WARN, "Could not extract externalLink from %s (possible ',' in label?)",
-                                values.get("value1").toString());
+                                values.get("value").toString());
                         break;
                     }
                     link.put("label", bits[0]);
@@ -810,7 +810,7 @@ public class LeanKitAccess {
                     if (brd.classOfServiceEnabled) {
                         if (brd.classesOfService != null) {
                             for (int i = 0; i < brd.classesOfService.length; i++) {
-                                if (brd.classesOfService[i].name.equals(values.get("value1"))) {
+                                if (brd.classesOfService[i].name.equals(values.get("value"))) {
                                     JSONObject upd = new JSONObject();
                                     upd.put("op", "replace");
                                     upd.put("path", "/customIconId");
@@ -824,12 +824,12 @@ public class LeanKitAccess {
                     break;
                 }
                 case "attachments": {
-                    sendAttachment(card.id, values.get("value1").toString());
+                    sendAttachment(card.id, values.get("value").toString());
                     break;
                 }
 
                 case "comments": {
-                    postComment(card.id, values.get("value1").toString());
+                    postComment(card.id, values.get("value").toString());
                     break;
                 }
 
@@ -837,7 +837,7 @@ public class LeanKitAccess {
                     CustomField[] cflds = brd.customFields;
                     if (cflds != null) {
                         for (int i = 0; i < cflds.length; i++) {
-                            if (cflds[i].label.equals(values.get("value1"))) {
+                            if (cflds[i].label.equals(values.get("value"))) {
                                 JSONObject upd = new JSONObject();
                                 JSONObject val = new JSONObject();
 
@@ -858,7 +858,7 @@ public class LeanKitAccess {
                     JSONObject upd = new JSONObject();
                     upd.put("op", "replace");
                     upd.put("path", "/" + key);
-                    upd.put("value", values.get("value1").toString().toLowerCase());
+                    upd.put("value", values.get("value").toString().toLowerCase());
                     jsa.put(upd);
                     break;
                 }
@@ -866,7 +866,7 @@ public class LeanKitAccess {
                     JSONObject upd = new JSONObject();
                     upd.put("op", "replace");
                     upd.put("path", "/" + key);
-                    upd.put("value", values.get("value1"));
+                    upd.put("value", values.get("value"));
                     jsa.put(upd);
                     break;
                 }
@@ -876,30 +876,25 @@ public class LeanKitAccess {
         reqUrl = "io/card/" + card.id;
         reqEnt = new StringEntity(jsa.toString(), "UTF-8");
         reqParams.clear();
-        reqHdrs.clear();
         return execute(Card.class);
 
     }
 
-    public Card createCard(String boardId, JSONObject jItem) {
+    public Card createCard(JSONObject jItem) {
         reqType = "POST";
         reqUrl = "io/card/";
+        reqParams.clear();
         reqParams.add(new BasicNameValuePair("returnFullRecord", "true"));
-        jItem.put("boardId", boardId);
-
-        if (!jItem.has("title")) {
-            jItem.put("title", "dummy title"); // Used when we are testing a create to get back the card structure
-        }
         reqEnt = new StringEntity(jItem.toString(), "UTF-8");
         return execute(Card.class);
     }
 
-    public Id createCardID(String boardId) {
+    public Id createCardID() {
         JSONObject jItem = new JSONObject();
         reqType = "POST";
+        reqParams.clear();
         reqParams.add(new BasicNameValuePair("returnFullRecord", "true"));
         reqUrl = "io/card/";
-        jItem.put("boardId", boardId);
         reqEnt = new StringEntity(jItem.toString(), "UTF-8");
         return execute(Id.class);
     }

@@ -33,7 +33,6 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
 
 /**
  * We need to get a unique board ID from the user or allow for a selection
@@ -59,9 +58,7 @@ public class Exporter {
     int itmRowIdx = 0;
     int chgRowIdx = 0;
 
-    XSSFSheet changeSht = null;
     Integer chShtIdx = -1; // Set to invalid as a precaution for misuse.
-    XSSFSheet itemSht = null;
 
     ArrayList<ParentChild> parentChild = new ArrayList<>();
     Debug d = new Debug();
@@ -76,22 +73,28 @@ public class Exporter {
         d.setLevel(config.debugLevel);
         cfg.cache = new AccessCache(cfg, cfg.source);
 
-        Integer chShtIdx = cfg.wb.getSheetIndex(InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.source.boardId);
-        if (chShtIdx >= 0) {
+        Integer chShtIdx = null;
+        if (!cfg.dualFlow) {
+            chShtIdx = cfg.wb.getSheetIndex(InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.source.boardId);
+        } else {
+            chShtIdx = cfg.wb.getSheetIndex(InternalConfig.CHANGES_SHEET_NAME);
+        }
+
+        if (chShtIdx != null) {
             cfg.wb.removeSheetAt(chShtIdx);
         }
 
         if (!cfg.dualFlow) {
-            changeSht = cfg.wb.createSheet(InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.source.boardId);
+            cfg.changesSheet = cfg.wb.createSheet(InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.source.boardId);
         } else {
-            changeSht = cfg.wb.createSheet(InternalConfig.CHANGES_SHEET_NAME);
+            cfg.changesSheet = cfg.wb.createSheet(InternalConfig.CHANGES_SHEET_NAME);
         }
 
         Integer itemShtIdx = cfg.wb.getSheetIndex(cfg.source.boardId);
         if (itemShtIdx >= 0) {
             cfg.wb.removeSheetAt(itemShtIdx);
         }
-        itemSht = cfg.wb.createSheet(cfg.source.boardId);
+        cfg.itemSheet = cfg.wb.createSheet(cfg.source.boardId);
 
         /**
          * Create the Changes Sheet layout
@@ -99,7 +102,7 @@ public class Exporter {
 
         int chgCellIdx = 0;
 
-        Row chgHdrRow = changeSht.createRow(chgRowIdx++);
+        Row chgHdrRow = cfg.changesSheet.createRow(chgRowIdx++);
 
         // These next lines are the fixed format of the Changes sheet
         chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Group");
@@ -113,7 +116,7 @@ public class Exporter {
          * Now create the Item Sheet layout
          */
 
-        Row itmHdrRow = itemSht.createRow(itmRowIdx++);
+        Row itmHdrRow = cfg.itemSheet.createRow(itmRowIdx++);
 
         int itmCellIdx = 0;
         itmHdrRow.createCell(itmCellIdx, CellType.STRING).setCellValue("ID");
@@ -135,7 +138,7 @@ public class Exporter {
         ArrayList<Card> cards = Utils.readCardIdsFromBoard(cfg, cfg.source);
 
         /**
-         * Write all the cards out to the itemSht
+         * Write all the cards out to the cfg.itemSheet
          */
         Iterator<Card> ic = cards.iterator();
         while (ic.hasNext()) {
@@ -151,10 +154,11 @@ public class Exporter {
             // We can only write out cards here. Tasks are handled differently
 
             createChangeRow(chgRowIdx, itmRowIdx, "Create", "", "");
-            Changes changeTotal = createItemRowFromCard(chgRowIdx, itmRowIdx, c, checkFields); // checkFields contains extra
+            Changes changeTotal = createItemRowFromCard(chgRowIdx, itmRowIdx, c, checkFields); // checkFields contains
+                                                                                               // extra
 
-            chgRowIdx = changeTotal.currChgRow;
-            itmRowIdx = changeTotal.currItmRow;
+            chgRowIdx = changeTotal.getChangeRow();
+            itmRowIdx = changeTotal.getItemRow();
 
             // Do these after because we have changed the index in the subr calls
             chgRowIdx++;
@@ -171,8 +175,8 @@ public class Exporter {
         Iterator<ParentChild> pci = parentChild.iterator();
         while (pci.hasNext()) {
             ParentChild pc = pci.next();
-            Integer parentRow = findRowBySourceId(itemSht, pc.parentId);
-            Integer childRow = findRowBySourceId(itemSht, pc.childId);
+            Integer parentRow = Utils.findRowBySourceId(cfg.itemSheet, pc.parentId);
+            Integer childRow = Utils.findRowBySourceId(cfg.itemSheet, pc.childId);
 
             if ((parentRow == null) || (childRow == null)) {
                 d.p(Debug.WARN, "Unexpected row result from %s/%s. Is parent archived?", pc.parentId, pc.childId);
@@ -189,18 +193,6 @@ public class Exporter {
         Utils.writeFile(cfg, cfg.xlsxfn, cfg.wb);
     }
 
-    public Integer findRowBySourceId(XSSFSheet itemSht, String cardId) {
-        for (int rowIndex = 0; rowIndex < itemSht.getLastRowNum(); rowIndex++) {
-            Row row = itemSht.getRow(rowIndex);
-            // Aargh! Embedded number alert
-            // TODO: Fix this to be more generic
-            if (row != null && row.getCell(1).getStringCellValue().equals(cardId)) {
-                return rowIndex;
-            }
-        }
-        return null;
-    }
-
     /**
      * All fields handled here must have mirror in createItemRowFromTask (which
      * probably does nothing) This is because we use the one list of fields from
@@ -209,11 +201,12 @@ public class Exporter {
      * 
      * Got a chick-and-egg situation with the indexes.
      */
-    public Changes createItemRowFromCard( Integer chgRow, Integer itmRow, Card c, Field[] pbFields) {
+    public Changes createItemRowFromCard(Integer chgRow, Integer itmRow, Card c, Field[] pbFields) {
 
         Integer item = itmRow;
 
-        Row iRow = itemSht.createRow(itmRow);
+        Row iRow = cfg.itemSheet.createRow(itmRow);
+        d.p(Debug.INFO, "Creating row for id: %s (%s)\n", c.id, (c.customId.value != null)?c.customId.value:c.title);
         for (int i = 0; i < pbFields.length; i++) {
             try {
                 switch (pbFields[i].getName()) {
@@ -235,10 +228,12 @@ public class Exporter {
                                 File af = new File("attachments/" + c.id + "/" + atts[j].name);
                                 FileOutputStream fw = new FileOutputStream(af);
                                 byte[] data = (byte[]) Utils.getAttachment(cfg, cfg.source, c.id, atts[j].id);
+                                d.p(Debug.INFO, "Saving attachment %s\n", af.getPath());
                                 fw.write(data, 0, data.length);
                                 fw.flush();
                                 fw.close();
                                 chgRow++;
+                                
                                 createChangeRow(chgRow, item, "Modify", "Attachment", af.getPath());
                             }
                         }
@@ -250,9 +245,8 @@ public class Exporter {
                             Comment[] cmts = (Comment[]) fv;
                             for (int j = 0; j < cmts.length; j++) {
                                 chgRow++;
-                                createChangeRow(chgRow, item, "Modify", "Comment",
-                                        String.format("%s : %s wrote: \n", cmts[j].createdOn,
-                                                cmts[j].createdBy.fullName) + cmts[j].text);
+                                createChangeRow(chgRow, item, "Modify", "Comment", String.format("%s : %s wrote: \n",
+                                        cmts[j].createdOn, cmts[j].createdBy.fullName) + cmts[j].text);
                             }
                         }
                         break;
@@ -340,20 +334,20 @@ public class Exporter {
                             for (int j = 0; j < tasks.size(); j++) {
                                 chgRow++;
                                 Card task = Utils.getCard(cfg, tasks.get(j).id);
-                                //Increment the row index ready for the item row create
+                                // Increment the row index ready for the item row create
                                 createChangeRow(chgRow, item, "Modify", "Task",
                                         "='" + cfg.source.boardId + "'!A" + (itmRow + 1));
-                                
+
                                 // Now create the item row itself
-                                //Changes changesMade = new Changes(0,0); //Testing!
+                                // Changes changesMade = new Changes(0,0); //Testing!
                                 itmRow++;
                                 Changes childChanges = createItemRowFromCard(chgRow, itmRow, task, pbFields);
                                 // Need to pick up the indexes again as we might have created task entries
-                                
-                                chgRow = childChanges.currChgRow;
-                                itmRow = childChanges.currItmRow;
+
+                                chgRow = childChanges.getChangeRow();
+                                itmRow = childChanges.getItemRow();
                             }
-                            //itmRowIncr += tasks.size();
+                            // itmRowIncr += tasks.size();
                         }
 
                         break;
@@ -401,15 +395,13 @@ public class Exporter {
                 e.printStackTrace();
             }
         }
-        Changes changeTotal = new Changes();
-        changeTotal.currChgRow = chgRow;
-        changeTotal.currItmRow = itmRow;
-        return changeTotal;
+        
+        return new Changes(chgRow, itmRow);
     }
 
     private void createChangeRow(Integer CRIdx, Integer IRIdx, String action, String field, String value) {
         Integer localCellIdx = 0;
-        Row chgRow = changeSht.createRow(CRIdx);
+        Row chgRow = cfg.changesSheet.createRow(CRIdx);
         chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(cfg.group);
         chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(cfg.source.boardId);
         chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(IRIdx + 1);
@@ -425,5 +417,4 @@ public class Exporter {
             chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(value); // "Value"
         }
     }
-
 }

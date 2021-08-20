@@ -2,8 +2,8 @@ package com.planview.lkutility;
 
 public class Debug {
     public final static Integer ERROR = 0;
-    public final static Integer INFO = 1;
-    public final static Integer WARN = 2;
+    public final static Integer INFO = 2;
+    public final static Integer WARN = 1;
     public final static Integer DEBUG = 3;
     public final static Integer VERBOSE = 4;
     
@@ -26,7 +26,7 @@ public class Debug {
     public void p(Integer level, String fmt, Object... parms) {
         String lp = null;
         switch (level) {
-            case 1: {
+            case 2: {
                 lp = "INFO: ";
                 break;
             }
@@ -34,7 +34,7 @@ public class Debug {
                 lp = "ERROR: ";
                 break;
             }
-            case 2: {
+            case 1: {
                 lp = "WARN: ";
                 break;
             }

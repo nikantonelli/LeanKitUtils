@@ -90,10 +90,30 @@ public class Main {
         impExpOpt.addOption(tnsO);
         impExpOpt.addRequiredOption("f", "filename", true, "XLSX Spreadsheet (must contain API config!)");
 
+        Option groupOpt = new Option("g", "group", true, "Identifier of group to process (if present)");
+        groupOpt.setRequired(false);
+        impExpOpt.addOption(groupOpt);
+
         Option dbp = new Option("x", "debug", true,
                 "Print out loads of helpful stuff: 0 - Error, 1 - And Info, 2 - And Warnings, 3 - And Debugging, 4 - Verbose");
         dbp.setRequired(false);
         impExpOpt.addOption(dbp);
+        Option archiveOpt = new Option("O", "archived", false, "Include older Archived cards in export (if present)");
+        archiveOpt.setRequired(false);
+        impExpOpt.addOption(archiveOpt);
+        Option tasksOpt = new Option("T", "tasks", false, "Include Task cards in export (if present)");
+        tasksOpt.setRequired(false);
+        impExpOpt.addOption(tasksOpt);
+        Option attsOpt = new Option("A", "attachments", false,
+                "Export card attachments in local filesystem (if present)");
+        attsOpt.setRequired(false);
+        impExpOpt.addOption(attsOpt);
+        Option comsOpt = new Option("C", "comments", false, "Export card comments in local filesystem (if present)");
+        comsOpt.setRequired(false);
+        impExpOpt.addOption(comsOpt);
+        Option originOpt = new Option("S", "origin", false, "Add comment for source artifact recording");
+        originOpt.setRequired(false);
+        impExpOpt.addOption(originOpt);
 
         try {
             impExpCl = p.parse(impExpOpt, args, true);
@@ -114,7 +134,6 @@ public class Main {
                 config.debugLevel = 99;
             }
         }
-
 
         /**
          * Import takes precedence if option present, then export, then transfer
@@ -144,61 +163,25 @@ public class Main {
 
         // We now need to check for all the other unique options
 
-        if (config.dualFlow == false) {
-            Option groupOpt = new Option("g", "group", true, "Identifier of group to process (if present)");
-            groupOpt.setRequired(false);
-            impExpOpt.addOption(groupOpt);
-
-            CommandLine cl = null;
-
-            if (setToExport == true) {
-                Option archiveOpt = new Option("O", "archived", false,
-                        "Include older Archived cards in export (if present)");
-                archiveOpt.setRequired(false);
-                impExpOpt.addOption(archiveOpt);
-                Option tasksOpt = new Option("T", "tasks", false, "Include Task cards in export (if present)");
-                tasksOpt.setRequired(false);
-                impExpOpt.addOption(tasksOpt);
-                Option attsOpt = new Option("A", "attachments", false,
-                        "Export card attachments in local filesystem (if present)");
-                attsOpt.setRequired(false);
-                impExpOpt.addOption(attsOpt);
-                Option comsOpt = new Option("C", "comments", false,
-                        "Export card comments in local filesystem (if present)");
-                comsOpt.setRequired(false);
-                impExpOpt.addOption(comsOpt);
-                Option originOpt = new Option("S", "origin", false, "Add comment for source artifact recording");
-                originOpt.setRequired(false);
-                impExpOpt.addOption(originOpt);
-            }
-            try {
-                cl = p.parse(impExpOpt, args);
-            } catch (ParseException e) {
-                d.p(Debug.ERROR, "(23): %s", e.getMessage());
-                d.p(Debug.INFO, "Exporter Options (with -e as first option)\n");
-                hf.printHelp(" ", impExpOpt);
-                System.exit(5);
-            }
-
-            if (cl.hasOption("group")) {
-                config.group = Integer.parseInt(cl.getOptionValue("group"));
-            }
-            if (cl.hasOption("archived")) {
-                config.exportArchived = true;
-            }
-            if (cl.hasOption("tasks")) {
-                config.exportTasks = true;
-            }
-            if (cl.hasOption("comments")) {
-                config.exportComments = true;
-            }
-            if (cl.hasOption("attachments")) {
-                config.exportAttachments = true;
-            }
-            if (cl.hasOption("origin")) {
-                config.addComment = true;
-            }
+        if (impExpCl.hasOption("group")) {
+            config.group = Integer.parseInt(impExpCl.getOptionValue("group"));
         }
+        if (impExpCl.hasOption("archived")) {
+            config.exportArchived = true;
+        }
+        if (impExpCl.hasOption("tasks")) {
+            config.exportTasks = true;
+        }
+        if (impExpCl.hasOption("comments")) {
+            config.exportComments = true;
+        }
+        if (impExpCl.hasOption("attachments")) {
+            config.exportAttachments = true;
+        }
+        if (impExpCl.hasOption("origin")) {
+            config.addComment = true;
+        }
+
     }
 
     /**
@@ -339,14 +322,14 @@ public class Main {
          * code the field names in here, even though I was trying to use the fields from
          * the Configuration class.
          **/
-        if ((config.source.url != null) && (setToExport || config.dualFlow)){
+        if ((config.source.url != null) && (setToExport || config.dualFlow)) {
             if (((config.source.apiKey == null) || (config.source.boardId == null))
                     && ((config.source.username == null) || (config.source.password == null))) {
                 d.p(Debug.ERROR, "%s", "Did not detect enough source info: apikey or username/password pair");
                 System.exit(13);
             }
         }
-        if ((config.destination.url != null) && ((!setToExport) || config.dualFlow)){
+        if ((config.destination.url != null) && ((!setToExport) || config.dualFlow)) {
             if (((config.destination.apiKey == null) || (config.destination.boardId == null))
                     && ((config.destination.username == null) || (config.destination.password == null))) {
                 d.p(Debug.ERROR, "%s", "Did not detect enough destination info: apikey or username/password pair");

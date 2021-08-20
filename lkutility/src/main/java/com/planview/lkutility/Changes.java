@@ -1,11 +1,19 @@
 package com.planview.lkutility;
 
 public class Changes {
-    public Integer currChgRow;
-    public Integer currItmRow;
+    private Integer currChgRow;
+    private Integer currItmRow;
 
     public Changes() {
 
+    }
+
+    public Integer getChangeRow() {
+        return currChgRow;
+    }
+
+    public Integer getItemRow() {
+        return currItmRow;
     }
 
     public Changes(Integer startChg, Integer startItm) {

@@ -2,8 +2,11 @@ package com.planview.lkutility;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.Iterator;
 
 import com.planview.lkutility.leankit.Board;
@@ -13,10 +16,126 @@ import com.planview.lkutility.leankit.Lane;
 import com.planview.lkutility.leankit.LeanKitAccess;
 import com.planview.lkutility.leankit.Task;
 
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.json.JSONObject;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DateUtil;
 
 public class Utils {
     static Debug d = new Debug();
+
+    /**
+     * First put all the spreadsheet related routines here:
+     */
+
+    public static ChangesColumns checkChangeSheetColumns(XSSFSheet changesSht) {
+        if (changesSht == null)
+            return null;
+        ChangesColumns cc = new ChangesColumns();
+        cc.group = findColumnFromSheet(changesSht, "Group");
+        cc.itmSht = findColumnFromSheet(changesSht, "Item Sheet");
+        cc.row = findColumnFromSheet(changesSht, "Item Row");
+        cc.action = findColumnFromSheet(changesSht, "Action");
+        cc.field = findColumnFromSheet(changesSht, "Field");
+        cc.value = findColumnFromSheet(changesSht, "Value");
+
+        if ((cc.group == null) || (cc.itmSht == null) || (cc.row == null) || (cc.action == null) || (cc.field == null)
+                || (cc.value == null)) {
+            d.p(Debug.WARN,
+                    "Could not find all required columns in %s sheet: \"Group\", \"Item Sheet\", \"Item Row\", \"Action\", \"Field\", \"Value\"\n",
+                    changesSht.getSheetName());
+            return null;
+        }
+        return cc;
+    }
+
+    public static Integer findRowBySourceId(XSSFSheet itemSht, String cardId) {
+        for (int rowIndex = 0; rowIndex < itemSht.getLastRowNum(); rowIndex++) {
+            Row row = itemSht.getRow(rowIndex);
+            // Aargh! Embedded number alert
+            // TODO: Fix this to be more generic
+            if (row != null && row.getCell(1).getStringCellValue().equals(cardId)) {
+                return rowIndex;
+            }
+        }
+        return null;
+    }
+
+    public static Integer findColumnFromName(Row firstRow, String name) {
+        Iterator<Cell> frtc = firstRow.iterator();
+        // First, find the column that the "Day Delta" info is in
+        int dayCol = -1;
+        int td = 0;
+        if (!frtc.hasNext()) {
+            return dayCol;
+        }
+
+        while (frtc.hasNext()) {
+            Cell tc = frtc.next();
+            if (!tc.getStringCellValue().equals(name)) {
+                td++;
+            } else {
+                dayCol = td;
+                break;
+            }
+        }
+        return dayCol;
+    }
+
+    public static Integer findColumnFromSheet(XSSFSheet sht, String name) {
+        Iterator<Row> row = sht.iterator();
+        if (!row.hasNext()) {
+            return null;
+        }
+        Row firstRow = row.next(); // Get the header row
+        Integer col = findColumnFromName(firstRow, name);
+        if (col < 0) {
+            return null;
+        }
+        return col;
+    }
+
+    public static Object convertCell(Row change, Integer col) {
+
+        if (change.getCell(col) != null) {
+            // Need to get the correct type of field
+            if (change.getCell(col).getCellType() == CellType.FORMULA) {
+                if (change.getCell(col).getCachedFormulaResultType() == CellType.STRING) {
+                    return change.getCell(col).getStringCellValue();
+                } else if (change.getCell(col).getCachedFormulaResultType() == CellType.NUMERIC) {
+                    if (DateUtil.isCellDateFormatted(change.getCell(col))) {
+                        SimpleDateFormat dtf = new SimpleDateFormat("yyyy-MM-dd");
+                        Date date = change.getCell(col).getDateCellValue();
+                        return dtf.format(date).toString();
+                    } else {
+                        return (int) change.getCell(col).getNumericCellValue();
+                    }
+                }
+            } else if (change.getCell(col).getCellType() == CellType.STRING) {
+                return change.getCell(col).getStringCellValue();
+            } else if (change.getCell(col).getCellType() == CellType.BLANK) {
+                return null;
+            } else {
+                if (DateUtil.isCellDateFormatted(change.getCell(col))) {
+                    SimpleDateFormat dtf = new SimpleDateFormat("yyyy-MM-dd");
+                    Date date = change.getCell(col).getDateCellValue();
+                    return dtf.format(date).toString();
+                } else {
+                    return change.getCell(col).getNumericCellValue();
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * @param iCfg
+     * @param xlsxfn
+     * @param wb
+     */
     static public void writeFile(InternalConfig iCfg, String xlsxfn, XSSFWorkbook wb) {
         d.setLevel(iCfg.debugLevel);
         Boolean donePrint = true;
@@ -62,10 +181,15 @@ public class Utils {
         }
     }
 
-    public static String getTaskLanePathFromId(InternalConfig iCfg, Configuration accessCfg, String cardId, String laneId){
+    /**
+     * Next up is all the Leankit access routines
+     * 
+     */
+    public static String getTaskLanePathFromId(InternalConfig iCfg, Configuration accessCfg, String cardId,
+            String laneId) {
         String lanePath = null;
         LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
-        Lane[] lanes = (Lane[])lka.fetchTaskLanes(cardId).toArray();
+        Lane[] lanes = (Lane[]) lka.fetchTaskLanes(cardId).toArray();
         Lane foundLane = findLaneFromId(lanes, laneId);
         if (foundLane != null) {
             lanePath = foundLane.name;
@@ -73,12 +197,12 @@ public class Utils {
         return lanePath;
     }
 
-    public static String getLanePathFromId(InternalConfig iCfg, Configuration accessCfg, String laneId){
-        
+    public static String getLanePathFromId(InternalConfig iCfg, Configuration accessCfg, String laneId) {
+
         Lane[] lanes = null;
         if (iCfg.cache != null) {
-            Board brd = iCfg.cache.getBoard() ;
-            if (brd != null){
+            Board brd = iCfg.cache.getBoard();
+            if (brd != null) {
                 lanes = brd.lanes;
             }
         }
@@ -87,15 +211,14 @@ public class Utils {
         String lanePath = "";
         if (lane == null) {
             return lanePath;
-        }
-        else {
+        } else {
             lanePath = lane.name;
         }
 
         while (lane.parentLaneId != null) {
             Lane parentLane = findLaneFromId(lanes, lane.parentLaneId);
             if (parentLane != null) {
-                lanePath = parentLane.name + "|"+lanePath;
+                lanePath = parentLane.name + "|" + lanePath;
             }
             lane = parentLane;
         }
@@ -121,7 +244,7 @@ public class Utils {
     public static Card getCard(InternalConfig iCfg, String id) {
         Card card = null;
         if (iCfg.cache != null) {
-            card = iCfg.cache.getCard(id) ;  
+            card = iCfg.cache.getCard(id);
         }
         return card;
     }
@@ -132,7 +255,8 @@ public class Utils {
     }
 
     /**
-     * BEWARE: reading cards from a board will give you a reduced field set - BUT WON'T TELL YOU!
+     * BEWARE: reading cards from a board will give you a reduced field set - BUT
+     * WON'T TELL YOU!
      * 
      * @param iCfg
      * @param accessCfg
@@ -140,43 +264,175 @@ public class Utils {
      */
     public static ArrayList<Card> readCardsFromBoard(InternalConfig iCfg, Configuration accessCfg) {
         LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
-        ArrayList<Card> cards = lka.fetchCardsFromBoard(accessCfg.boardId, iCfg.exportArchived); 
+        ArrayList<Card> cards = lka.fetchCardsFromBoard(accessCfg.boardId, iCfg.exportArchived);
         return cards;
+    }
+
+    public static Board getBoard(InternalConfig iCfg, Configuration accessCfg) {
+        Board brd = null;
+        if (iCfg.cache != null) {
+            brd = iCfg.cache.getBoard();
+        }
+        return brd;
     }
 
     public static ArrayList<Card> readCardIdsFromBoard(InternalConfig iCfg, Configuration accessCfg) {
         LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
-        ArrayList<Card> cards = lka.fetchCardIdsFromBoard(accessCfg.boardId, iCfg.exportArchived); 
+        ArrayList<Card> cards = lka.fetchCardIdsFromBoard(accessCfg.boardId, iCfg.exportArchived);
         return cards;
     }
 
     public static ArrayList<Task> readTaskIdsFromCard(InternalConfig iCfg, Configuration accessCfg, String cardId) {
         LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
-        ArrayList<Task> tasks = lka.fetchTaskIds(cardId); 
+        ArrayList<Task> tasks = lka.fetchTaskIds(cardId);
         return tasks;
     }
 
     public static ArrayList<Task> readTasksFromCard(InternalConfig iCfg, Configuration accessCfg, String cardId) {
         LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
-        ArrayList<Task> tasks = lka.fetchTasks(cardId); 
+        ArrayList<Task> tasks = lka.fetchTasks(cardId);
         return tasks;
     }
 
     public static ArrayList<CardType> readCardsTypesFromBoard(InternalConfig iCfg, Configuration accessCfg) {
         LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
-        ArrayList<CardType> types = lka.fetchCardTypes(accessCfg.boardId); 
+        ArrayList<CardType> types = null;
+        if (iCfg.cache != null) {
+            Board brd = iCfg.cache.getBoard();
+            types = new ArrayList<>();
+            for (int i = 0; i < brd.cardTypes.length; i++) {
+                types.add(brd.cardTypes[i]);
+            }
+        } else {
+            types = lka.fetchCardTypes(accessCfg.boardId);
+        }
         return types;
     }
 
-    public static CardType findCardTypeFromList( ArrayList<CardType> cardTypes, String id) {
+    public static CardType findCardTypeFromList(ArrayList<CardType> cardTypes, String name) {
         Iterator<CardType> cti = cardTypes.iterator();
         while (cti.hasNext()) {
             CardType ct = cti.next();
-            if (ct.id.equals(id)) {
+            if (ct.name.equals(name)) {
                 return ct;
             }
         }
-        d.p(Debug.WARN, "Failed to find CardType %s in board\n", id);
+        d.p(Debug.WARN, "Failed to find CardType %s in board\n",name);
         return null;
+    }
+
+    public static Card createCard(InternalConfig iCfg, Configuration accessCfg, JSONObject fieldLst) {
+        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+        // First create an empty card and get back the full structure
+
+        Card newCard = lka.createCard(fieldLst);
+        if (newCard != null) {
+            if (iCfg.cache != null) {
+                iCfg.cache.setCard(newCard);
+            }
+        }
+        return newCard;
+    }
+
+    public static Card updateCard(InternalConfig iCfg, Configuration accessCfg, String cardId, JSONObject updates) {
+        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+        Card card = null;
+        Board brd = null;
+
+        if (iCfg.cache != null) {
+            card = iCfg.cache.getCard(cardId);
+            brd = iCfg.cache.getBoard();
+        } else {
+            card = lka.fetchCard(cardId);
+            brd = lka.fetchBoardFromId(accessCfg.boardId);
+        }
+        card = lka.updateCardFromId(brd, card, updates);
+        if (iCfg.cache != null) {
+            iCfg.cache.setCard(card);
+        }
+        return card;
+    }
+
+    private static ArrayList<Lane> findLanesFromName(ArrayList<Lane> lanes, String name) {
+        ArrayList<Lane> ln = new ArrayList<>();
+        for (int i = 0; i < lanes.size(); i++) {
+            if (lanes.get(i).name.equals(name)) {
+                ln.add(lanes.get(i));
+                break;
+            }
+        }
+        return ln;
+    }
+
+    private static ArrayList<Lane> findLanesFromParentId(Lane[] lanes, String id) {
+        ArrayList<Lane> ln = new ArrayList<>();
+        for (int i = 0; i < lanes.length; i++) {
+            if (lanes[i].parentLaneId != null) {
+                if (lanes[i].parentLaneId.equals(id)) {
+                    ln.add(lanes[i]);
+                }
+            }
+        }
+        return ln;
+    }
+
+    public static Lane findLanesFromString(InternalConfig iCfg, Configuration accessCfg, String name){
+        Board brd = null;
+        if (iCfg.cache != null) {
+            brd = iCfg.cache.getBoard();
+        }
+        else {
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            brd = lka.fetchBoardFromId(accessCfg.boardId);
+        }
+        if (brd != null) return findLaneFromString(brd, name);
+        else return null;
+    }
+
+    private static Lane findLaneFromString(Board brd, String name) {
+        String[] lanes = name.split("\\|");
+
+        // Is this VS Code failing to handle the '|' character gracefully....
+        if (lanes.length == 1) {
+            String[] vsLanes = name.split("%");
+            if (vsLanes.length > 1) {
+                lanes = vsLanes;
+            }
+        }
+        ArrayList<Lane> searchLanes = new ArrayList<>(Arrays.asList(brd.lanes));
+        int j = 0;
+        ArrayList<Lane> lanesToCheck = findLanesFromName(searchLanes, lanes[j]);
+        do {
+            if (++j >= lanes.length) {
+                searchLanes = lanesToCheck;
+                break;
+            }
+            Iterator<Lane> lIter = lanesToCheck.iterator();
+            while (lIter.hasNext()) {
+                ArrayList<Lane> foundLanes = new ArrayList<>();
+                Lane ln = lIter.next();
+                ArrayList<Lane> childLanes = findLanesFromParentId(brd.lanes, ln.id);
+                Iterator<Lane> clIter = childLanes.iterator();
+                while (clIter.hasNext()) {
+                    Lane cl = clIter.next();
+                    if (cl.name.equals(lanes[j])) {
+                        foundLanes.add(cl);
+                    }
+                }
+                if (foundLanes.size() > 0) {
+                    lanesToCheck = foundLanes;
+                }
+            }
+
+        } while (true);
+
+        if (searchLanes.size() == 0) {
+            d.p(Debug.WARN, "Cannot find lane \"%s\"on board \"%s\"\n", name, brd.title);
+        }
+        if (searchLanes.size() > 1) {
+            d.p(Debug.WARN, "Ambiguous lane name \"%s\"on board \"%s\"\n", name, brd.title);
+        }
+
+        return searchLanes.get(0);
     }
 }
