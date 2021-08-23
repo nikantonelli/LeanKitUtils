@@ -1,7 +1,11 @@
 package com.planview.lkutility.leankit;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.StringReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDateTime;
@@ -23,11 +27,13 @@ import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.ParseException;
 import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.entity.EntityBuilder;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
@@ -59,7 +65,7 @@ public class LeanKitAccess {
         cm = cmp;
         d.setLevel(debugLevel);
 
-        // Check URL has a trailing '/'
+        // Check URL has a trailing '/' and remove
         if (config.url.endsWith("/")) {
             config.url = config.url.substring(0, config.url.length() - 1);
         }
@@ -95,7 +101,7 @@ public class LeanKitAccess {
                 JSONObject pageMeta = new JSONObject(jresp.get("pageMeta").toString());
 
                 int totalRecords = pageMeta.getInt("totalRecords");
-                
+
                 // Unfortunately, we need to know what sort of item to get out of the json
                 // object. Doh!
                 String fieldName = null;
@@ -144,14 +150,17 @@ public class LeanKitAccess {
                      * and limit params
                      */
                     // Length here may be limited to 200 by the API paging.
-                    d.p(Debug.VERBOSE, "Received %d %s (out of %d)\n", accumulatedCount, fieldName.substring(0, ((accumulatedCount>1)?fieldName.length():fieldName.length()-1)), totalRecords);
+                    d.p(Debug.VERBOSE, "Received %d %s (out of %d)\n", accumulatedCount,
+                            fieldName.substring(0,
+                                    ((accumulatedCount > 1) ? fieldName.length() : fieldName.length() - 1)),
+                            totalRecords);
                     while (totalRecords > accumulatedCount) {
 
                         Iterator<NameValuePair> it = reqParams.iterator();
                         int acc = 0, offsetIdx = -1;
-                        while (it.hasNext()){
+                        while (it.hasNext()) {
                             NameValuePair vp = it.next();
-                            if (vp.getName() == "offset"){
+                            if (vp.getName() == "offset") {
                                 offsetIdx = acc;
                                 break;
                             }
@@ -248,7 +257,10 @@ public class LeanKitAccess {
 
     private String processRequest() {
         try {
-            return EntityUtils.toString(processRawRequest());
+            HttpEntity hpe = processRawRequest();
+            if (hpe != null) {
+                return EntityUtils.toString(hpe);
+            }
         } catch (ParseException | IOException e) {
             e.printStackTrace();
         }
@@ -309,7 +321,7 @@ public class LeanKitAccess {
             if (bldr.length() > 0) {
                 bldr = "?" + bldr.substring(1);
             }
-            request.setURI(new URI(config.url + "/" + reqUrl + bldr));
+            request.setURI(new URI(config.url + reqUrl + bldr));
             d.p(Debug.VERBOSE, "%s\n", request.toString());
             httpResponse = client.execute(request);
             d.p(Debug.VERBOSE, "%s\n", httpResponse.toString());
@@ -356,8 +368,22 @@ public class LeanKitAccess {
                     break;
                 }
                 case 422: { // Unprocessable Parameter
-                    d.p(Debug.WARN, "Parameter Error in request: %s (%s)\n", request.toString(),
-                            httpResponse.toString());
+                    String errReq = "";
+                    switch (request.getMethod()) {
+                        case "POST": {
+                            errReq = EntityUtils.toString(((HttpPost) request).getEntity());
+                            break;
+                        }
+                        case "PATCH": {
+                            errReq = EntityUtils.toString(((HttpPatch) request).getEntity());
+                            break;
+                        }
+                        default: {
+                            errReq = request.toString();
+                            break;
+                        }
+                    }
+                    d.p(Debug.WARN, "Parameter Error in request: %s \n%s\n", request.toString(), errReq);
                     break;
                 }
                 case 404: { // Item not found
@@ -402,7 +428,7 @@ public class LeanKitAccess {
 
     public ArrayList<CardType> fetchCardTypes(String boardId) {
         reqType = "GET";
-        reqUrl = "io/board/" + boardId + "/cardType";
+        reqUrl = "/io/board/" + boardId + "/cardType";
         reqParams.clear();
         reqHdrs.clear();
         ArrayList<CardType> brd = read(CardType.class);
@@ -416,7 +442,7 @@ public class LeanKitAccess {
 
     public Lane[] fetchLanes(String boardId) {
         reqType = "GET";
-        reqUrl = "io/board/" + boardId + "/";
+        reqUrl = "/io/board/" + boardId + "/";
         reqParams.clear();
         reqHdrs.clear();
         ArrayList<Board> brd = read(Board.class);
@@ -430,29 +456,29 @@ public class LeanKitAccess {
 
     public ArrayList<Lane> fetchTaskLanes(String cardId) {
         reqType = "GET";
-        reqUrl = "io/card/" + cardId + "/taskboard";
+        reqUrl = "/io/card/" + cardId + "/taskboard";
         reqParams.clear();
         reqHdrs.clear();
         ArrayList<Lane> lanes = read(Lane.class);
         return lanes;
     }
-    
+
     public ArrayList<Task> fetchTasks(String cardId) {
         reqType = "GET";
         reqUrl = "io/card/" + cardId + "/tasks";
         reqParams.clear();
         reqHdrs.clear();
-        ArrayList<Task> tasks= read(Task.class);
+        ArrayList<Task> tasks = read(Task.class);
         return tasks;
     }
 
     public ArrayList<Task> fetchTaskIds(String cardId) {
         reqType = "GET";
-        reqUrl = "io/card/" + cardId + "/tasks";
+        reqUrl = "/io/card/" + cardId + "/tasks";
         reqParams.clear();
         reqParams.add(new BasicNameValuePair("only", "id"));
         reqHdrs.clear();
-        ArrayList<Task> tasks= read(Task.class);
+        ArrayList<Task> tasks = read(Task.class);
         return tasks;
     }
 
@@ -460,7 +486,7 @@ public class LeanKitAccess {
         reqParams.clear();
         reqHdrs.clear();
         reqType = "GET";
-        reqUrl = "io/board";
+        reqUrl = "/io/board";
         reqParams.add(new BasicNameValuePair("search", name));
 
         // Once you get the boards, you could cache them. There may be loads, but
@@ -476,7 +502,7 @@ public class LeanKitAccess {
             reqType = "DELETE";
             reqHdrs.clear();
             reqParams.clear();
-            reqUrl = "io/card/" + cards.get(i).id;
+            reqUrl = "/io/card/" + cards.get(i).id;
             processRequest();
         }
     }
@@ -485,7 +511,7 @@ public class LeanKitAccess {
         reqParams.clear();
         reqHdrs.clear();
         reqType = "GET";
-        reqUrl = "io/card/" + cd.id + "/comment";
+        reqUrl = "/io/card/" + cd.id + "/comment";
         return read(Comment.class);
     }
 
@@ -499,12 +525,12 @@ public class LeanKitAccess {
         reqParams.add(new BasicNameValuePair("board", id));
         reqParams.add(new BasicNameValuePair("limit", "200"));
         reqParams.add(new BasicNameValuePair("offset", "0"));
-        //We handle tasks by getting them on a card by card basis
+        // We handle tasks by getting them on a card by card basis
         reqParams.add(new BasicNameValuePair("select", "cards"));
 
         reqHdrs.clear();
         reqType = "GET";
-        reqUrl = "io/card";
+        reqUrl = "/io/card";
         if (includeArchived) {
             reqParams.add(new BasicNameValuePair("lane_class_types", "backlog,active,archive"));
             reqParams.add(new BasicNameValuePair("deleted", "0"));
@@ -522,7 +548,7 @@ public class LeanKitAccess {
         reqType = "GET";
         reqParams.clear();
         reqHdrs.clear();
-        reqUrl = "io/board/" + id;
+        reqUrl = "/io/board/" + id;
         reqParams.add(new BasicNameValuePair("returnFullRecord", "true"));
 
         ArrayList<Board> results = read(Board.class);
@@ -531,11 +557,12 @@ public class LeanKitAccess {
         }
         return null;
     }
+
     public byte[] fetchAttachment(String cardId, String attId) {
         reqType = "GET";
         reqParams.clear();
         reqHdrs.clear();
-        reqUrl = "io/card/" + cardId + "/attachment/" + attId + "/content";
+        reqUrl = "/io/card/" + cardId + "/attachment/" + attId + "/content";
 
         HttpEntity he = processRawRequest();
         String[] typeStr = he.getContentType().getValue().split(";");
@@ -578,7 +605,7 @@ public class LeanKitAccess {
     }
 
     public String fetchUserId(String emailAddress) {
-        reqUrl = "io/user";
+        reqUrl = "/io/user";
         reqType = "GET";
         reqParams.clear();
         reqHdrs.clear();
@@ -611,12 +638,12 @@ public class LeanKitAccess {
         reqUrl = "/io/card/" + id + "/attachment";
         reqParams.clear();
         reqHdrs.clear();
-
         File atchmt = new File(filename);
         FileBody fb = new FileBody(atchmt);
         MultipartEntityBuilder mpeb = MultipartEntityBuilder.create().setMode(HttpMultipartMode.BROWSER_COMPATIBLE)
                 .addTextBody("Description", "Auto-generated from Script").addPart(filename, fb);
         reqEnt = mpeb.build();
+
 
         String status = processRequest();
         return status;
@@ -873,7 +900,7 @@ public class LeanKitAccess {
             }
         }
         reqType = "PATCH";
-        reqUrl = "io/card/" + card.id;
+        reqUrl = "/io/card/" + card.id;
         reqEnt = new StringEntity(jsa.toString(), "UTF-8");
         reqParams.clear();
         return execute(Card.class);
@@ -882,7 +909,7 @@ public class LeanKitAccess {
 
     public Card createCard(JSONObject jItem) {
         reqType = "POST";
-        reqUrl = "io/card/";
+        reqUrl = "/io/card/";
         reqParams.clear();
         reqParams.add(new BasicNameValuePair("returnFullRecord", "true"));
         reqEnt = new StringEntity(jItem.toString(), "UTF-8");
@@ -894,7 +921,7 @@ public class LeanKitAccess {
         reqType = "POST";
         reqParams.clear();
         reqParams.add(new BasicNameValuePair("returnFullRecord", "true"));
-        reqUrl = "io/card/";
+        reqUrl = "/io/card/";
         reqEnt = new StringEntity(jItem.toString(), "UTF-8");
         return execute(Id.class);
     }

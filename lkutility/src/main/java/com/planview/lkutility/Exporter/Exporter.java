@@ -234,7 +234,7 @@ public class Exporter {
                                 fw.close();
                                 chgRow++;
                                 
-                                createChangeRow(chgRow, item, "Modify", "Attachment", af.getPath());
+                                createChangeRow(chgRow, item, "Modify", "attachments", af.getPath());
                             }
                         }
                         break;
@@ -245,7 +245,7 @@ public class Exporter {
                             Comment[] cmts = (Comment[]) fv;
                             for (int j = 0; j < cmts.length; j++) {
                                 chgRow++;
-                                createChangeRow(chgRow, item, "Modify", "Comment", String.format("%s : %s wrote: \n",
+                                createChangeRow(chgRow, item, "Modify", "comments", String.format("%s : %s wrote: \n",
                                         cmts[j].createdOn, cmts[j].createdBy.fullName) + cmts[j].text);
                             }
                         }
@@ -311,7 +311,7 @@ public class Exporter {
                         iRow.createCell(i + 1, CellType.STRING).setCellValue(c.id);
                         if (cfg.addComment) {
                             chgRow++;
-                            createChangeRow(chgRow, item, "Modify", "Comment",
+                            createChangeRow(chgRow, item, "Modify", "comments",
                                     Utils.getUrl(cfg, cfg.source) + "/card/" + c.id);
                         }
                         break;

@@ -8,7 +8,6 @@ import com.planview.lkutility.Debug;
 import com.planview.lkutility.InternalConfig;
 import com.planview.lkutility.Utils;
 import com.planview.lkutility.leankit.AccessCache;
-import com.planview.lkutility.leankit.Board;
 import com.planview.lkutility.leankit.Card;
 import com.planview.lkutility.leankit.CardType;
 import com.planview.lkutility.leankit.Lane;
