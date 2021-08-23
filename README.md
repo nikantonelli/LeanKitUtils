@@ -4,7 +4,7 @@ Currently this is limited to an exporter/importer app. The same app will do both
 
 With this tool, you can make a backup of the current state of play of your board, recreate a copy of the cards on a board, merge boards together into a single destination. 
 
-It will copy cards, comments, attachments, as well as marking the source of the copy by adding an additional comment in the destination card.
+It will copy current cards (with option to include archived) with comments and attachments (if indicated), as well as marking the source of the copy by adding an additional comment in the destination card.
 
 TODO: Copy tasks
 
