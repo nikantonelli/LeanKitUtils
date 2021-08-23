@@ -80,7 +80,7 @@ public class Exporter {
             chShtIdx = cfg.wb.getSheetIndex(InternalConfig.CHANGES_SHEET_NAME);
         }
 
-        if (chShtIdx != null) {
+        if (chShtIdx >= 0) {
             cfg.wb.removeSheetAt(chShtIdx);
         }
 
@@ -335,12 +335,12 @@ public class Exporter {
                                 chgRow++;
                                 Card task = Utils.getCard(cfg, tasks.get(j).id);
                                 // Increment the row index ready for the item row create
+                                itmRow++;
                                 createChangeRow(chgRow, item, "Modify", "Task",
                                         "='" + cfg.source.boardId + "'!A" + (itmRow + 1));
 
                                 // Now create the item row itself
                                 // Changes changesMade = new Changes(0,0); //Testing!
-                                itmRow++;
                                 Changes childChanges = createItemRowFromCard(chgRow, itmRow, task, pbFields);
                                 // Need to pick up the indexes again as we might have created task entries
 

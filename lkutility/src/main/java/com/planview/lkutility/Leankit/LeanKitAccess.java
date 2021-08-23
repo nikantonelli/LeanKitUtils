@@ -538,9 +538,6 @@ public class LeanKitAccess {
             reqParams.add(new BasicNameValuePair("lane_class_types", "backlog,active"));
             reqParams.add(new BasicNameValuePair("deleted", "0"));
         }
-        // Once you get the boards, you could cache them. There may be loads, but
-        // shouldn't max
-        // out memory.
         return read(Card.class);
     }
 
@@ -860,6 +857,9 @@ public class LeanKitAccess {
                     break;
                 }
 
+                case "Task": {
+                    break;
+                }
                 case "CustomField": {
                     CustomField[] cflds = brd.customFields;
                     if (cflds != null) {
