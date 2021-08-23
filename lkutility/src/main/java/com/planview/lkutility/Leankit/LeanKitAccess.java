@@ -371,11 +371,11 @@ public class LeanKitAccess {
                     String errReq = "";
                     switch (request.getMethod()) {
                         case "POST": {
-                            errReq = EntityUtils.toString(((HttpPost) request).getEntity());
+                            errReq = EntityUtils.toString(httpResponse.getEntity());
                             break;
                         }
                         case "PATCH": {
-                            errReq = EntityUtils.toString(((HttpPatch) request).getEntity());
+                            errReq = EntityUtils.toString(httpResponse.getEntity());
                             break;
                         }
                         default: {
@@ -641,7 +641,7 @@ public class LeanKitAccess {
         File atchmt = new File(filename);
         FileBody fb = new FileBody(atchmt);
         MultipartEntityBuilder mpeb = MultipartEntityBuilder.create().setMode(HttpMultipartMode.BROWSER_COMPATIBLE)
-                .addTextBody("Description", "Auto-generated from Script").addPart(filename, fb);
+                .addTextBody("Description", "Auto-generated from Script").addPart("file", fb);
         reqEnt = mpeb.build();
 
 
