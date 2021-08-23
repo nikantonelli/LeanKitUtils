@@ -2,6 +2,12 @@
 
 Currently this is limited to an exporter/importer app. The same app will do both directions independently. Future development may make it do both at once, i.e 'simultaneous transfer'
 
+With this tool, you can make a backup of the current state of play of your board, recreate a copy of the cards on a board, merge boards together into a single destination. 
+
+It will copy cards, comments, attachments, as well as marking the source of the copy by adding an additional comment in the destination card.
+
+TODO: Copy tasks
+
 # Setup
 
 The app does its work through the medium of an Excel spreadsheet. This has more flexibility that using a CSV file as I can do stuff to implement parent/child relationships fairly easily. In addition, comments, descriptions, etc. can cause issues if they contain the "," character
