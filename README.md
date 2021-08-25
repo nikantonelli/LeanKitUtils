@@ -45,3 +45,6 @@ If you are running the export in order to run the importer, you must copy (or re
  
 If you want to merge boards together into one destination board, you can concatenate multiple changes sheet together, leaving the board item sheets as they are. E.g. merge sheets called "Changes_1598676317" and "Changes_1606150498" (created by the exporter) into one sheet called "Changes" and then run the importer. Remember! You will have issues with Lanes if the layouts of the boards are imcompatible. All items that cannot be put into a correct lane will end up in the default drop lane - this can get messy. To recover, you can delete all the items in the default drop lane that aren't supposed to be there and set the value in the Group column in the Changes sheet to something memorable (e.g. 99) for those items you want to recreate and modify. Then rerun the importer with the -g option with that group number.
  
+ To run it, use the following command line:
+ 
+ java -jar lkutility\target\lkutility-1.0-jar-with-dependencies.jar -f "file.xlsx" -t  -A -T -S
