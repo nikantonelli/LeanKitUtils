@@ -59,10 +59,10 @@ The use of the spreadsheet allows the indirect logging of the parent/child relat
  
 # OnScreen positioning and Indexes
  
-The priority of a card is normally set as an index of a card with zero being at the top of the screen. The order in which the exporter finds cards is done based on the last date that the cards were accessed. This means that the index order does not match the 'found' order. The upshot of this is the importer may attempt to set the Index to some value that may not yet be valid (as all the cards have not yet been created).
+The priority of a card is normally set as an index of a card with zero being at the top of the screen. The order in which the exporter finds cards is done based on the last date that the cards were accessed. This means that the index order does not match the 'found' order. The upshot of this is the importer may attempt to set the Index to some value that may not yet be valid (as all the cards have not yet been created) and these indexes get ignored by LeanKit.
 
-If you are manually creating the importer spreadsheet, you will need to bear this in mind. The exporter will attempt to create an extra set of 'Modify' rows at the end of the spreadsheet to reset the indexes appropriately.
+If you are manually creating the importer spreadsheet, you will need to bear this in mind. The exporter will create an extra set of 'Modify' rows at the end of the spreadsheet to reset the indexes appropriately.
 
-# Assigned Users
+# Assigned Users on Import
 
 If your destination system does not have the correct users set up (and they also have access to the board), the users are ignored.
