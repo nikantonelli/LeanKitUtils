@@ -47,11 +47,13 @@ If you want to merge boards together into one destination board, you can concate
 
 All items that cannot be put into a correct lane will end up in the default drop lane - this can get messy. To recover, you can delete all the items in the default drop lane that aren't supposed to be there and set the value in the Group column in the Changes sheet to something memorable (e.g. 99) for those items you want to recreate and modify. Then rerun the importer with the -g option with that group number.
  
-To run it, use the following command line:
+To run it, for example, you can use the following command line:
  
 java -jar lkutility\target\lkutility-1.0-jar-with-dependencies.jar -f "file.xlsx" -t  -A -T -S -C
  
-To get an example spreadsheet of what the importer requires, you can run the export (only, using -e) on a board that has parent/child, attachment, comment, etc. already set up.
+To get an example spreadsheet of what the importer requires, you can run the export (only, using -e) on a board that has parent/child, attachment, comment, etc., data already set up.
+
+To get an idea of the progress that the exporter/importer is making, use the option "-x 3".
  
 # Parent/Child Relationships
  
