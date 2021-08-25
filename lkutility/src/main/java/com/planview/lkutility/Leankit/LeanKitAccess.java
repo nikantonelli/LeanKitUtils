@@ -187,7 +187,8 @@ public class LeanKitAccess {
                 ArrayList<T> items = new ArrayList<T>();
                 ObjectMapper om = new ObjectMapper();
                 switch (expectedResponseType.getSimpleName()) {
-                    case "CardType": {
+                    case "CardType":
+                    case "Lane": {
                         // Getting CardTypes comes here, for example.
                         Iterator<String> sItor = jresp.keys();
                         String iStr = sItor.next();
@@ -924,5 +925,13 @@ public class LeanKitAccess {
         reqUrl = "/io/card/";
         reqEnt = new StringEntity(jItem.toString(), "UTF-8");
         return execute(Id.class);
+    }
+
+    public Card addTaskToCard(String cardId, JSONObject item){
+        reqType = "POST";
+        reqParams.clear();
+        reqUrl = "/io/card/" + cardId + "/tasks";
+        reqEnt = new StringEntity(item.toString(), "UTF-8");
+        return execute(Card.class);
     }
 }

@@ -20,6 +20,7 @@ import com.planview.lkutility.leankit.AccessCache;
 import com.planview.lkutility.leankit.Attachment;
 import com.planview.lkutility.leankit.BlockedStatus;
 import com.planview.lkutility.leankit.Card;
+import com.planview.lkutility.leankit.CardType;
 import com.planview.lkutility.leankit.Comment;
 import com.planview.lkutility.leankit.CustomId;
 import com.planview.lkutility.leankit.ExternalLink;
@@ -284,9 +285,16 @@ public class Exporter {
                     }
                     case "lane": {
                         Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
-                        if (fv != null) {
-                            iRow.createCell(i + 1, CellType.STRING)
+                        if (fv != null) {   //Might be a task 
+                            CardType ct = Utils.findCardTypeFromBoard(cfg,  cfg.source, c.type.title);
+                            if (ct.isTaskType){
+                                Lane taskLane = (Lane)fv;
+                                iRow.createCell(i + 1, CellType.STRING)
+                                    .setCellValue(taskLane.laneType);
+                            }  else { 
+                                iRow.createCell(i + 1, CellType.STRING)
                                     .setCellValue(Utils.getLanePathFromId(cfg, cfg.source, ((Lane) fv).id));
+                            }
                         }
                         break;
                     }

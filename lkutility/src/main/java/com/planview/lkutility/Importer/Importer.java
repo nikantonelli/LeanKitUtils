@@ -14,6 +14,8 @@ import com.planview.lkutility.leankit.Lane;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.util.CellAddress;
+import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.json.JSONObject;
@@ -108,7 +110,9 @@ public class Importer {
             // If unset, it has a null value for the Leankit ID
             if ((item.getCell(idCol) == null) || (item.getCell(idCol).getStringCellValue() == "")) {
                 // Check if this is a 'create' operation. If not, ignore and continue past.
-                if (!change.getCell(cc.action).getStringCellValue().equals("Create")) {
+                if (!change.getCell(cc.action).getStringCellValue().equals("Create") &&
+                    !(change.getCell(cc.action).getStringCellValue().equals("Modify") && 
+                       change.getCell(cc.field).getStringCellValue().equals("Task"))) {
                     d.p(Debug.WARN, "Ignoring action \"%s\" on item \"%s\" (no ID present in row: %d)\n",
                             change.getCell(cc.action).getStringCellValue(), item.getCell(titleCol).getStringCellValue(),
                             item.getRowNum());
@@ -116,7 +120,10 @@ public class Importer {
                 }
             } else {
                 // Check if this is a 'create' operation. If it is, ignore and continue past.
-                if (change.getCell(cc.action).getStringCellValue().equals("Create")) {
+                if ( change.getCell(cc.action).getStringCellValue().equals("Create") ||
+                    (change.getCell(cc.action).getStringCellValue().equals("Modify") && 
+                      (change.getCell(cc.field).getStringCellValue().equals("Task")))
+                ) {
                     d.p(Debug.WARN,
                             "Ignoring action \"%s\" on item \"%s\" (attempting create on existing ID in row: %d)\n",
                             change.getCell(cc.action).getStringCellValue(), item.getCell(titleCol).getStringCellValue(),
@@ -134,7 +141,7 @@ public class Importer {
                 }
                 item.getCell(idCol).setCellValue(id);
                 XSSFFormulaEvaluator.evaluateAllFormulaCells(cfg.wb);
-                Utils.writeFile(cfg, cfg.xlsxfn, cfg.wb);
+                
                 d.p(Debug.INFO, "Create card \"%s\" on board \"%s\"\n", item.getCell(titleCol).getStringCellValue(),
                         cfg.destination.boardId);
             } else {
@@ -146,6 +153,9 @@ public class Importer {
             if (id == null) {
 
                 d.p(Debug.ERROR, "%s", "Got null back from doAction(). Seek help!\n");
+            }
+            else {
+                Utils.writeFile(cfg, cfg.xlsxfn, cfg.wb);
             }
         }
     }
@@ -184,77 +194,7 @@ public class Importer {
         if (change.getCell(cc.action).getStringCellValue().equalsIgnoreCase("Create")) {
             // Now 'translate' the spreadsheet name:col pairs to fieldName:value pairs
 
-            Iterator<String> keys = fieldLst.keys();
-            JSONObject flds = new JSONObject();
-
-            while (keys.hasNext()) {
-                String key = keys.next();
-                switch (key) {
-                   /** 
-                     * Don't include if not present
-                     * 
-                     */
-                    case "blockReason":{
-                        String reason = (String) Utils.convertCell(item, fieldLst.getInt(key));
-                        if ((reason != null) && !reason.equals("")) {
-            
-                            flds.put(key, reason);
-                        } else {
-                            continue;
-                        }
-                        break;
-                    }
-                    case "lane": {
-                        Lane lane = Utils.findLanesFromString(cfg, cfg.destination, (String) Utils.convertCell(item, fieldLst.getInt(key)));
-                        if (lane != null) {
-                            flds.put("laneId", lane.id);
-                        }
-                        break;
-                    }
-                    case "size":
-                    case "index": {
-                        Integer digits = ((Double) Utils.convertCell(item, fieldLst.getInt(key))).intValue();
-                        if (digits != null) {
-                            flds.put(key, digits);
-                        }
-                        break;
-                    }
-                    
-                    /**
-                     * Tags need to be as an array of strings
-                     */
-                    case "tags": {
-                        String tagLine = (String) Utils.convertCell(item, fieldLst.getInt(key));
-                        if ((tagLine != null) && !tagLine.equals("")) {
-                            String[] tags = tagLine.split(",");
-                            flds.put("tags", tags);
-                        }
-                        break;
-                    }
-                    case "type": {
-                        String cardtype = (String) Utils.convertCell(item, fieldLst.getInt(key));
-                        ArrayList<CardType> cts = Utils.readCardsTypesFromBoard(cfg, cfg.destination);
-                        CardType ct = Utils.findCardTypeFromList(cts, cardtype);
-                        if (ct != null) {
-                            flds.put("typeId", ct.id);
-                        }
-                        break;
-                    }
-                    default: {
-                        if (item.getCell(fieldLst.getInt(key)) != null) {
-                            Object obj = Utils.convertCell(item, fieldLst.getInt(key));
-                            if (obj != null) flds.put(key, obj);
-                        }
-                        break;
-                    }
-                }
-            }
-
-            /**
-             * We need to either 'create' if ID == null && action == 'Create' or update if
-             * ID != null && action == 'Modify'
-             * 
-             */
+            JSONObject flds = Utils.jsonCardFromRow(cfg, cfg.destination, fieldLst, item, null);
 
             flds.put("boardId", cfg.destination.boardId);
             Card card = Utils.createCard(cfg, cfg.destination, flds); // Change from human readable to API fields on
@@ -269,6 +209,7 @@ public class Importer {
         } else if (change.getCell(cc.action).getStringCellValue().equalsIgnoreCase("Modify")) {
             // Fetch the ID from the item and then fetch that card
             Card card = Utils.getCard(cfg, item.getCell(idCol).getStringCellValue());
+            Card newCard = null;
 
             if (card == null) {
                 d.p(Debug.ERROR, "Could not locate card \"%s\" on board \"%s\"\n",
@@ -277,10 +218,29 @@ public class Importer {
                 JSONObject fld = new JSONObject();
                 JSONObject vals = new JSONObject();
 
-                vals.put("value", Utils.convertCell(change, cc.value));
+                String field = change.getCell(cc.field).getStringCellValue();
+                switch (field) {
+                    case "Task": {
+                        //Get row for the task
+                        String cf = change.getCell(cc.value).getCellFormula();
+                        CellReference ca = new CellReference(cf);
+                        XSSFSheet cSheet = cfg.wb.getSheet(ca.getSheetName());
+                        Row task = cSheet.getRow(ca.getRow());
+                        JSONObject jsonTask = Utils.jsonCardFromRow(cfg, cfg.destination, fieldLst, task, card.id);
+                        if (task.getCell(idCol) == null) {
 
-                fld.put(change.getCell(cc.field).getStringCellValue(), vals);
-                Card newCard = Utils.updateCard(cfg, cfg.destination, card.id, fld);
+                            task.createCell(idCol);
+                        }
+                        task.getCell(idCol).setCellValue( Utils.addTask(  cfg,  cfg.destination,  card.id,  jsonTask).id);
+                        break;
+                    }
+                    default: {
+                        vals.put("value", Utils.convertCell(change, cc.value));
+                        break;
+                    }
+                }
+                fld.put(change.getCell(cc.field).getStringCellValue(), vals);  
+                newCard = Utils.updateCard(cfg, cfg.destination, card.id, fld);        
                 if (newCard == null) {
                     d.p(Debug.ERROR, "Could not modify card \"%s\" on board %s with details: %s", card.id,
                             cfg.destination.boardId, fld.toString());

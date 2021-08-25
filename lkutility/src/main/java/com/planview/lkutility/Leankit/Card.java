@@ -22,6 +22,7 @@ public class Card {
     public BlockedStatus blockedStatus;
     public Board board;
     public Lane lane;
+    public TaskBoard taskBoard;
     public Boolean isBlocked, canView;
     public ExternalLink[] externalLinks;
     public TaskBoardStats taskBoardStats;

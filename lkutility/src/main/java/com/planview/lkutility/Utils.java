@@ -185,16 +185,16 @@ public class Utils {
      * Next up is all the Leankit access routines
      * 
      */
-    public static String getTaskLanePathFromId(InternalConfig iCfg, Configuration accessCfg, String cardId,
-            String laneId) {
-        String lanePath = null;
+    public static Lane getTaskLaneFromId(InternalConfig iCfg, Configuration accessCfg, String cardId, String laneId) {
         LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
         Lane[] lanes = (Lane[]) lka.fetchTaskLanes(cardId).toArray();
-        Lane foundLane = findLaneFromId(lanes, laneId);
-        if (foundLane != null) {
-            lanePath = foundLane.name;
-        }
-        return lanePath;
+        return findLaneFromId(lanes, laneId);
+    }
+
+    public static Lane getTaskLaneFromName(InternalConfig iCfg, Configuration accessCfg, String cardId, String name) {
+        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+        Lane[] lanes = (Lane[]) lka.fetchTaskLanes(cardId).toArray();
+        return findLaneFromName(lanes, name);
     }
 
     public static String getLanePathFromId(InternalConfig iCfg, Configuration accessCfg, String laneId) {
@@ -233,6 +233,16 @@ public class Utils {
             }
         }
         d.p(Debug.WARN, "Failed to find lane %s in board\n", id);
+        return null;
+    }
+
+    private static Lane findLaneFromName(Lane[] lanes, String name) {
+        for (int i = 0; i < lanes.length; i++) {
+            if (lanes[i].name.equals(name)) {
+                return lanes[i];
+            }
+        }
+        d.p(Debug.WARN, "Failed to find lane %s in board\n", name);
         return null;
     }
 
@@ -309,6 +319,10 @@ public class Utils {
         return types;
     }
 
+    public static CardType findCardTypeFromBoard(InternalConfig iCfg, Configuration accessCfg, String name) {
+        return findCardTypeFromList(readCardsTypesFromBoard(iCfg, accessCfg), name);
+    }
+
     public static CardType findCardTypeFromList(ArrayList<CardType> cardTypes, String name) {
         Iterator<CardType> cti = cardTypes.iterator();
         while (cti.hasNext()) {
@@ -317,7 +331,7 @@ public class Utils {
                 return ct;
             }
         }
-        d.p(Debug.WARN, "Failed to find CardType %s in board\n",name);
+        d.p(Debug.WARN, "Failed to find CardType %s in board\n", name);
         return null;
     }
 
@@ -376,17 +390,18 @@ public class Utils {
         return ln;
     }
 
-    public static Lane findLanesFromString(InternalConfig iCfg, Configuration accessCfg, String name){
+    public static Lane findLaneFromBoard(InternalConfig iCfg, Configuration accessCfg, String name) {
         Board brd = null;
         if (iCfg.cache != null) {
             brd = iCfg.cache.getBoard();
-        }
-        else {
+        } else {
             LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
             brd = lka.fetchBoardFromId(accessCfg.boardId);
         }
-        if (brd != null) return findLaneFromString(brd, name);
-        else return null;
+        if (brd != null)
+            return findLaneFromString(brd, name);
+        else
+            return null;
     }
 
     private static Lane findLaneFromString(Board brd, String name) {
@@ -434,5 +449,126 @@ public class Utils {
         }
 
         return searchLanes.get(0);
+    }
+
+    public static Lane findLaneFromCard(InternalConfig iCfg, Configuration accessCfg, String cardId, String laneType) {
+        Lane lane = null;
+        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+        ArrayList<Lane> lanes = lka.fetchTaskLanes(cardId);
+        if (lanes != null) {
+            Iterator<Lane> lIter = lanes.iterator();
+            while (lIter.hasNext()) {
+                Lane laneToCheck = lIter.next();
+                if (laneToCheck.laneType.equals(laneType)) {
+                    lane = laneToCheck;
+                }
+            }
+        }
+        return lane;
+    }
+
+    /**
+     * If cardId is null, we assume this is a card on a board If non-null, then this
+     * is a task on a card
+     * 
+     * @param cfg
+     * @param accessCfg
+     * @param fieldLst
+     * @param item
+     * @param cardId
+     * @return JSONObject ready for passing to a LeanKitAccess call.
+     * 
+     */
+    public static JSONObject jsonCardFromRow(InternalConfig cfg, Configuration accessCfg, JSONObject fieldLst, Row item,
+            String cardId) {
+        JSONObject flds = new JSONObject();
+
+        Iterator<String> keyIt = fieldLst.keys();
+        while (keyIt.hasNext()) {
+            String key = keyIt.next();
+            switch (key) {
+                /**
+                 * Don't include if not present
+                 * 
+                 */
+                case "blockReason": {
+                    String reason = (String) Utils.convertCell(item, fieldLst.getInt(key));
+                    if ((reason != null) && !reason.equals("")) {
+
+                        flds.put(key, reason);
+                    } else {
+                        continue;
+                    }
+                    break;
+                }
+                case "lane": {
+                    Lane lane = null;
+                    String laneType = (String) Utils.convertCell(item, fieldLst.getInt(key));
+                    if (cardId != null) {
+                        if (laneType.isBlank()){
+                            laneType = "ready";
+                        }
+                        lane = Utils.findLaneFromCard(cfg, accessCfg, cardId, laneType);
+                        if (lane != null) {
+                            flds.put("laneType", lane.laneType);
+                        } else {
+                            flds.put("laneType", laneType);
+                        }
+                    } else {
+                        lane = Utils.findLaneFromBoard(cfg, accessCfg, laneType);
+                        if (lane != null) {
+                            flds.put("laneId", lane.id);
+                        }
+                    }
+                    break;
+                }
+                case "size":
+                case "index": {
+                    Integer digits = ((Double) Utils.convertCell(item, fieldLst.getInt(key))).intValue();
+                    if (digits != null) {
+                        flds.put(key, digits);
+                    }
+                    break;
+                }
+
+                /**
+                 * Tags need to be as an array of strings
+                 */
+                case "tags": {
+                    String tagLine = (String) Utils.convertCell(item, fieldLst.getInt(key));
+                    if ((tagLine != null) && !tagLine.equals("")) {
+                        String[] tags = tagLine.split(",");
+                        flds.put("tags", tags);
+                    }
+                    break;
+                }
+                case "type": {
+
+                    String cardtype = (String) Utils.convertCell(item, fieldLst.getInt(key));
+                    ArrayList<CardType> cts = Utils.readCardsTypesFromBoard(cfg, cfg.destination);
+                    CardType ct = Utils.findCardTypeFromList(cts, cardtype);
+                    if (ct != null) {
+                        flds.put("typeId", ct.id);
+                    }
+
+                    break;
+                }
+                default: {
+                    if (item.getCell(fieldLst.getInt(key)) != null) {
+                        Object obj = Utils.convertCell(item, fieldLst.getInt(key));
+                        if (obj != null)
+                            flds.put(key, obj);
+                    }
+                    break;
+                }
+            }
+
+        }
+        return flds;
+    }
+
+    public static Card addTask(InternalConfig iCfg, Configuration accessCfg, String cardId, JSONObject item) {
+        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+        return lka.addTaskToCard(cardId, item);
     }
 }
