@@ -1,5 +1,6 @@
 package com.planview.lkutility.leankit;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import com.planview.lkutility.Configuration;
@@ -8,6 +9,7 @@ import com.planview.lkutility.InternalConfig;
 public class AccessCache {
     HashMap<String, Board> boardMap = new HashMap<>();
     HashMap<String, Card> cardMap = new HashMap<>();
+    HashMap<String, ArrayList<Lane>> taskBoardMap = new HashMap<>();
     HashMap<String, Task> taskMap = new HashMap<>();
     InternalConfig iCfg;
     Configuration accessCfg;
@@ -53,5 +55,24 @@ public class AccessCache {
             }
         }
         return card;
+    }
+    
+    public void setTaskBoard(String cardId, ArrayList<Lane> lanes) {
+        if (taskBoardMap.get(cardId) != null){
+            taskBoardMap.remove(cardId);
+        }
+        taskBoardMap.put(cardId, lanes);
+    }
+
+    public ArrayList <Lane> getTaskBoard(String cardId){
+        ArrayList<Lane> lanes = taskBoardMap.get(cardId);
+        if ( lanes == null) {
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            lanes = lka.fetchTaskLanes(cardId);
+            if (lanes != null) {
+                setTaskBoard(cardId, lanes);
+            }
+        }
+        return lanes;
     }
 }

@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 
@@ -70,6 +71,7 @@ public class Main {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        d.p(Debug.INFO, "Finished at: %s\n", new Date());
     }
 
     public static void getCommandLine(String[] args) {

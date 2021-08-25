@@ -1,11 +1,7 @@
 package com.planview.lkutility.leankit;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.StringReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDateTime;
@@ -27,13 +23,11 @@ import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.ParseException;
 import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.entity.EntityBuilder;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
@@ -647,6 +641,23 @@ public class LeanKitAccess {
         return status;
     }
 
+    private Card prioritiseCard(Card card, int idx){
+        reqType = "POST";
+        reqUrl = "/io/card/move";
+        reqParams.clear();
+        reqHdrs.clear();
+        JSONObject ent = new JSONObject();
+        String[] ps = new String[1];
+        ps[0] = card.id;
+        ent.put("cardIds", ps);
+        JSONObject dest = new JSONObject();
+        dest.put("index", idx);
+        dest.put("laneId", card.lane.id);
+        ent.put("destination", dest);
+        reqEnt = new StringEntity(ent.toString(), "UTF-8");
+        return execute(Card.class);
+    }
+
     private String postComment(String id, String comment) {
         reqType = "POST";
         reqUrl = "/io/card/" + id + "/comment";
@@ -857,7 +868,9 @@ public class LeanKitAccess {
                     postComment(card.id, values.get("value").toString());
                     break;
                 }
-
+                case "index": {
+                    prioritiseCard(card, values.getInt("value"));
+                }
                 case "Task": {
                     break;
                 }

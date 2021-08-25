@@ -1,6 +1,7 @@
 package com.planview.lkutility.importer;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 
 import com.planview.lkutility.ChangesColumns;
@@ -9,12 +10,9 @@ import com.planview.lkutility.InternalConfig;
 import com.planview.lkutility.Utils;
 import com.planview.lkutility.leankit.AccessCache;
 import com.planview.lkutility.leankit.Card;
-import com.planview.lkutility.leankit.CardType;
-import com.planview.lkutility.leankit.Lane;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.util.CellAddress;
 import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
@@ -29,7 +27,7 @@ public class Importer {
         cfg = config;
         cfg.cache = new AccessCache(cfg, cfg.destination);
         d.setLevel(cfg.debugLevel);
-
+        d.p(Debug.INFO, "Starting Import at: %s\n", new Date());
         /**
          * cfg might contain the sheet info for the importer if it came from the
          * exporter directly
@@ -40,6 +38,10 @@ public class Importer {
             cfg.itemSheet = cfg.wb.getSheet(cfg.destination.boardId);
         }
 
+        if (null == cfg.changesSheet) {
+            d.p(Debug.ERROR, "Cannot find Changes sheet in file: %s\n", cfg.xlsxfn);
+            System.exit(1);
+        }
         ChangesColumns cc = Utils.checkChangeSheetColumns(cfg.changesSheet);
         if (cc == null) {
             System.exit(1);
@@ -107,12 +109,24 @@ public class Importer {
                         item.getRowNum());
             }
 
+            //Check import requirements against command line
+            if (change.getCell(cc.action).getStringCellValue() == "Modify") {
+                if (((change.getCell(cc.field).getStringCellValue() == "attachments") && !cfg.exportAttachments)
+                        || ((change.getCell(cc.field).getStringCellValue() == "Task") && !cfg.exportTasks)
+                        || ((change.getCell(cc.field).getStringCellValue() == "comments") && !cfg.exportComments)) {
+                    d.p(Debug.WARN, "Ignoring action \"%s\" on item \"%s\", not set to import %s\n",
+                            change.getCell(cc.action).getStringCellValue(), item.getCell(titleCol).getStringCellValue(),
+                            change.getCell(cc.field).getStringCellValue());
+                    continue; // Break out and try next change
+                }
+            }
+            
             // If unset, it has a null value for the Leankit ID
             if ((item.getCell(idCol) == null) || (item.getCell(idCol).getStringCellValue() == "")) {
                 // Check if this is a 'create' operation. If not, ignore and continue past.
-                if (!change.getCell(cc.action).getStringCellValue().equals("Create") &&
-                    !(change.getCell(cc.action).getStringCellValue().equals("Modify") && 
-                       change.getCell(cc.field).getStringCellValue().equals("Task"))) {
+                if (!change.getCell(cc.action).getStringCellValue().equals("Create")
+                        && !(change.getCell(cc.action).getStringCellValue().equals("Modify")
+                                && change.getCell(cc.field).getStringCellValue().equals("Task"))) {
                     d.p(Debug.WARN, "Ignoring action \"%s\" on item \"%s\" (no ID present in row: %d)\n",
                             change.getCell(cc.action).getStringCellValue(), item.getCell(titleCol).getStringCellValue(),
                             item.getRowNum());
@@ -120,10 +134,7 @@ public class Importer {
                 }
             } else {
                 // Check if this is a 'create' operation. If it is, ignore and continue past.
-                if ( change.getCell(cc.action).getStringCellValue().equals("Create") ||
-                    (change.getCell(cc.action).getStringCellValue().equals("Modify") && 
-                      (change.getCell(cc.field).getStringCellValue().equals("Task")))
-                ) {
+                if (change.getCell(cc.action).getStringCellValue().equals("Create")) {
                     d.p(Debug.WARN,
                             "Ignoring action \"%s\" on item \"%s\" (attempting create on existing ID in row: %d)\n",
                             change.getCell(cc.action).getStringCellValue(), item.getCell(titleCol).getStringCellValue(),
@@ -141,20 +152,19 @@ public class Importer {
                 }
                 item.getCell(idCol).setCellValue(id);
                 XSSFFormulaEvaluator.evaluateAllFormulaCells(cfg.wb);
-                
-                d.p(Debug.INFO, "Create card \"%s\" on board \"%s\"\n", item.getCell(titleCol).getStringCellValue(),
-                        cfg.destination.boardId);
+
+                d.p(Debug.INFO, "Create card \"%s\" (row %s)\n", id, change.getRowNum());
             } else {
                 id = doAction(change, item);
-                d.p(Debug.INFO, "Modified card \"%s\" on board \"%s\"\n", item.getCell(titleCol).getStringCellValue(),
-                        cfg.destination.boardId);
+                d.p(Debug.INFO, "Mod: \"%s\" on card \"%s\" (row %s)\n", change.getCell(cc.field).getStringCellValue(),
+                        id, change.getRowNum());
             }
 
             if (id == null) {
 
-                d.p(Debug.ERROR, "%s", "Got null back from doAction(). Seek help!\n");
-            }
-            else {
+                d.p(Debug.ERROR, "%s",
+                        "Got null back from doAction(). Most likely card deleted from destination mid-transaction!\n");
+            } else {
                 Utils.writeFile(cfg, cfg.xlsxfn, cfg.wb);
             }
         }
@@ -221,7 +231,7 @@ public class Importer {
                 String field = change.getCell(cc.field).getStringCellValue();
                 switch (field) {
                     case "Task": {
-                        //Get row for the task
+                        // Get row for the task
                         String cf = change.getCell(cc.value).getCellFormula();
                         CellReference ca = new CellReference(cf);
                         XSSFSheet cSheet = cfg.wb.getSheet(ca.getSheetName());
@@ -231,16 +241,16 @@ public class Importer {
 
                             task.createCell(idCol);
                         }
-                        task.getCell(idCol).setCellValue( Utils.addTask(  cfg,  cfg.destination,  card.id,  jsonTask).id);
+                        task.getCell(idCol).setCellValue(Utils.addTask(cfg, cfg.destination, card.id, jsonTask).id);
                         break;
                     }
                     default: {
-                        vals.put("value", Utils.convertCell(change, cc.value));
+                        vals.put("value", Utils.fetchCell(change, cc.value));
                         break;
                     }
                 }
-                fld.put(change.getCell(cc.field).getStringCellValue(), vals);  
-                newCard = Utils.updateCard(cfg, cfg.destination, card.id, fld);        
+                fld.put(change.getCell(cc.field).getStringCellValue(), vals);
+                newCard = Utils.updateCard(cfg, cfg.destination, card.id, fld);
                 if (newCard == null) {
                     d.p(Debug.ERROR, "Could not modify card \"%s\" on board %s with details: %s", card.id,
                             cfg.destination.boardId, fld.toString());

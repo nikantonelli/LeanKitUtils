@@ -2,7 +2,7 @@ package com.planview.lkutility.leankit;
 
 import java.util.Date;
 
-public class Card {
+public class Card implements Comparable<Card> {
     public String id, title, typeId, description, laneId, mirrorSourceCardId, copiedFromCardId, 
             blockReason, priority, subscriptionId, version, containingCardId,
             customIconId, customIconLabel, iconPath, color, wipOverrideComment;
@@ -28,4 +28,9 @@ public class Card {
     public TaskBoardStats taskBoardStats;
     public Attachment[] attachments;
     public Comment[] comments;
+
+    //Sorting by index
+    public int compareTo(Card card){
+        return (this.index < card.index)? -1 : ((this.index == card.index)? 0:1);
+    }
 }

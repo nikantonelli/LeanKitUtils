@@ -44,7 +44,7 @@ public class Utils {
 
         if ((cc.group == null) || (cc.itmSht == null) || (cc.row == null) || (cc.action == null) || (cc.field == null)
                 || (cc.value == null)) {
-            d.p(Debug.WARN,
+            d.p(Debug.ERROR,
                     "Could not find all required columns in %s sheet: \"Group\", \"Item Sheet\", \"Item Row\", \"Action\", \"Field\", \"Value\"\n",
                     changesSht.getSheetName());
             return null;
@@ -55,9 +55,7 @@ public class Utils {
     public static Integer findRowBySourceId(XSSFSheet itemSht, String cardId) {
         for (int rowIndex = 0; rowIndex < itemSht.getLastRowNum(); rowIndex++) {
             Row row = itemSht.getRow(rowIndex);
-            // Aargh! Embedded number alert
-            // TODO: Fix this to be more generic
-            if (row != null && row.getCell(1).getStringCellValue().equals(cardId)) {
+            if (row != null && row.getCell(findColumnFromSheet(itemSht, "srcID")).getStringCellValue().equals(cardId)) {
                 return rowIndex;
             }
         }
@@ -98,7 +96,7 @@ public class Utils {
         return col;
     }
 
-    public static Object convertCell(Row change, Integer col) {
+    public static Object fetchCell(Row change, Integer col) {
 
         if (change.getCell(col) != null) {
             // Need to get the correct type of field
@@ -185,20 +183,8 @@ public class Utils {
      * Next up is all the Leankit access routines
      * 
      */
-    public static Lane getTaskLaneFromId(InternalConfig iCfg, Configuration accessCfg, String cardId, String laneId) {
-        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
-        Lane[] lanes = (Lane[]) lka.fetchTaskLanes(cardId).toArray();
-        return findLaneFromId(lanes, laneId);
-    }
-
-    public static Lane getTaskLaneFromName(InternalConfig iCfg, Configuration accessCfg, String cardId, String name) {
-        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
-        Lane[] lanes = (Lane[]) lka.fetchTaskLanes(cardId).toArray();
-        return findLaneFromName(lanes, name);
-    }
 
     public static String getLanePathFromId(InternalConfig iCfg, Configuration accessCfg, String laneId) {
-
         Lane[] lanes = null;
         if (iCfg.cache != null) {
             Board brd = iCfg.cache.getBoard();
@@ -222,7 +208,6 @@ public class Utils {
             }
             lane = parentLane;
         }
-
         return lanePath;
     }
 
@@ -233,16 +218,6 @@ public class Utils {
             }
         }
         d.p(Debug.WARN, "Failed to find lane %s in board\n", id);
-        return null;
-    }
-
-    private static Lane findLaneFromName(Lane[] lanes, String name) {
-        for (int i = 0; i < lanes.length; i++) {
-            if (lanes[i].name.equals(name)) {
-                return lanes[i];
-            }
-        }
-        d.p(Debug.WARN, "Failed to find lane %s in board\n", name);
         return null;
     }
 
@@ -263,21 +238,7 @@ public class Utils {
         LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
         return lka.fetchAttachment(cardId, attId);
     }
-
-    /**
-     * BEWARE: reading cards from a board will give you a reduced field set - BUT
-     * WON'T TELL YOU!
-     * 
-     * @param iCfg
-     * @param accessCfg
-     * @return ArrayList<Card>
-     */
-    public static ArrayList<Card> readCardsFromBoard(InternalConfig iCfg, Configuration accessCfg) {
-        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
-        ArrayList<Card> cards = lka.fetchCardsFromBoard(accessCfg.boardId, iCfg.exportArchived);
-        return cards;
-    }
-
+ 
     public static Board getBoard(InternalConfig iCfg, Configuration accessCfg) {
         Board brd = null;
         if (iCfg.cache != null) {
@@ -453,8 +414,14 @@ public class Utils {
 
     public static Lane findLaneFromCard(InternalConfig iCfg, Configuration accessCfg, String cardId, String laneType) {
         Lane lane = null;
-        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
-        ArrayList<Lane> lanes = lka.fetchTaskLanes(cardId);
+        ArrayList<Lane> lanes = null;
+
+        if (iCfg.cache != null) {
+            lanes = iCfg.cache.getTaskBoard(cardId);
+        } else {
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            lanes = lka.fetchTaskLanes(cardId);
+        }
         if (lanes != null) {
             Iterator<Lane> lIter = lanes.iterator();
             while (lIter.hasNext()) {
@@ -491,8 +458,19 @@ public class Utils {
                  * Don't include if not present
                  * 
                  */
+                case "assignedUsers": {
+                    String usersList = (String) Utils.fetchCell(item, fieldLst.getInt(key));
+                    if (usersList != null){
+                        String[] users = usersList.split(",");
+                        for (int i = 0; i < users.length; i++){
+                            flds.put(key, users[i]);
+                        }
+                    }
+                    break;
+                }
+
                 case "blockReason": {
-                    String reason = (String) Utils.convertCell(item, fieldLst.getInt(key));
+                    String reason = (String) Utils.fetchCell(item, fieldLst.getInt(key));
                     if ((reason != null) && !reason.equals("")) {
 
                         flds.put(key, reason);
@@ -503,7 +481,7 @@ public class Utils {
                 }
                 case "lane": {
                     Lane lane = null;
-                    String laneType = (String) Utils.convertCell(item, fieldLst.getInt(key));
+                    String laneType = (String) Utils.fetchCell(item, fieldLst.getInt(key));
                     if (cardId != null) {
                         if (laneType.isBlank()){
                             laneType = "ready";
@@ -523,8 +501,10 @@ public class Utils {
                     break;
                 }
                 case "size":
+                // The index will be set by the exporter in extra 'Modify' rows. This is here
+                //for manually created (import) spreadsheets
                 case "index": {
-                    Integer digits = ((Double) Utils.convertCell(item, fieldLst.getInt(key))).intValue();
+                    Integer digits = ((Double) Utils.fetchCell(item, fieldLst.getInt(key))).intValue();
                     if (digits != null) {
                         flds.put(key, digits);
                     }
@@ -535,7 +515,7 @@ public class Utils {
                  * Tags need to be as an array of strings
                  */
                 case "tags": {
-                    String tagLine = (String) Utils.convertCell(item, fieldLst.getInt(key));
+                    String tagLine = (String) Utils.fetchCell(item, fieldLst.getInt(key));
                     if ((tagLine != null) && !tagLine.equals("")) {
                         String[] tags = tagLine.split(",");
                         flds.put("tags", tags);
@@ -544,7 +524,7 @@ public class Utils {
                 }
                 case "type": {
 
-                    String cardtype = (String) Utils.convertCell(item, fieldLst.getInt(key));
+                    String cardtype = (String) Utils.fetchCell(item, fieldLst.getInt(key));
                     ArrayList<CardType> cts = Utils.readCardsTypesFromBoard(cfg, cfg.destination);
                     CardType ct = Utils.findCardTypeFromList(cts, cardtype);
                     if (ct != null) {
@@ -555,7 +535,7 @@ public class Utils {
                 }
                 default: {
                     if (item.getCell(fieldLst.getInt(key)) != null) {
-                        Object obj = Utils.convertCell(item, fieldLst.getInt(key));
+                        Object obj = Utils.fetchCell(item, fieldLst.getInt(key));
                         if (obj != null)
                             flds.put(key, obj);
                     }
@@ -569,6 +549,10 @@ public class Utils {
 
     public static Card addTask(InternalConfig iCfg, Configuration accessCfg, String cardId, JSONObject item) {
         LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
-        return lka.addTaskToCard(cardId, item);
+        Card card = lka.addTaskToCard(cardId, item);
+        if (iCfg.cache != null) {
+            iCfg.cache.setCard(card);
+        }
+        return card;
     }
 }

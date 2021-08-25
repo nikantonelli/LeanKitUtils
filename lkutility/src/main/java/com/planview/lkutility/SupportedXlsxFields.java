@@ -21,6 +21,8 @@ public class SupportedXlsxFields {
     public CustomId customId; 
     public String color, blockReason;
     public Integer index; 
+    public User[] assignedUsers;
+    
     /**
      * These are pseudo-fields. When these are seen, some extra
      * activity needs to take place and not be sent to the spreadsheet
@@ -45,7 +47,7 @@ public class SupportedXlsxFields {
     public CustomIcon customIcon;
     public ParentCard[] parentCards;    //Seems to be unpopulated in the /io/card?board= call
                                         //so we had to make a call per card to get the parents
-    public User[] assignedUsers;
+    
     public Board board;
     public Boolean isBlocked;
     public Attachment[] attachments;

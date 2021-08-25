@@ -29,6 +29,7 @@ import com.planview.lkutility.leankit.Lane;
 import com.planview.lkutility.leankit.ParentCard;
 import com.planview.lkutility.leankit.ParentChild;
 import com.planview.lkutility.leankit.Task;
+import com.planview.lkutility.leankit.User;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
@@ -74,6 +75,7 @@ public class Exporter {
         d.setLevel(config.debugLevel);
         cfg.cache = new AccessCache(cfg, cfg.source);
 
+        d.p(Debug.INFO, "Starting Export at: %s\n", new Date());
         Integer chShtIdx = null;
         if (!cfg.dualFlow) {
             chShtIdx = cfg.wb.getSheetIndex(InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.source.boardId);
@@ -212,6 +214,20 @@ public class Exporter {
             try {
                 switch (pbFields[i].getName()) {
 
+                    case "assignedUsers": {
+                        Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
+                        String outStr = "";
+                        if (fv != null) {
+                            User[] au = (User[])fv;
+                            for (int j = 0; j < au.length; j++){
+                                outStr += ((outStr.length()>0)?",":"") + au[j].emailAddress;
+                            }
+                            if (outStr.length() > 0){
+                                iRow.createCell(i + 1, CellType.STRING).setCellValue(outStr);
+                            }
+                        }
+                        break;
+                    }
                     case "attachments": {
                         Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
                         if ((fv != null) && cfg.exportAttachments) {
