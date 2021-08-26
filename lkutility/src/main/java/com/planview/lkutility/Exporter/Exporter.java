@@ -23,6 +23,7 @@ import com.planview.lkutility.leankit.BlockedStatus;
 import com.planview.lkutility.leankit.Card;
 import com.planview.lkutility.leankit.CardType;
 import com.planview.lkutility.leankit.Comment;
+import com.planview.lkutility.leankit.CustomField;
 import com.planview.lkutility.leankit.CustomId;
 import com.planview.lkutility.leankit.ExternalLink;
 import com.planview.lkutility.leankit.ItemType;
@@ -129,8 +130,14 @@ public class Exporter {
         fieldMap.put("ID", itmCellIdx++);
 
         // Now write out the fields
-        Field[] outFields = (new SupportedXlsxFields()).getClass().getFields();
-        Field[] checkFields = (new SupportedXlsxFields()).getClass().getDeclaredFields();
+        Field[] outFields = (new SupportedXlsxFields()).getClass().getFields();     //Public fields that will be written as columns
+        Field[] checkFields = (new SupportedXlsxFields()).getClass().getDeclaredFields(); //Inlcudes private that will cause alternative actions
+
+        /** 
+         * We need to find the custom fields and add those to the output list
+         */
+
+        CustomField[] customFields = Utils.fetchCustomFields(cfg, cfg.source);
 
         for (int i = 0; i < outFields.length; i++) {
             itmHdrRow.createCell(itmCellIdx, CellType.STRING).setCellValue(outFields[i].getName());
@@ -140,7 +147,7 @@ public class Exporter {
          * Read all the normal cards on the board - up to a limit?
          */
         ArrayList<Card> cards = Utils.readCardIdsFromBoard(cfg, cfg.source);
-
+        Collections.sort(cards);
         /**
          * Write all the cards out to the cfg.itemSheet
          */
@@ -191,14 +198,14 @@ public class Exporter {
             }
         }
 
-        Collections.sort(cards);
-        ic = cards.iterator();
-        while (ic.hasNext()){
-            Card card = ic.next();
-            Integer cardRow = Utils.findRowBySourceId(cfg.itemSheet, card.id);
-            createChangeRow(chgRowIdx, cardRow, "Modify", "index", card.index);
-                chgRowIdx++;
-        }
+        // Collections.sort(cards);
+        // ic = cards.iterator();
+        // while (ic.hasNext()){
+        //     Card card = ic.next();
+        //     Integer cardRow = Utils.findRowBySourceId(cfg.itemSheet, card.id);
+        //     createChangeRow(chgRowIdx, cardRow, "Modify", "index", card.index);
+        //         chgRowIdx++;
+        // }
 
         /**
          * Open the output stream and send the file back out.
@@ -230,7 +237,13 @@ public class Exporter {
                         if (fv != null) {
                             User[] au = (User[])fv;
                             for (int j = 0; j < au.length; j++){
-                                outStr += ((outStr.length()>0)?",":"") + au[j].emailAddress;
+                                /** Another case of brain-deadness. I have to fetch the realuser
+                                 * because the assignedUser != boardUser != user
+                                 */
+                                User realUser = Utils.fetchUser(cfg, cfg.source, au[j].id);
+                                if (realUser != null) {
+                                    outStr += ((outStr.length()>0)?",":"") + realUser.username;
+                                }
                             }
                             if (outStr.length() > 0){
                                 iRow.createCell(i + 1, CellType.STRING).setCellValue(outStr);
@@ -455,14 +468,14 @@ public class Exporter {
         }
     }
 
-    private void createChangeRow(Integer CRIdx, Integer IRIdx, String action, String field, Integer value) {
-        Integer localCellIdx = 0;
-        Row chgRow = cfg.changesSheet.createRow(CRIdx);
-        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(cfg.group);
-        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(cfg.source.boardId);
-        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(IRIdx + 1);
-        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(action); // "Action"
-        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(field); // "Field"
-        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(value); // "Value"    
-    }
+    // private void createChangeRow(Integer CRIdx, Integer IRIdx, String action, String field, Integer value) {
+    //     Integer localCellIdx = 0;
+    //     Row chgRow = cfg.changesSheet.createRow(CRIdx);
+    //     chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(cfg.group);
+    //     chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(cfg.source.boardId);
+    //     chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(IRIdx + 1);
+    //     chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(action); // "Action"
+    //     chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(field); // "Field"
+    //     chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(value); // "Value"    
+    // }
 }

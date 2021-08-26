@@ -10,8 +10,10 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -614,12 +616,21 @@ public class LeanKitAccess {
         return null;
     }
 
-    public String fetchUserId(String emailAddress) {
+    public User fetchUserById(String id) {
+        reqUrl = "/io/user/" + id;
+        reqType = "GET";
+        reqParams.clear();
+        reqHdrs.clear();
+
+        return execute(User.class);
+    }
+
+    public User fetchUserByName(String username) {
         reqUrl = "/io/user";
         reqType = "GET";
         reqParams.clear();
         reqHdrs.clear();
-        reqParams.add(new BasicNameValuePair("search", emailAddress));
+        reqParams.add(new BasicNameValuePair("search", username));
 
         ArrayList<User> userd = read(User.class);
         User user = null;
@@ -630,14 +641,14 @@ public class LeanKitAccess {
                 Iterator<User> uItor = userd.iterator();
                 while (uItor.hasNext()) {
                     User u = uItor.next();
-                    if (u.emailAddress.equals(emailAddress)) {
+                    if (u.username.equals(username)) {
                         user = u;
                     }
                 }
                 // Then take the first if that fails
                 if (user == null)
                     user = userd.get(0);
-                return user.id;
+                return user;
             }
         }
         return null;
@@ -832,13 +843,13 @@ public class LeanKitAccess {
                         JSONObject upd = new JSONObject();
                         upd.put("op", "remove");
                         upd.put("path", "/assignedUserIds");
-                        upd.put("value", fetchUserId(values.get("value").toString().substring(1)));
+                        upd.put("value", values.get("value").toString());
                         jsa.put(upd);
                     } else {
                         JSONObject upd = new JSONObject();
                         upd.put("op", "add");
                         upd.put("path", "/assignedUserIds/-");
-                        upd.put("value", fetchUserId(values.get("value").toString()));
+                        upd.put("value", values.get("value").toString());
                         jsa.put(upd);
                     }
                     break;
@@ -968,5 +979,20 @@ public class LeanKitAccess {
         reqUrl = "/io/card/" + cardId + "/tasks";
         reqEnt = new StringEntity(item.toString(), "UTF-8");
         return execute(Card.class);
+    }
+
+    public CustomFieldResult fetchCustomFields(String id) {
+        reqType = "GET";
+        reqUrl = "/io/board/" + id + "/customfield";
+        reqParams.clear();
+        reqHdrs.clear();
+        String results = processRequest();
+        ObjectMapper om = new ObjectMapper();
+            try {
+                return om.readValue(results, CustomFieldResult.class);
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+            }
+        return null;
     }
 }

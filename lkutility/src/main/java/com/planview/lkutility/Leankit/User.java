@@ -8,6 +8,6 @@ public class User {
     public BoardCount boardCount;
     public Date createdOn, lastAccess;
     public String gravatarLink;
-    public Role[] boardRoles;
+    public BoardRole[] boardRoles;
     public UserSetting settings;
 }

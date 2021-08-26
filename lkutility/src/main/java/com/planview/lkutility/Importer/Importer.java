@@ -9,7 +9,9 @@ import com.planview.lkutility.Debug;
 import com.planview.lkutility.InternalConfig;
 import com.planview.lkutility.Utils;
 import com.planview.lkutility.leankit.AccessCache;
+import com.planview.lkutility.leankit.BoardUser;
 import com.planview.lkutility.leankit.Card;
+import com.planview.lkutility.leankit.User;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
@@ -242,6 +244,35 @@ public class Importer {
                             task.createCell(idCol);
                         }
                         task.getCell(idCol).setCellValue(Utils.addTask(cfg, cfg.destination, card.id, jsonTask).id);
+                        break;
+                    }
+                    case "assignedUsers": {
+                        /**
+                         * We need to try and match the email address in the destination and fetch the
+                         * userID
+                         */
+                        String usersList = change.getCell(cc.value).getStringCellValue();
+                        if (usersList != null) {
+                            ArrayList<BoardUser> boardUsers = Utils.fetchUsers(cfg, cfg.destination); // Fetch the board users
+                            if (boardUsers != null) {
+    
+                                if (usersList != null) {
+                                    String[] users = usersList.split(",");
+                                    ArrayList<String> usersToPut = new ArrayList<>();
+                                    for (int i = 0; i < users.length; i++) {
+                                        User realUser = Utils.fetchUser(cfg, cfg.destination, users[i]);
+    
+                                        //Check if they are a board user so we don't error.
+                                        for (int j = 0; j < boardUsers.size(); j++) {
+                                            if (realUser.id.equals(boardUsers.get(j).id)) {
+                                                usersToPut.add(realUser.id);
+                                            }
+                                        }
+                                    }
+                                    fld.put("assignedUserIds", usersToPut.toArray());
+                                }
+                            }
+                        }
                         break;
                     }
                     default: {

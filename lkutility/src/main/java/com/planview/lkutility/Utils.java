@@ -13,9 +13,11 @@ import com.planview.lkutility.leankit.Board;
 import com.planview.lkutility.leankit.BoardUser;
 import com.planview.lkutility.leankit.Card;
 import com.planview.lkutility.leankit.CardType;
+import com.planview.lkutility.leankit.CustomField;
 import com.planview.lkutility.leankit.Lane;
 import com.planview.lkutility.leankit.LeanKitAccess;
 import com.planview.lkutility.leankit.Task;
+import com.planview.lkutility.leankit.User;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
@@ -435,7 +437,40 @@ public class Utils {
         return lane;
     }
 
-    static ArrayList<BoardUser> fetchUsers(InternalConfig iCfg, Configuration accessCfg) {
+    public static User fetchUser(InternalConfig iCfg, Configuration accessCfg, String id) {
+        User user = null;
+        if (iCfg.cache != null) {
+            user = iCfg.cache.getUserById(id);
+        } else {
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            user = lka.fetchUserById(id);
+        }
+        return user;
+    }
+
+    public static CustomField[] fetchCustomFields(InternalConfig iCfg, Configuration accessCfg){
+        CustomField[] fields = null;
+        if (iCfg.cache != null) {
+            fields = iCfg.cache.getCustomFields();
+        } else {
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            fields = lka.fetchCustomFields(accessCfg.boardId).customFields;
+        }
+        return fields;
+    }
+    
+    public static User fetchUserByName(InternalConfig iCfg, Configuration accessCfg, String username) {
+        User user = null;
+        if (iCfg.cache != null) {
+            user = iCfg.cache.getUserByName(username);
+        } else {
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            user = lka.fetchUserByName(username);
+        }
+        return user;
+    }
+
+    public static ArrayList<BoardUser> fetchUsers(InternalConfig iCfg, Configuration accessCfg) {
 
         ArrayList<BoardUser> users = null;
         if (iCfg.cache != null) {
@@ -476,8 +511,10 @@ public class Utils {
                      * We need to try and match the email address in the destination and fetch the
                      * userID
                      */
-                    String usersList = (String) Utils.fetchCell(item, fieldLst.getInt(key));
-                    if (usersList != null) {
+                    Object fv = Utils.fetchCell(item, fieldLst.getInt(key));
+                     
+                    if (fv != null) {
+                        String usersList = (String)fv;
                         ArrayList<BoardUser> boardUsers = fetchUsers(cfg, accessCfg); // Fetch the board users
                         if (boardUsers != null) {
 
@@ -485,13 +522,21 @@ public class Utils {
                                 String[] users = usersList.split(",");
                                 ArrayList<String> usersToPut = new ArrayList<>();
                                 for (int i = 0; i < users.length; i++) {
-                                    for (int j = 0; j < boardUsers.size(); j++) {
-                                        if (boardUsers.get(j).emailAddress.equals(users[i])) {
-                                            usersToPut.add(boardUsers.get(j).userId);
+                                    User realUser = fetchUserByName(cfg, accessCfg, users[i]);
+                                    if (realUser != null) {
+                                        // Check if they are a board user so we don't error.
+                                        for (int j = 0; j < boardUsers.size(); j++) {
+                                            if (realUser.id.equals(boardUsers.get(j).userId)) {
+                                                usersToPut.add(realUser.id);
+                                            }
                                         }
+                                    } else {
+                                        d.p(Debug.WARN, "Cannot locate assignedUser: %s\n", users[i]);
                                     }
                                 }
-                                flds.put("assignedUserIds", usersToPut.toArray());
+                                if (usersToPut.size() > 0) {
+                                    flds.put("assignedUserIds", usersToPut.toArray());
+                                }
                             }
                         }
                     }

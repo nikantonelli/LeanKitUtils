@@ -7,8 +7,15 @@ import com.planview.lkutility.Configuration;
 import com.planview.lkutility.InternalConfig;
 
 public class AccessCache {
+
+    /** For now, we will put everything into HashMaps
+     * At some later date, we could create a better organisation of info
+     */
     HashMap<String, Board> boardMap = new HashMap<>();
     HashMap<String, Card> cardMap = new HashMap<>();
+    HashMap<String, User> userIdMap = new HashMap<>();
+    HashMap<String, User> usernameMap = new HashMap<>();
+    HashMap<String, CustomField[]> customFieldMap = new HashMap<>();
     HashMap<String, ArrayList<Lane>> taskBoardMap = new HashMap<>();
     HashMap<String, ArrayList<BoardUser>> boardUserMap = new HashMap<>();
     HashMap<String, Task> taskMap = new HashMap<>();
@@ -20,6 +27,25 @@ public class AccessCache {
         accessCfg = accCfg;
     }
 
+    public void setCustomFields(CustomField[] cfm) {
+        if (customFieldMap.get(accessCfg.boardId) != null){
+            customFieldMap.remove(accessCfg.boardId);
+        }
+        customFieldMap.put(accessCfg.boardId, cfm);
+    }
+
+    public CustomField[] getCustomFields(){
+        CustomField[] cfm = customFieldMap.get(accessCfg.boardId);
+        if (cfm == null) {
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            cfm = lka.fetchCustomFields(accessCfg.boardId).customFields;
+            if (cfm != null) {
+                setCustomFields(cfm);
+            }
+        }
+        return cfm;
+    }
+    
     public void setBoard(Board brd) {
         if (boardMap.get(brd.id) != null){
             boardMap.remove(brd.id);
@@ -39,6 +65,40 @@ public class AccessCache {
         return brd;
     }
     
+    public User getUserById(String id){
+        User user = userIdMap.get(id);
+        if (user == null) {
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            user = lka.fetchUserById(id);
+            if (user != null) {
+                setUser(user);
+            }
+        }
+        return user;
+    }
+    public User getUserByName(String username){
+        User user = usernameMap.get(username);
+        if (user == null) {
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            user = lka.fetchUserByName(username);
+            if (user != null) {
+                setUser(user);
+            }
+        }
+        return user;
+    }
+
+    public void setUser(User user) {
+        if (userIdMap.get(user.id) != null){
+            userIdMap.remove(user.id);
+        }
+        if (usernameMap.get(user.username) != null){
+            usernameMap.remove(user.username);
+        }
+        userIdMap.put(user.id, user);
+        usernameMap.put(user.username, user);
+    }
+
     public void setCard(Card card) {
         if (cardMap.get(card.id) != null){
             cardMap.remove(card.id);
