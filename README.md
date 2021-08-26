@@ -8,7 +8,7 @@ It will copy current cards (with option to include archived) with tasks, comment
 
 # Setup
 
-The app does its work through the medium of an Excel spreadsheet. This has more flexibility that using a CSV file as I can do stuff to implement parent/child relationships fairly easily. In addition, comments, descriptions, etc. can cause issues if they contain the "," character
+The app does its work through the medium of an Excel spreadsheet. This has more flexibility that using a CSV file as I can do stuff to implement parent/child relationships fairly easily. In addition, comments, descriptions, etc. can cause issues if they contain the "," character in CSV files.
 
 The app may also require you to have read/write access on the directory you are running it from. This is to store the attachment files if you have asked for them to be exported.
 
