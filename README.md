@@ -37,14 +37,34 @@ Option | Argument | Description
  
 # Features and Usage
  
-The exporter will create sheets in the Xlsx file that correspond to the boardId that will be needed by the importer (if you progress to that stage). The exporter does not export any history information and takes a snapshot of what is there right now.
+The exporter will create sheets in the Xlsx file that correspond to the boardId that will be needed by the importer (if you progress to that stage). The exporter does not export any history (i.e. dates of changes) information and takes a snapshot of what is there right now.
  
 You can re-use the same spreadsheet to export multiple boards as each one is saved under a different sheet name
 
 If you are running the export in order to run the importer, you must copy (or rename) the sheet entitled Changes_\<boardid\> to a sheet called just Changes. 
  
-If you want to merge boards together into one destination board, you can concatenate multiple changes sheet together, leaving the board item sheets as they are. E.g. merge sheets called "Changes_1598676317" and "Changes_1606150498" (created by the exporter) into one sheet called "Changes" and then run the importer. Remember! You will have issues with Lanes if the layouts of the boards are imcompatible. All items that cannot be put into a correct lane will end up in the default drop lane - this can get messy. To recover, you can delete all the items in the default drop lane that aren't supposed to be there and set the value in the Group column in the Changes sheet to something memorable (e.g. 99) for those items you want to recreate and modify. Then rerun the importer with the -g option with that group number.
+If you want to merge boards together into one destination board, you can concatenate multiple changes sheet together, leaving the board item sheets as they are. E.g. merge sheets called "Changes_1598676317" and "Changes_1606150498" (created by the exporter) into one sheet called "Changes" and then run the importer. Remember! You will have issues with Lanes if the layouts of the boards are imcompatible. 
+
+All items that cannot be put into a correct lane will end up in the default drop lane - this can get messy. To recover, you can delete all the items in the default drop lane that aren't supposed to be there and set the value in the Group column in the Changes sheet to something memorable (e.g. 99) for those items you want to recreate and modify. Then rerun the importer with the -g option with that group number.
  
- To run it, use the following command line:
+To run it, for example, you can use the following command line:
  
- java -jar lkutility\target\lkutility-1.0-jar-with-dependencies.jar -f "file.xlsx" -t  -A -T -S
+java -jar lkutility\target\lkutility-1.0-jar-with-dependencies.jar -f "file.xlsx" -t  -A -T -S -C
+ 
+To get an example spreadsheet of what the importer requires, you can run the export (only, using -e) on a board that has parent/child, attachment, comment, etc., data already set up.
+
+To get an idea of the progress that the exporter/importer is making, use the option "-x 3".
+ 
+# Parent/Child Relationships
+ 
+The use of the spreadsheet allows the indirect logging of the parent/child relationships. This is useful when you don't yet know the Id of the cards in the destination board. A 'Modify' row in the Changes sheet will allow you to point a child to a parent item by using a FORMULA in the cell.
+ 
+# OnScreen positioning and Indexes
+ 
+The priority of a card is normally set as an index of a card with zero being at the top of the screen. The order in which the exporter finds cards is done based on the last date that the cards were accessed. This means that the index order does not match the 'found' order. The upshot of this is the importer may attempt to set the Index to some value that may not yet be valid (as all the cards have not yet been created) and these indexes get ignored by LeanKit.
+
+If you are manually creating the importer spreadsheet, you will need to bear this in mind. The exporter will create an extra set of 'Modify' rows at the end of the spreadsheet to reset the indexes appropriately.
+
+# Assigned Users on Import
+
+If your destination system does not have the correct users set up (and they also have access to the board), the users are ignored.
