@@ -22,6 +22,7 @@ public class SupportedXlsxFields {
     public String color, blockReason;
     public Integer index; 
     public User[] assignedUsers;
+    public ExternalLink externalLink;
     
     /**
      * These are pseudo-fields. When these are seen, some extra

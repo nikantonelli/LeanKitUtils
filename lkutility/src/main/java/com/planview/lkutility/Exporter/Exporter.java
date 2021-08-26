@@ -300,12 +300,15 @@ public class Exporter {
                         }
                         break;
                     }
-                    // Not sure why this is in the plural as I have only ever seen one
-                    case "externalLinks": {
-                        Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
+                    
+                    case "externalLink": {
+                        Object fv = c.getClass().getField("externalLinks").get(c);
                         if (fv != null) {
-                            iRow.createCell(i + 1, CellType.STRING).setCellValue(
-                                    ((ExternalLink) fv).label.replace(",", " ") + "," + ((ExternalLink) fv).url);
+                            ExternalLink[] extlnks = (ExternalLink[])fv;
+                            if (extlnks.length > 0){
+                                iRow.createCell(i + 1, CellType.STRING).setCellValue(
+                                    extlnks[0].label.replace(",", " ") + "," + extlnks[0].url);
+                            }
                         }
                         break;
                     }

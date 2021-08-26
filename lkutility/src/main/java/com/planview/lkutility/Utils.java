@@ -508,6 +508,34 @@ public class Utils {
                     }
                     break;
                 }
+                case "externalLink": {
+                    String link = (String) Utils.fetchCell(item, fieldLst.getInt(key));
+                    if (link != null) {
+                        if (!link.isBlank()) {
+                            String[] bits = link.split(",");
+                            JSONObject el = new JSONObject();
+
+                            switch (bits.length) {
+                                case 2: {
+                                    el.put("label", bits[0]);
+                                    el.put("url", bits[1]);
+                                    break;
+                                }
+                                case 1: {
+                                    el.put("label", "");
+                                    el.put("url", bits[0]);
+                                    break;
+                                }
+                                default:
+                                    break;
+                            }
+                            if (el.has("url")) {
+                                flds.put(key, el);
+                            }
+                        }
+                    }
+                    break;
+                }
                 case "lane": {
                     Lane lane = null;
                     String laneType = (String) Utils.fetchCell(item, fieldLst.getInt(key));

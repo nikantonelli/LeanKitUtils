@@ -940,6 +940,10 @@ public class LeanKitAccess {
     }
 
     public Card createCard(JSONObject jItem) {
+
+        /**
+         * We have to 'translate' some fields as we do for updateCard
+         */
         reqType = "POST";
         reqUrl = "/io/card/";
         reqParams.clear();
