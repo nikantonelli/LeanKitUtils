@@ -28,10 +28,10 @@ Option | Argument | Description
 -t |  | Run importer and exporter sequentially
 -g | \<group\> | Mark exported items with this groupId ready for selection on import. Select only items marked with this group for import
 -O |  | Include _Older_ archived items during export
--A |  | Include _Attachments_ in export - these get placed in your current working directory 
--T |  | Include _Tasks_ in export
--C |  | Include  _Comments_ in export
--S |  | Include a comment in export containing link to original _Source_
+-A |  | Include _Attachments_ in export/import - these get placed in your current working directory 
+-T |  | Include _Tasks_ in export/import
+-C |  | Include  _Comments_ in export/import
+-S |  | Include a comment in export containing link to original _Source_ (will not get imported if -C not used)
  
 # Features and Usage
  
