@@ -2,11 +2,9 @@
 
 Currently this is limited to an exporter/importer app. The same app will do both directions independently. Future development may make it do both at once, i.e 'simultaneous transfer'
 
-With this tool, you can make a backup of the current state of play of your board, recreate a copy of the cards on a board, merge boards together into a single destination. 
+With this tool, you can make a backup of the current state of play of your board - recreate a copy of the cards on the same, or different, board - merge boards together into a single destination board. 
 
-It will copy current cards (with option to include archived) with comments and attachments (if indicated), as well as marking the source of the copy by adding an additional comment in the destination card.
-
-TODO: Copy tasks
+It will copy current cards (with option to include archived) with tasks, comments and attachments (if indicated), as well as marking the source of the copy by adding an additional comment in the destination card. AssignedUsers are preserved if the same login name exists on the source and destination.
 
 # Setup
 
@@ -67,4 +65,4 @@ If you are manually creating the importer spreadsheet, you will need to bear thi
 
 # Assigned Users on Import
 
-If your destination system does not have the correct users set up (and they also have access to the board), the users are ignored.
+If your destination system does not have the correct users set up, the users are ignored.
