@@ -2,7 +2,7 @@
 
 Currently this is limited to an exporter/importer app. The same app will do both directions independently. Future development may make it do both at once, i.e 'simultaneous transfer'
 
-With this tool, you can make a backup of the current state of play of your board - recreate a copy of the cards on the same, or different, board - merge boards together into a single destination board. 
+With this tool, you can make a backup of the current state of cards on your board - recreate a copy of the cards on the same, or different, board - merge boards together into a single destination board. 
 
 It will copy current cards (with option to include archived) with tasks, comments and attachments (if indicated), as well as marking the source of the copy by adding an additional comment in the destination card. AssignedUsers are preserved if the same login name exists on the source and destination.
 
@@ -42,6 +42,10 @@ You can re-use the same spreadsheet to export multiple boards as each one is sav
 If you are running the export in order to run the importer, you must copy (or rename) the sheet entitled Changes_\<boardid\> to a sheet called just Changes. 
  
 If you want to merge boards together into one destination board, you can concatenate multiple changes sheet together, leaving the board item sheets as they are. E.g. merge sheets called "Changes_1598676317" and "Changes_1606150498" (created by the exporter) into one sheet called "Changes" and then run the importer. Remember! You will have issues with Lanes if the layouts of the boards are imcompatible. 
+
+I will say it again in case you missed it: YOU MIGHT WANT TO MAKE SURE THE BOARD LAYOUT IS THE SAME.
+
+and: DO NOT PUT ANY LANE WIP LIMITS IN PLACE ON THE DESTINATION BOARD. REMOVE AND RESET AFTER IMPORTING
 
 All items that cannot be put into a correct lane will end up in the default drop lane - this can get messy. To recover, you can delete all the items in the default drop lane that aren't supposed to be there and set the value in the Group column in the Changes sheet to something memorable (e.g. 99) for those items you want to recreate and modify. Then rerun the importer with the -g option with that group number.
  
