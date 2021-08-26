@@ -16,15 +16,14 @@ import com.planview.lkutility.leankit.CardType;
 import com.planview.lkutility.leankit.Lane;
 import com.planview.lkutility.leankit.LeanKitAccess;
 import com.planview.lkutility.leankit.Task;
-import com.planview.lkutility.leankit.User;
 
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.json.JSONObject;
-import org.apache.poi.ss.usermodel.CellType;
-import org.apache.poi.ss.usermodel.DateUtil;
 
 public class Utils {
     static Debug d = new Debug();
@@ -55,7 +54,7 @@ public class Utils {
     }
 
     public static Integer findRowBySourceId(XSSFSheet itemSht, String cardId) {
-        for (int rowIndex = 0; rowIndex < itemSht.getLastRowNum(); rowIndex++) {
+        for (int rowIndex = 1; rowIndex <= itemSht.getLastRowNum(); rowIndex++) {
             Row row = itemSht.getRow(rowIndex);
             if (row != null && row.getCell(findColumnFromSheet(itemSht, "srcID")).getStringCellValue().equals(cardId)) {
                 return rowIndex;

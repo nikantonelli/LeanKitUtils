@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -188,6 +189,15 @@ public class Exporter {
                         "='" + cfg.source.boardId + "'!A" + (parentRow + 1));
                 chgRowIdx++;
             }
+        }
+
+        Collections.sort(cards);
+        ic = cards.iterator();
+        while (ic.hasNext()){
+            Card card = ic.next();
+            Integer cardRow = Utils.findRowBySourceId(cfg.itemSheet, card.id);
+            createChangeRow(chgRowIdx, cardRow, "Modify", "index", card.index);
+                chgRowIdx++;
         }
 
         /**
@@ -440,5 +450,16 @@ public class Exporter {
         } else {
             chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(value); // "Value"
         }
+    }
+
+    private void createChangeRow(Integer CRIdx, Integer IRIdx, String action, String field, Integer value) {
+        Integer localCellIdx = 0;
+        Row chgRow = cfg.changesSheet.createRow(CRIdx);
+        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(cfg.group);
+        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(cfg.source.boardId);
+        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(IRIdx + 1);
+        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(action); // "Action"
+        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(field); // "Field"
+        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(value); // "Value"    
     }
 }

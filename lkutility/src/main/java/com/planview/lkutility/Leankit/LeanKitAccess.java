@@ -137,53 +137,53 @@ public class LeanKitAccess {
                     JSONArray p = (JSONArray) jresp.get(fieldName);
                     Integer accumulatedCount = pageMeta.getInt("endRow");
 
-                    //if (accumulatedCount >= totalRecords) {
-                        // Add the returned items to the array
-                        for (int i = 0; i < p.length(); i++) {
-                            try {
-                                items.add(om.readValue(p.get(i).toString(), expectedResponseType));
-                            } catch (JsonProcessingException | JSONException e) {
-                                e.printStackTrace();
-                            }
+                    // if (accumulatedCount >= totalRecords) {
+                    // Add the returned items to the array
+                    for (int i = 0; i < p.length(); i++) {
+                        try {
+                            items.add(om.readValue(p.get(i).toString(), expectedResponseType));
+                        } catch (JsonProcessingException | JSONException e) {
+                            e.printStackTrace();
                         }
-                    //} else {
-                        /**
-                         * We start off assuming that we begin at zero. If we find that there are less
-                         * than there are available, we have to redo the processRequest with new offset
-                         * and limit params
-                         */
-                        // Length here may be limited to 200 by the API paging.
-                        d.p(Debug.VERBOSE, "Received %d %s (out of %d)\n", accumulatedCount,
-                                fieldName.substring(0,
-                                        ((accumulatedCount > 1) ? fieldName.length() : fieldName.length() - 1)),
-                                totalRecords);
-                        if (totalRecords > accumulatedCount) {
+                    }
+                    // } else {
+                    /**
+                     * We start off assuming that we begin at zero. If we find that there are less
+                     * than there are available, we have to redo the processRequest with new offset
+                     * and limit params
+                     */
+                    // Length here may be limited to 200 by the API paging.
+                    d.p(Debug.VERBOSE, "Received %d %s (out of %d)\n", accumulatedCount,
+                            fieldName.substring(0,
+                                    ((accumulatedCount > 1) ? fieldName.length() : fieldName.length() - 1)),
+                            totalRecords);
+                    if (totalRecords > accumulatedCount) {
 
-                            Iterator<NameValuePair> it = reqParams.iterator();
-                            int acc = 0, offsetIdx = -1;
-                            while (it.hasNext()) {
-                                NameValuePair vp = it.next();
-                                if (vp.getName() == "offset") {
-                                    offsetIdx = acc;
-                                    break;
-                                }
-                                acc++;
+                        Iterator<NameValuePair> it = reqParams.iterator();
+                        int acc = 0, offsetIdx = -1;
+                        while (it.hasNext()) {
+                            NameValuePair vp = it.next();
+                            if (vp.getName() == "offset") {
+                                offsetIdx = acc;
+                                break;
                             }
-
-                            if (offsetIdx >= 0) {
-                                reqParams.remove(offsetIdx);
-                                reqParams.add(new BasicNameValuePair("offset", accumulatedCount.toString()));
-                                /**
-                                 * This is slightly dangerous as it is a recursive call to get more stuff.
-                                 */
-                                ArrayList<T> childItems = readRaw(expectedResponseType);
-                                if (childItems != null) {
-                                    items.addAll(childItems);
-                                }
-                                accumulatedCount = items.size();
-                            }
+                            acc++;
                         }
-                    //}
+
+                        if (offsetIdx >= 0) {
+                            reqParams.remove(offsetIdx);
+                            reqParams.add(new BasicNameValuePair("offset", accumulatedCount.toString()));
+                            /**
+                             * This is slightly dangerous as it is a recursive call to get more stuff.
+                             */
+                            ArrayList<T> childItems = readRaw(expectedResponseType);
+                            if (childItems != null) {
+                                items.addAll(childItems);
+                            }
+                            accumulatedCount = items.size();
+                        }
+                    }
+                    // }
                     return items;
                 }
 
