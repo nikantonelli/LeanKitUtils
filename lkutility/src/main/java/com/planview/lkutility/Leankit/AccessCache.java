@@ -10,6 +10,7 @@ public class AccessCache {
     HashMap<String, Board> boardMap = new HashMap<>();
     HashMap<String, Card> cardMap = new HashMap<>();
     HashMap<String, ArrayList<Lane>> taskBoardMap = new HashMap<>();
+    HashMap<String, ArrayList<BoardUser>> boardUserMap = new HashMap<>();
     HashMap<String, Task> taskMap = new HashMap<>();
     InternalConfig iCfg;
     Configuration accessCfg;
@@ -74,5 +75,24 @@ public class AccessCache {
             }
         }
         return lanes;
+    }
+
+    public void setBoardUsers(String brdId, ArrayList<BoardUser> users) {
+        if (boardUserMap.get(brdId) != null){
+            boardUserMap.remove(brdId);
+        }
+        boardUserMap.put(brdId, users);
+    }
+
+    public ArrayList <BoardUser> getBoardUsers(String brdId){
+        ArrayList<BoardUser> users = boardUserMap.get(brdId);
+        if ( users == null) {
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            users = lka.fetchUsers(brdId);
+            if (users != null) {
+                setBoardUsers(brdId, users);
+            }
+        }
+        return users;
     }
 }

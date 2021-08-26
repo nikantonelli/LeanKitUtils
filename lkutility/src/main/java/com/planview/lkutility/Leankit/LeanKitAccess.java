@@ -78,9 +78,13 @@ public class LeanKitAccess {
     }
 
     public <T> ArrayList<T> read(Class<T> expectedResponseType) {
-        reqHdrs.clear();
+
         reqHdrs.add(new BasicNameValuePair("Accept", "application/json"));
         reqHdrs.add(new BasicNameValuePair("Content-type", "application/json"));
+        return readRaw(expectedResponseType);
+    }
+
+    public <T> ArrayList<T> readRaw(Class<T> expectedResponseType) {
         String bd = processRequest();
         if (bd == null) {
             return null;
@@ -104,6 +108,9 @@ public class LeanKitAccess {
                 switch (typename[typename.length - 1]) {
                     case "Board":
                         fieldName = "boards";
+                        break;
+                    case "BoardUser":
+                        fieldName = "boardUsers";
                         break;
                     case "User":
                         fieldName = "users";
@@ -130,50 +137,53 @@ public class LeanKitAccess {
                     JSONArray p = (JSONArray) jresp.get(fieldName);
                     Integer accumulatedCount = pageMeta.getInt("endRow");
 
-                    // Add the returned items to the array
-                    for (int i = 0; i < p.length(); i++) {
-                        try {
-                            items.add(om.readValue(p.get(i).toString(), expectedResponseType));
-                        } catch (JsonProcessingException | JSONException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                    /**
-                     * We start off assuming that we begin at zero. If we find that there are less
-                     * than there are available, we have to redo the processRequest with new offset
-                     * and limit params
-                     */
-                    // Length here may be limited to 200 by the API paging.
-                    d.p(Debug.VERBOSE, "Received %d %s (out of %d)\n", accumulatedCount,
-                            fieldName.substring(0,
-                                    ((accumulatedCount > 1) ? fieldName.length() : fieldName.length() - 1)),
-                            totalRecords);
-                    while (totalRecords > accumulatedCount) {
-
-                        Iterator<NameValuePair> it = reqParams.iterator();
-                        int acc = 0, offsetIdx = -1;
-                        while (it.hasNext()) {
-                            NameValuePair vp = it.next();
-                            if (vp.getName() == "offset") {
-                                offsetIdx = acc;
-                                break;
+                    //if (accumulatedCount >= totalRecords) {
+                        // Add the returned items to the array
+                        for (int i = 0; i < p.length(); i++) {
+                            try {
+                                items.add(om.readValue(p.get(i).toString(), expectedResponseType));
+                            } catch (JsonProcessingException | JSONException e) {
+                                e.printStackTrace();
                             }
-                            acc++;
                         }
+                    //} else {
+                        /**
+                         * We start off assuming that we begin at zero. If we find that there are less
+                         * than there are available, we have to redo the processRequest with new offset
+                         * and limit params
+                         */
+                        // Length here may be limited to 200 by the API paging.
+                        d.p(Debug.VERBOSE, "Received %d %s (out of %d)\n", accumulatedCount,
+                                fieldName.substring(0,
+                                        ((accumulatedCount > 1) ? fieldName.length() : fieldName.length() - 1)),
+                                totalRecords);
+                        if (totalRecords > accumulatedCount) {
 
-                        if (offsetIdx >= 0) {
-                            reqParams.remove(offsetIdx);
-                            reqParams.add(new BasicNameValuePair("offset", accumulatedCount.toString()));
-                            /**
-                             * This is slightly dangerous as it is a recursive call to get more stuff.
-                             */
-                            ArrayList<T> childItems = read(expectedResponseType);
-                            if (childItems != null) {
-                                items.addAll(childItems);
+                            Iterator<NameValuePair> it = reqParams.iterator();
+                            int acc = 0, offsetIdx = -1;
+                            while (it.hasNext()) {
+                                NameValuePair vp = it.next();
+                                if (vp.getName() == "offset") {
+                                    offsetIdx = acc;
+                                    break;
+                                }
+                                acc++;
                             }
-                            accumulatedCount = items.size();
+
+                            if (offsetIdx >= 0) {
+                                reqParams.remove(offsetIdx);
+                                reqParams.add(new BasicNameValuePair("offset", accumulatedCount.toString()));
+                                /**
+                                 * This is slightly dangerous as it is a recursive call to get more stuff.
+                                 */
+                                ArrayList<T> childItems = readRaw(expectedResponseType);
+                                if (childItems != null) {
+                                    items.addAll(childItems);
+                                }
+                                accumulatedCount = items.size();
+                            }
                         }
-                    }
+                    //}
                     return items;
                 }
 
@@ -426,6 +436,8 @@ public class LeanKitAccess {
         reqUrl = "/io/board/" + boardId + "/cardType";
         reqParams.clear();
         reqHdrs.clear();
+        reqParams.add(new BasicNameValuePair("limit", "200"));
+        reqParams.add(new BasicNameValuePair("offset", "0"));
         ArrayList<CardType> brd = read(CardType.class);
         if (brd != null) {
             if (brd.size() > 0) {
@@ -463,6 +475,8 @@ public class LeanKitAccess {
         reqUrl = "io/card/" + cardId + "/tasks";
         reqParams.clear();
         reqHdrs.clear();
+        reqParams.add(new BasicNameValuePair("limit", "200"));
+        reqParams.add(new BasicNameValuePair("offset", "0"));
         ArrayList<Task> tasks = read(Task.class);
         return tasks;
     }
@@ -473,6 +487,8 @@ public class LeanKitAccess {
         reqParams.clear();
         reqParams.add(new BasicNameValuePair("only", "id"));
         reqHdrs.clear();
+        reqParams.add(new BasicNameValuePair("limit", "200"));
+        reqParams.add(new BasicNameValuePair("offset", "0"));
         ArrayList<Task> tasks = read(Task.class);
         return tasks;
     }
@@ -505,6 +521,8 @@ public class LeanKitAccess {
     public ArrayList<Comment> fetchCommentsForCard(Card cd) {
         reqParams.clear();
         reqHdrs.clear();
+        reqParams.add(new BasicNameValuePair("limit", "200"));
+        reqParams.add(new BasicNameValuePair("offset", "0"));
         reqType = "GET";
         reqUrl = "/io/card/" + cd.id + "/comment";
         return read(Comment.class);
@@ -636,12 +654,11 @@ public class LeanKitAccess {
                 .addTextBody("Description", "Auto-generated from Script").addPart("file", fb);
         reqEnt = mpeb.build();
 
-
         String status = processRequest();
         return status;
     }
 
-    private Card prioritiseCard(Card card, int idx){
+    private Card prioritiseCard(Card card, int idx) {
         reqType = "POST";
         reqUrl = "/io/card/move";
         reqParams.clear();
@@ -683,13 +700,14 @@ public class LeanKitAccess {
         return execute(Card.class);
     }
 
-    public User fetchUser(String id) {
+    public ArrayList<BoardUser> fetchUsers(String boardId) {
         reqType = "GET";
-        reqUrl = "/io/user/" + id;
+        reqUrl = "/io/board/" + boardId + "/user";
         reqParams.clear();
         reqHdrs.clear();
-        reqParams.add(new BasicNameValuePair("returnFullRecord", "true"));
-        return execute(User.class);
+        reqParams.add(new BasicNameValuePair("limit", "100"));
+        reqParams.add(new BasicNameValuePair("offset", "0"));
+        return read(BoardUser.class);
     }
 
     private Integer findTagIndex(Card card, String name) {
@@ -940,7 +958,7 @@ public class LeanKitAccess {
         return execute(Id.class);
     }
 
-    public Card addTaskToCard(String cardId, JSONObject item){
+    public Card addTaskToCard(String cardId, JSONObject item) {
         reqType = "POST";
         reqParams.clear();
         reqUrl = "/io/card/" + cardId + "/tasks";

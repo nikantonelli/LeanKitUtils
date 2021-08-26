@@ -10,11 +10,13 @@ import java.util.Date;
 import java.util.Iterator;
 
 import com.planview.lkutility.leankit.Board;
+import com.planview.lkutility.leankit.BoardUser;
 import com.planview.lkutility.leankit.Card;
 import com.planview.lkutility.leankit.CardType;
 import com.planview.lkutility.leankit.Lane;
 import com.planview.lkutility.leankit.LeanKitAccess;
 import com.planview.lkutility.leankit.Task;
+import com.planview.lkutility.leankit.User;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
@@ -238,7 +240,7 @@ public class Utils {
         LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
         return lka.fetchAttachment(cardId, attId);
     }
- 
+
     public static Board getBoard(InternalConfig iCfg, Configuration accessCfg) {
         Board brd = null;
         if (iCfg.cache != null) {
@@ -434,6 +436,18 @@ public class Utils {
         return lane;
     }
 
+    static ArrayList<BoardUser> fetchUsers(InternalConfig iCfg, Configuration accessCfg) {
+
+        ArrayList<BoardUser> users = null;
+        if (iCfg.cache != null) {
+            users = iCfg.cache.getBoardUsers(accessCfg.boardId);
+        } else {
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            users = lka.fetchUsers(accessCfg.boardId);
+        }
+        return users;
+    }
+
     /**
      * If cardId is null, we assume this is a card on a board If non-null, then this
      * is a task on a card
@@ -459,11 +473,27 @@ public class Utils {
                  * 
                  */
                 case "assignedUsers": {
+                    /**
+                     * We need to try and match the email address in the destination and fetch the
+                     * userID
+                     */
                     String usersList = (String) Utils.fetchCell(item, fieldLst.getInt(key));
-                    if (usersList != null){
-                        String[] users = usersList.split(",");
-                        for (int i = 0; i < users.length; i++){
-                            flds.put(key, users[i]);
+                    if (usersList != null) {
+                        ArrayList<BoardUser> boardUsers = fetchUsers(cfg, accessCfg); // Fetch the board users
+                        if (boardUsers != null) {
+
+                            if (usersList != null) {
+                                String[] users = usersList.split(",");
+                                ArrayList<String> usersToPut = new ArrayList<>();
+                                for (int i = 0; i < users.length; i++) {
+                                    for (int j = 0; j < boardUsers.size(); j++) {
+                                        if (boardUsers.get(j).emailAddress.equals(users[i])) {
+                                            usersToPut.add(boardUsers.get(j).userId);
+                                        }
+                                    }
+                                }
+                                flds.put("assignedUserIds", usersToPut.toArray());
+                            }
                         }
                     }
                     break;
@@ -483,7 +513,7 @@ public class Utils {
                     Lane lane = null;
                     String laneType = (String) Utils.fetchCell(item, fieldLst.getInt(key));
                     if (cardId != null) {
-                        if (laneType.isBlank()){
+                        if (laneType.isBlank()) {
                             laneType = "ready";
                         }
                         lane = Utils.findLaneFromCard(cfg, accessCfg, cardId, laneType);
@@ -501,8 +531,8 @@ public class Utils {
                     break;
                 }
                 case "size":
-                // The index will be set by the exporter in extra 'Modify' rows. This is here
-                //for manually created (import) spreadsheets
+                    // The index will be set by the exporter in extra 'Modify' rows. This is here
+                    // for manually created (import) spreadsheets
                 case "index": {
                     Integer digits = ((Double) Utils.fetchCell(item, fieldLst.getInt(key))).intValue();
                     if (digits != null) {
