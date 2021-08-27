@@ -67,7 +67,7 @@ The use of the spreadsheet allows the indirect logging of the parent/child relat
  
 The priority of a card is normally set as an index of a card with zero being at the top of the screen. The upshot of this is the importer may attempt to set the Index to some value that may not yet be valid (as all the cards have not yet been created) if you do them in the wrong order.
 
-If you are manually creating the importer spreadsheet, you will need to bear this in mind. The exporter will re-order the indexes appropriately for you instead of using the default order of: last card accessed comes first.
+If you are manually creating the importer spreadsheet, you will need to bear this in mind. The exporter will re-order the indexes appropriately for you, instead of using the default order of: last card accessed comes first.
 
 # Assigned Users on Import
 
