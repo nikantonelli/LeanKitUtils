@@ -6,6 +6,8 @@ With this tool, you can make a backup of the current state of cards on your boar
 
 It will copy current cards (with option to include archived) with tasks, comments and attachments (if indicated), as well as marking the source of the copy by adding an additional comment in the destination card. AssignedUsers are preserved if the same login name exists on the source and destination.
 
+If you wish, you can create your own spreadsheet and import a particular set of cards - handy if you want to have 'template' sets you want to tailor to some specific use-case, e.g a repeatable set of actions for a scrum team.
+
 # Setup
 
 The app does its work through the medium of an Excel spreadsheet. This has more flexibility that using a CSV file as I can do stuff to implement parent/child relationships fairly easily. In addition, comments, descriptions, etc. can cause issues if they contain the "," character in CSV files.
@@ -41,7 +43,7 @@ You can re-use the same spreadsheet to export multiple boards as each one is sav
 
 If you are running the export in order to run the importer, you must copy (or rename) the sheet entitled Changes_\<boardid\> to a sheet called just Changes. 
  
-If you want to merge boards together into one destination board, you can concatenate multiple changes sheet together, leaving the board item sheets as they are. E.g. merge sheets called "Changes_1598676317" and "Changes_1606150498" (created by the exporter) into one sheet called "Changes" and then run the importer. Remember! You will have issues with Lanes if the layouts of the boards are imcompatible. 
+If you want to merge boards together into one destination board, you can concatenate multiple changes sheet together, leaving the board item sheets as they are. E.g. merge sheets called "Changes_1598676317" and "Changes_1606150498" (created by the exporter) into one sheet called "Changes" and then run the importer. Remember! You will have issues with Lanes if the layouts of the boards are incompatible. 
 
 I will say it again in case you missed it: YOU MIGHT WANT TO MAKE SURE THE BOARD LAYOUT IS THE SAME.
 
@@ -65,7 +67,7 @@ The use of the spreadsheet allows the indirect logging of the parent/child relat
  
 The priority of a card is normally set as an index of a card with zero being at the top of the screen. The upshot of this is the importer may attempt to set the Index to some value that may not yet be valid (as all the cards have not yet been created) if you do them in the wrong order.
 
-If you are manually creating the importer spreadsheet, you will need to bear this in mind. The exporter will re-order the indexes appropriately for you instead of using the default order of: last card accessed comes first.
+If you are manually creating the importer spreadsheet, you will need to bear this in mind. The exporter will re-order the indexes appropriately for you, instead of using the default order of: last card accessed comes first.
 
 # Assigned Users on Import
 
