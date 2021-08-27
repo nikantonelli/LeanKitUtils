@@ -327,8 +327,10 @@ public class Utils {
             brd = lka.fetchBoardFromId(accessCfg.boardId);
         }
         card = lka.updateCardFromId(brd, card, updates);
-        if (iCfg.cache != null) {
-            iCfg.cache.setCard(card);
+        if (card != null) {
+            if (iCfg.cache != null) {
+                iCfg.cache.setCard(card);
+            }
         }
         return card;
     }
@@ -448,6 +450,16 @@ public class Utils {
             user = lka.fetchUserById(id);
         }
         return user;
+    }
+
+    public static CustomField findCustomField(InternalConfig iCfg, Configuration accessCfg, String name) {
+        CustomField[] cfs = fetchCustomFields(iCfg, accessCfg);
+        for (int j = 0; j < cfs.length; j++){
+            if (cfs[j].label.equals(name)){
+                return cfs[j];
+            }
+        }
+        return null;
     }
 
     public static CustomField[] fetchCustomFields(InternalConfig iCfg, Configuration accessCfg) {

@@ -1,5 +1,6 @@
 package com.planview.lkutility.importer;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
@@ -11,6 +12,7 @@ import com.planview.lkutility.Utils;
 import com.planview.lkutility.leankit.AccessCache;
 import com.planview.lkutility.leankit.BoardUser;
 import com.planview.lkutility.leankit.Card;
+import com.planview.lkutility.leankit.CustomField;
 import com.planview.lkutility.leankit.User;
 
 import org.apache.poi.ss.usermodel.Cell;
@@ -111,7 +113,7 @@ public class Importer {
                         item.getRowNum());
             }
 
-            //Check import requirements against command line
+            // Check import requirements against command line
             if (change.getCell(cc.action).getStringCellValue() == "Modify") {
                 if (((change.getCell(cc.field).getStringCellValue() == "attachments") && !cfg.exportAttachments)
                         || ((change.getCell(cc.field).getStringCellValue() == "Task") && !cfg.exportTasks)
@@ -122,14 +124,14 @@ public class Importer {
                     continue; // Break out and try next change
                 }
             }
-            
+
             // If unset, it has a null value for the Leankit ID
             if ((item.getCell(idCol) == null) || (item.getCell(idCol).getStringCellValue() == "")) {
                 // Check if this is a 'create' operation. If not, ignore and continue past.
                 if (!change.getCell(cc.action).getStringCellValue().equals("Create")
                         && !(change.getCell(cc.action).getStringCellValue().equals("Modify")
                                 && change.getCell(cc.field).getStringCellValue().equals("Task"))) {
-                    d.p(Debug.WARN, "Ignoring action \"%s\" on item \"%s\" (no ID present in row: %d)\n",
+                    d.p(Debug.WARN, "Ignoring action \"%s\" on item \"%s\" (no ID present in item row: %d)\n",
                             change.getCell(cc.action).getStringCellValue(), item.getCell(titleCol).getStringCellValue(),
                             item.getRowNum());
                     continue; // Break out and try next change
@@ -138,7 +140,7 @@ public class Importer {
                 // Check if this is a 'create' operation. If it is, ignore and continue past.
                 if (change.getCell(cc.action).getStringCellValue().equals("Create")) {
                     d.p(Debug.WARN,
-                            "Ignoring action \"%s\" on item \"%s\" (attempting create on existing ID in row: %d)\n",
+                            "Ignoring action \"%s\" on item \"%s\" (attempting create on existing ID in item row: %d)\n",
                             change.getCell(cc.action).getStringCellValue(), item.getCell(titleCol).getStringCellValue(),
                             item.getRowNum());
                     continue; // Break out and try next change
@@ -155,17 +157,17 @@ public class Importer {
                 item.getCell(idCol).setCellValue(id);
                 XSSFFormulaEvaluator.evaluateAllFormulaCells(cfg.wb);
 
-                d.p(Debug.INFO, "Create card \"%s\" (row %s)\n", id, change.getRowNum());
+                d.p(Debug.INFO, "Create card \"%s\" (changes row %s)\n", id, change.getRowNum());
             } else {
                 id = doAction(change, item);
-                d.p(Debug.INFO, "Mod: \"%s\" on card \"%s\" (row %s)\n", change.getCell(cc.field).getStringCellValue(),
+                d.p(Debug.INFO, "Mod: \"%s\" on card \"%s\" (changes row %s)\n", change.getCell(cc.field).getStringCellValue(),
                         id, change.getRowNum());
             }
 
             if (id == null) {
 
                 d.p(Debug.ERROR, "%s",
-                        "Got null back from doAction(). Most likely card deleted from destination mid-transaction!\n");
+                        "Got null back from doAction(). Most likely card deleted, but ID still in spreadsheet!\n");
             } else {
                 Utils.writeFile(cfg, cfg.xlsxfn, cfg.wb);
             }
@@ -253,16 +255,17 @@ public class Importer {
                          */
                         String usersList = change.getCell(cc.value).getStringCellValue();
                         if (usersList != null) {
-                            ArrayList<BoardUser> boardUsers = Utils.fetchUsers(cfg, cfg.destination); // Fetch the board users
+                            ArrayList<BoardUser> boardUsers = Utils.fetchUsers(cfg, cfg.destination); // Fetch the board
+                                                                                                      // users
                             if (boardUsers != null) {
-    
+
                                 if (usersList != null) {
                                     String[] users = usersList.split(",");
                                     ArrayList<String> usersToPut = new ArrayList<>();
                                     for (int i = 0; i < users.length; i++) {
                                         User realUser = Utils.fetchUser(cfg, cfg.destination, users[i]);
-    
-                                        //Check if they are a board user so we don't error.
+
+                                        // Check if they are a board user so we don't error.
                                         for (int j = 0; j < boardUsers.size(); j++) {
                                             if (realUser.id.equals(boardUsers.get(j).id)) {
                                                 usersToPut.add(realUser.id);
@@ -276,11 +279,24 @@ public class Importer {
                         break;
                     }
                     default: {
-                        vals.put("value", Utils.fetchCell(change, cc.value));
+                        // Check if this is a standard/custom field and redo the 'put'
+                        
+                        CustomField cf = Utils.findCustomField(cfg, cfg.destination, field);
+                        if (cf != null) {
+                            vals.put("value", field);
+                            vals.put("value2", Utils.fetchCell(change, cc.value));
+                            fld.put("CustomField", vals);
+                        }
+                        //May be special case or satandard field, so let it through.
+                        else {
+                            vals.put("value", Utils.fetchCell(change, cc.value));
+                            fld.put(change.getCell(cc.field).getStringCellValue(), vals);
+                        }
+
                         break;
                     }
                 }
-                fld.put(change.getCell(cc.field).getStringCellValue(), vals);
+                
                 newCard = Utils.updateCard(cfg, cfg.destination, card.id, fld);
                 if (newCard == null) {
                     d.p(Debug.ERROR, "Could not modify card \"%s\" on board %s with details: %s", card.id,
