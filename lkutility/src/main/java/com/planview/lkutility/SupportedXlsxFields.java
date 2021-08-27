@@ -22,8 +22,24 @@ public class SupportedXlsxFields {
     public String color, blockReason;
     public Integer index; 
     public User[] assignedUsers;
-    public ExternalLink externalLink;
-    
+    public ExternalLink externalLink;   //Should really be in the plural, but I have never seen
+                                        // support for more than one.
+    /* public String wipOverrideComment;    //This is part of the 'lane' column,
+                                            //comma separated from lane and we can't get at it
+                                            // on export. It's available for import only
+    */
+
+    /* public CustomField[] customFields;   //Custom fields are found and listed
+                                                //as if they were normal fields
+    */
+    /* public Boolean isBlocked;    //Gets translated into blockReason in spreadsheet
+    */
+
+    /* public ParentCard[] parentCards; //Seems to be unpopulated in the /io/card?board= call
+                                        //so we had to make a special call per card to get the parents
+                                        */
+
+                                    
     /**
      * These are pseudo-fields. When these are seen, some extra
      * activity needs to take place and not be sent to the spreadsheet
@@ -36,21 +52,15 @@ public class SupportedXlsxFields {
     private TaskBoardStats taskBoardStats;
     
     /**
-     * Unsupported or unsupportable
+     * All the following are
+     * unsupported or unsupportable
      * 
-    public String customIconId, customIconLabel, iconPath, wipOverrideComment;
- 
+    public String customIconId, customIconLabel, iconPath;
     public Connections connections;
-    public ExternalLink externalLink;
-    public String[] assignedUserIds;
-
-    public CustomField[] customFields;
     public CustomIcon customIcon;
-    public ParentCard[] parentCards;    //Seems to be unpopulated in the /io/card?board= call
-                                        //so we had to make a call per card to get the parents
     
     public Board board;
-    public Boolean isBlocked;
-    public Attachment[] attachments;
+
+
     */
 }
