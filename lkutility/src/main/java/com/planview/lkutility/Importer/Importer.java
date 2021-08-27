@@ -1,6 +1,5 @@
 package com.planview.lkutility.importer;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
@@ -13,6 +12,7 @@ import com.planview.lkutility.leankit.AccessCache;
 import com.planview.lkutility.leankit.BoardUser;
 import com.planview.lkutility.leankit.Card;
 import com.planview.lkutility.leankit.CustomField;
+import com.planview.lkutility.leankit.CustomIcon;
 import com.planview.lkutility.leankit.User;
 
 import org.apache.poi.ss.usermodel.Cell;
@@ -278,6 +278,15 @@ public class Importer {
                         }
                         break;
                     }
+                    case "customIcon": {
+                        //Incoming customIcon value is a name. We need to translate to
+                        // an id
+                        CustomIcon ci = Utils.findCustomIcon(cfg, cfg.destination, field);
+                        vals.put("value", ci.id);
+                            fld.put("customIconId", vals);
+                        break;
+                    }
+
                     default: {
                         // Check if this is a standard/custom field and redo the 'put'
                         

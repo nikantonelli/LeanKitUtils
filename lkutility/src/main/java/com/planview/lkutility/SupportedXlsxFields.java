@@ -22,6 +22,7 @@ public class SupportedXlsxFields {
     public String color, blockReason;
     public Integer index; 
     public User[] assignedUsers;
+    public CustomIcon customIcon;
     public ExternalLink externalLink;   //Should really be in the plural, but I have never seen
                                         // support for more than one.
     /* public String wipOverrideComment;    //This is part of the 'lane' column,
@@ -43,7 +44,7 @@ public class SupportedXlsxFields {
     /**
      * These are pseudo-fields. When these are seen, some extra
      * activity needs to take place and not be sent to the spreadsheet
-     * Compiler gives warning which we will ignore.
+     * Compiler gives 'unused' warning, which we will ignore.
      */
     
     private ParentCard[] parentCards;

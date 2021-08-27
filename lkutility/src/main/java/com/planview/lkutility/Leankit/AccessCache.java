@@ -16,6 +16,7 @@ public class AccessCache {
     HashMap<String, User> userIdMap = new HashMap<>();
     HashMap<String, User> usernameMap = new HashMap<>();
     HashMap<String, CustomField[]> customFieldMap = new HashMap<>();
+    HashMap<String, CustomIcon[]> customIconMap = new HashMap<>();
     HashMap<String, ArrayList<Lane>> taskBoardMap = new HashMap<>();
     HashMap<String, ArrayList<BoardUser>> boardUserMap = new HashMap<>();
     HashMap<String, Task> taskMap = new HashMap<>();
@@ -155,4 +156,24 @@ public class AccessCache {
         }
         return users;
     }
+
+    public void setCustomIcons(CustomIcon[] cfm) {
+        if (customIconMap.get(accessCfg.boardId) != null){
+            customIconMap.remove(accessCfg.boardId);
+        }
+        customIconMap.put(accessCfg.boardId, cfm);
+    }
+
+    public CustomIcon[] getCustomIcons(){
+        CustomIcon[] cfm = customIconMap.get(accessCfg.boardId);
+        if (cfm == null) {
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            cfm = lka.fetchCustomIcons(accessCfg.boardId).customIcons;
+            if (cfm != null) {
+                setCustomIcons(cfm);
+            }
+        }
+        return cfm;
+    }
+
 }

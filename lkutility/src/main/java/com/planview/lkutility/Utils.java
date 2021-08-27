@@ -15,6 +15,7 @@ import com.planview.lkutility.leankit.BoardUser;
 import com.planview.lkutility.leankit.Card;
 import com.planview.lkutility.leankit.CardType;
 import com.planview.lkutility.leankit.CustomField;
+import com.planview.lkutility.leankit.CustomIcon;
 import com.planview.lkutility.leankit.Lane;
 import com.planview.lkutility.leankit.LeanKitAccess;
 import com.planview.lkutility.leankit.Task;
@@ -462,6 +463,17 @@ public class Utils {
         return null;
     }
 
+    public static CustomIcon findCustomIcon(InternalConfig iCfg, Configuration accessCfg, String name) {
+        CustomIcon[] cfs = fetchCustomIcons(iCfg, accessCfg);
+        for (int j = 0; j < cfs.length; j++){
+            if (cfs[j].name.equals(name)){
+                return cfs[j];
+            }
+        }
+        return null;
+    }
+
+
     public static CustomField[] fetchCustomFields(InternalConfig iCfg, Configuration accessCfg) {
         CustomField[] fields = null;
         if (iCfg.cache != null) {
@@ -469,6 +481,17 @@ public class Utils {
         } else {
             LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
             fields = lka.fetchCustomFields(accessCfg.boardId).customFields;
+        }
+        return fields;
+    }
+
+    public static CustomIcon[] fetchCustomIcons(InternalConfig iCfg, Configuration accessCfg) {
+        CustomIcon[] fields = null;
+        if (iCfg.cache != null) {
+            fields = iCfg.cache.getCustomIcons();
+        } else {
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            fields = lka.fetchCustomIcons(accessCfg.boardId).customIcons;
         }
         return fields;
     }
@@ -565,6 +588,16 @@ public class Utils {
                         flds.put(key, reason);
                     } else {
                         continue;
+                    }
+                    break;
+                }
+                case "customIcon": {
+                    //Incoming customIcon value is a name. We need to translate to
+                    // an id
+                    String iconName = (String) Utils.fetchCell(item, fieldLst.getInt(key));
+                    CustomIcon ci = Utils.findCustomIcon(cfg, cfg.destination, iconName);
+                    if (ci != null) {
+                        flds.put("customIconId", ci.id);
                     }
                     break;
                 }

@@ -993,4 +993,19 @@ public class LeanKitAccess {
             }
         return null;
     }
+
+    public CustomIconResult fetchCustomIcons(String id) {
+        reqType = "GET";
+        reqUrl = "/io/board/" + id + "/customIcon";
+        reqParams.clear();
+        reqHdrs.clear();
+        String results = processRequest();
+        ObjectMapper om = new ObjectMapper();
+            try {
+                return om.readValue(results, CustomIconResult.class);
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+            }
+        return null;
+    }
 }

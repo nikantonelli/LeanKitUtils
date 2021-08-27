@@ -24,6 +24,7 @@ import com.planview.lkutility.leankit.Card;
 import com.planview.lkutility.leankit.CardType;
 import com.planview.lkutility.leankit.Comment;
 import com.planview.lkutility.leankit.CustomField;
+import com.planview.lkutility.leankit.CustomIcon;
 import com.planview.lkutility.leankit.CustomId;
 import com.planview.lkutility.leankit.ExternalLink;
 import com.planview.lkutility.leankit.ItemType;
@@ -456,6 +457,11 @@ public class Exporter {
                                                 .setCellValue(((ItemType) fv).title);
                                         break;
                                     }
+                                    case "CustomIcon": {
+                                        iRow.createCell(fieldCounter, CellType.STRING)
+                                                .setCellValue(((CustomIcon) fv).title);
+                                        break;
+                                    }
                                     case "Date": {
                                         SimpleDateFormat dtf = new SimpleDateFormat("yyyy-MM-dd");
                                         Cell cl = iRow.createCell(fieldCounter);
@@ -468,7 +474,7 @@ public class Exporter {
                                         break;
                                     }
                                     default: {
-                                        System.out.printf("Unknown class: %s", fv.getClass().getSimpleName());
+                                        System.out.printf("Unknown class: %s\n", fv.getClass().getSimpleName());
                                         break;
                                     }
                                 }
