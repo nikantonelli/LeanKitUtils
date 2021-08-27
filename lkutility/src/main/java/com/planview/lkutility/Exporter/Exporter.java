@@ -130,19 +130,31 @@ public class Exporter {
         fieldMap.put("ID", itmCellIdx++);
 
         // Now write out the fields
-        Field[] outFields = (new SupportedXlsxFields()).getClass().getFields();     //Public fields that will be written as columns
-        Field[] checkFields = (new SupportedXlsxFields()).getClass().getDeclaredFields(); //Inlcudes private that will cause alternative actions
-
-        /** 
-         * We need to find the custom fields and add those to the output list
-         */
-
+        Field[] xlsxFields = (new SupportedXlsxFields()).getClass().getFields();     //Public fields that will be written as columns
+        Field[] validFields = (new SupportedXlsxFields()).getClass().getDeclaredFields(); //Inlcudes private that will cause alternative actions
         CustomField[] customFields = Utils.fetchCustomFields(cfg, cfg.source);
 
-        for (int i = 0; i < outFields.length; i++) {
-            itmHdrRow.createCell(itmCellIdx, CellType.STRING).setCellValue(outFields[i].getName());
-            fieldMap.put(outFields[i].getName(), itmCellIdx++);
+        String[] outFields = new String[xlsxFields.length + customFields.length];
+        String[] checkFields = new String[validFields.length + customFields.length];
+
+        for ( int i = 0; i < xlsxFields.length; i++){
+            outFields[i] = xlsxFields[i].getName();
         }
+        for ( int i = 0; i < validFields.length; i++){
+            checkFields[i] = validFields[i].getName();
+        }
+
+        for ( int i = 0; i < customFields.length; i++){
+            outFields[xlsxFields.length + i] = customFields[i].label;
+            checkFields[validFields.length + i] = customFields[i].label;
+        }
+
+        //Store the indexes for the spreadsheet columns
+        for (int i = 0; i < outFields.length; i++) {
+            itmHdrRow.createCell(itmCellIdx, CellType.STRING).setCellValue(outFields[i]);
+            fieldMap.put(outFields[i], itmCellIdx++);
+        }
+
         /**
          * Read all the normal cards on the board - up to a limit?
          */
@@ -221,18 +233,20 @@ public class Exporter {
      * 
      * Got a chick-and-egg situation with the indexes.
      */
-    public Changes createItemRowFromCard(Integer chgRow, Integer itmRow, Card c, Field[] pbFields) {
+    public Changes createItemRowFromCard(Integer chgRow, Integer itmRow, Card c, String[] pbFields) {
 
         Integer item = itmRow;
 
         Row iRow = cfg.itemSheet.createRow(itmRow);
         d.p(Debug.INFO, "Creating row for id: %s (%s)\n", c.id, (c.customId.value != null)?c.customId.value:c.title);
+        //We need to keep a separate counter for the fields we actually write out
+        Integer fieldCounter = 1;
         for (int i = 0; i < pbFields.length; i++) {
             try {
-                switch (pbFields[i].getName()) {
+                switch (pbFields[i]) {
 
                     case "assignedUsers": {
-                        Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
+                        Object fv = c.getClass().getField(pbFields[i]).get(c);
                         String outStr = "";
                         if (fv != null) {
                             User[] au = (User[])fv;
@@ -246,13 +260,14 @@ public class Exporter {
                                 }
                             }
                             if (outStr.length() > 0){
-                                iRow.createCell(i + 1, CellType.STRING).setCellValue(outStr);
+                                iRow.createCell(fieldCounter, CellType.STRING).setCellValue(outStr);
                             }
                         }
+                        fieldCounter++;
                         break;
                     }
                     case "attachments": {
-                        Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
+                        Object fv = c.getClass().getField(pbFields[i]).get(c);
                         if ((fv != null) && cfg.exportAttachments) {
                             Attachment[] atts = ((Attachment[]) fv);
                             if (atts.length > 0) {
@@ -280,7 +295,7 @@ public class Exporter {
                         break;
                     }
                     case "comments": {
-                        Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
+                        Object fv = c.getClass().getField(pbFields[i]).get(c);
                         if ((fv != null) && cfg.exportComments) {
                             Comment[] cmts = (Comment[]) fv;
                             for (int j = 0; j < cmts.length; j++) {
@@ -299,18 +314,20 @@ public class Exporter {
                         Object fv = c.getClass().getField("blockedStatus").get(c);
                         if (fv != null) {
                             if (((BlockedStatus) fv).isBlocked) {
-                                iRow.createCell(i + 1, CellType.STRING).setCellValue(((BlockedStatus) fv).reason);
+                                iRow.createCell(fieldCounter, CellType.STRING).setCellValue(((BlockedStatus) fv).reason);
                             } else {
-                                iRow.createCell(i + 1, CellType.STRING).setCellValue("");
+                                iRow.createCell(fieldCounter, CellType.STRING).setCellValue("");
                             }
                         }
+                        fieldCounter++;
                         break;
                     }
                     case "customId": {
-                        Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
+                        Object fv = c.getClass().getField(pbFields[i]).get(c);
                         if (fv != null) {
-                            iRow.createCell(i + 1, CellType.STRING).setCellValue(((CustomId) fv).value);
+                            iRow.createCell(fieldCounter, CellType.STRING).setCellValue(((CustomId) fv).value);
                         }
+                        fieldCounter++;
                         break;
                     }
                     
@@ -319,29 +336,31 @@ public class Exporter {
                         if (fv != null) {
                             ExternalLink[] extlnks = (ExternalLink[])fv;
                             if (extlnks.length > 0){
-                                iRow.createCell(i + 1, CellType.STRING).setCellValue(
+                                iRow.createCell(fieldCounter, CellType.STRING).setCellValue(
                                     extlnks[0].label.replace(",", " ") + "," + extlnks[0].url);
                             }
                         }
+                        fieldCounter++;
                         break;
                     }
                     case "lane": {
-                        Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
+                        Object fv = c.getClass().getField(pbFields[i]).get(c);
                         if (fv != null) {   //Might be a task 
                             CardType ct = Utils.findCardTypeFromBoard(cfg,  cfg.source, c.type.title);
                             if (ct.isTaskType){
                                 Lane taskLane = (Lane)fv;
-                                iRow.createCell(i + 1, CellType.STRING)
+                                iRow.createCell(fieldCounter, CellType.STRING)
                                     .setCellValue(taskLane.laneType);
                             }  else { 
-                                iRow.createCell(i + 1, CellType.STRING)
+                                iRow.createCell(fieldCounter, CellType.STRING)
                                     .setCellValue(Utils.getLanePathFromId(cfg, cfg.source, ((Lane) fv).id));
                             }
                         }
+                        fieldCounter++;
                         break;
                     }
                     case "parentCards": {
-                        Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
+                        Object fv = c.getClass().getField(pbFields[i]).get(c);
                         if (fv != null) {
                             /**
                              * We will only worry about parents on the same board. We cannot deal with
@@ -358,19 +377,21 @@ public class Exporter {
                         break;
                     }
                     case "srcID": {
-                        iRow.createCell(i + 1, CellType.STRING).setCellValue(c.id);
+                        iRow.createCell(fieldCounter, CellType.STRING).setCellValue(c.id);
                         if (cfg.addComment) {
                             chgRow++;
                             createChangeRow(chgRow, item, "Modify", "comments",
                                     Utils.getUrl(cfg, cfg.source) + "/card/" + c.id);
                         }
+                        fieldCounter++;
                         break;
                     }
                     case "tags": {
-                        Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
+                        Object fv = c.getClass().getField(pbFields[i]).get(c);
                         if (fv != null) {
-                            iRow.createCell(i + 1, CellType.STRING).setCellValue(String.join(",", ((String[]) fv)));
+                            iRow.createCell(fieldCounter, CellType.STRING).setCellValue(String.join(",", ((String[]) fv)));
                         }
+                        fieldCounter++;
                         break;
                     }
 
@@ -403,42 +424,77 @@ public class Exporter {
                         break;
                     }
                     default: {
-                        Object fv = c.getClass().getField(pbFields[i].getName()).get(c);
-                        if (fv != null) {
-                            switch (fv.getClass().getSimpleName()) {
-                                case "String": {
-                                    iRow.createCell(i + 1, CellType.STRING).setCellValue(fv.toString());
-                                    break;
-                                }
-                                case "Boolean": {
-                                    iRow.createCell(i + 1, CellType.BOOLEAN).setCellValue(((Boolean) fv));
-                                    break;
-                                }
-                                case "Integer": {
-                                    iRow.createCell(i + 1, CellType.NUMERIC).setCellValue(((Integer) fv));
-                                    break;
-                                }
-                                case "ItemType": {
-                                    iRow.createCell(i + 1, CellType.STRING).setCellValue(((ItemType) fv).title);
-                                    break;
-                                }
-                                case "Date": {
-                                    SimpleDateFormat dtf = new SimpleDateFormat("yyyy-MM-dd");
-                                    Cell cl = iRow.createCell(i + 1);
-                                    cl.setCellValue(dtf.format(((Date) fv)).toString());
+                        Object fv;
 
-                                    break;
+                        try {
+                            fv = c.getClass().getField(pbFields[i]).get(c);
+                            if (fv != null) {
+                                switch (fv.getClass().getSimpleName()) {
+                                    case "String": {
+                                        iRow.createCell(fieldCounter, CellType.STRING).setCellValue(fv.toString());
+                                        break;
+                                    }
+                                    case "Boolean": {
+                                        iRow.createCell(fieldCounter, CellType.BOOLEAN).setCellValue(((Boolean) fv));
+                                        break;
+                                    }
+                                    case "Integer": {
+                                        iRow.createCell(fieldCounter, CellType.NUMERIC).setCellValue(((Integer) fv));
+                                        break;
+                                    }
+                                    case "ItemType": {
+                                        iRow.createCell(fieldCounter, CellType.STRING).setCellValue(((ItemType) fv).title);
+                                        break;
+                                    }
+                                    case "Date": {
+                                        SimpleDateFormat dtf = new SimpleDateFormat("yyyy-MM-dd");
+                                        Cell cl = iRow.createCell(fieldCounter);
+                                        cl.setCellValue(dtf.format(((Date) fv)).toString());
+    
+                                        break;
+                                    }
+                                    // Ignore these pseudo-fields
+                                    case "ParentCard": {
+                                        break;
+                                    }
+                                    default: {
+                                        System.out.printf("Unknown class: %s", fv.getClass().getSimpleName());
+                                        break;
+                                    }
                                 }
-                                // Ignore these pseudo-fields
-                                case "ParentCard": {
-                                    break;
-                                }
-                                default: {
-                                    System.out.printf("Unknown class: %s", fv.getClass().getSimpleName());
+    
+                            }
+                        } catch (NoSuchFieldException e) {
+                            //This is probably a custom field so look for it in the customFields
+                            // array
+                            Object cfa = c.getClass().getField("customFields").get(c);
+                            CustomField[] cfs = (CustomField[])cfa;
+                            CustomField foundField = null;
+                            for (int j = 0; j < cfs.length; j++){
+                                if (cfs[j].label.equals(pbFields[i])){
+                                    foundField = cfs[j];
                                 }
                             }
-
-                        }
+                            //We now know that the field is part of the Custom Field set, so find the value in the cards array
+                            //of 
+                            if (foundField != null){
+                                if (foundField.value != null) {
+                                switch (foundField.type){
+                                    case "number":{
+                                        iRow.createCell(fieldCounter, CellType.NUMERIC).setCellValue(Integer.parseInt((String)foundField.value));
+                                        break;
+                                    }
+                                    default:{
+                                        iRow.createCell(fieldCounter, CellType.STRING).setCellValue((String)foundField.value);
+                                        break;
+                                    }
+                                }
+                            }
+                            }
+                        }                     
+                        fieldCounter++;
+                        break;
+                       
                     }
                 }
             } catch (Exception e) {

@@ -2,6 +2,7 @@ package com.planview.lkutility;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,6 +27,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.json.JSONObject;
+import org.json.JSONArray;
 
 public class Utils {
     static Debug d = new Debug();
@@ -448,7 +450,7 @@ public class Utils {
         return user;
     }
 
-    public static CustomField[] fetchCustomFields(InternalConfig iCfg, Configuration accessCfg){
+    public static CustomField[] fetchCustomFields(InternalConfig iCfg, Configuration accessCfg) {
         CustomField[] fields = null;
         if (iCfg.cache != null) {
             fields = iCfg.cache.getCustomFields();
@@ -458,7 +460,7 @@ public class Utils {
         }
         return fields;
     }
-    
+
     public static User fetchUserByName(InternalConfig iCfg, Configuration accessCfg, String username) {
         User user = null;
         if (iCfg.cache != null) {
@@ -498,6 +500,7 @@ public class Utils {
             String cardId) {
         JSONObject flds = new JSONObject();
 
+        ArrayList<CustomField> customF = new ArrayList<>();
         Iterator<String> keyIt = fieldLst.keys();
         while (keyIt.hasNext()) {
             String key = keyIt.next();
@@ -512,9 +515,9 @@ public class Utils {
                      * userID
                      */
                     Object fv = Utils.fetchCell(item, fieldLst.getInt(key));
-                     
+
                     if (fv != null) {
-                        String usersList = (String)fv;
+                        String usersList = (String) fv;
                         ArrayList<BoardUser> boardUsers = fetchUsers(cfg, accessCfg); // Fetch the board users
                         if (boardUsers != null) {
 
@@ -636,15 +639,53 @@ public class Utils {
                     break;
                 }
                 default: {
-                    if (item.getCell(fieldLst.getInt(key)) != null) {
-                        Object obj = Utils.fetchCell(item, fieldLst.getInt(key));
-                        if (obj != null)
-                            flds.put(key, obj);
+                    // See if the field is part of the standard list of fields. If not, it's a
+                    // custom field
+
+                    Card c = new Card();
+                    Field[] validFields = c.getClass().getFields();
+                    Boolean found = false;
+                    for (int i = 0; i < validFields.length; i++) {
+                        if (validFields[i].getName().equals(key)) {
+                            found = true;
+                        }
                     }
+                    if (found) {
+                        if (item.getCell(fieldLst.getInt(key)) != null) {
+                            Object obj = Utils.fetchCell(item, fieldLst.getInt(key));
+                            if (obj != null)
+                                flds.put(key, obj);
+                        }
+                    } else {
+                        CustomField[] customFields = Utils.fetchCustomFields(cfg, cfg.destination);
+                        CustomField cf = new CustomField();
+                        for (int i = 0; i < customFields.length; i++) {
+                            if (customFields[i].label.equals(key)) {
+                                cf.fieldId = customFields[i].id;
+                                cf.value = Utils.fetchCell(item, fieldLst.getInt(key));
+                                if (cf.value != null) {
+                                    customF.add(cf);
+                                }
+                            }
+                        }
+                    }
+
                     break;
                 }
             }
 
+        }
+
+        if (customF.size() > 0) {
+            // Create a entry to push the custom fields in
+            JSONArray jsa = new JSONArray();
+            for (int i = 0; i < customF.size(); i++) {
+                JSONObject jso = new JSONObject();
+                jso.put("fieldId", customF.get(i).fieldId);
+                jso.put("value", customF.get(i).value);
+                jsa.put(jso);
+            }
+            flds.put("customFields", jsa);
         }
         return flds;
     }
