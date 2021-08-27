@@ -43,7 +43,7 @@ You can re-use the same spreadsheet to export multiple boards as each one is sav
 
 If you are running the export in order to run the importer, you must copy (or rename) the sheet entitled Changes_\<boardid\> to a sheet called just Changes. 
  
-If you want to merge boards together into one destination board, you can concatenate multiple changes sheet together, leaving the board item sheets as they are. E.g. merge sheets called "Changes_1598676317" and "Changes_1606150498" (created by the exporter) into one sheet called "Changes" and then run the importer. Remember! You will have issues with Lanes if the layouts of the boards are imcompatible. 
+If you want to merge boards together into one destination board, you can concatenate multiple changes sheet together, leaving the board item sheets as they are. E.g. merge sheets called "Changes_1598676317" and "Changes_1606150498" (created by the exporter) into one sheet called "Changes" and then run the importer. Remember! You will have issues with Lanes if the layouts of the boards are incompatible. 
 
 I will say it again in case you missed it: YOU MIGHT WANT TO MAKE SURE THE BOARD LAYOUT IS THE SAME.
 
