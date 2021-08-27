@@ -37,7 +37,7 @@ Option | Argument | Description
  
 # Features and Usage
  
-The exporter will create sheets in the Xlsx file that correspond to the boardId that will be needed by the importer (if you progress to that stage). The exporter does not export any history (i.e. dates of changes) information and takes a snapshot of what is there right now.
+The exporter will create sheets in the Xlsx file that correspond to the boardId that will be needed by the importer (if you progress to that stage). The exporter does not export any history (i.e. dates of changes, createdBy, ActualFinish, etc., etc.) information and takes a snapshot of what is there right now. As this app is all about recreating new items afresh, all that data is irrelevant. To get those dates, please use the standard in-built exporter (to csv).
  
 You can re-use the same spreadsheet to export multiple boards as each one is saved under a different sheet name
 
