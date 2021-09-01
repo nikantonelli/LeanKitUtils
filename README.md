@@ -41,13 +41,13 @@ The exporter will create sheets in the Xlsx file that correspond to the boardId 
  
 You can re-use the same spreadsheet to export multiple boards as each one is saved under a different sheet name
 
-If you are running the export in order to run the importer, you must copy (or rename) the sheet entitled Changes_\<boardid\> to a sheet called just Changes. 
+If you are running the export in order to run the importer some time later, you must copy (or rename) the sheet entitled Changes_\<boardid\> to a sheet called "Changes". 
  
 If you want to merge boards together into one destination board, you can concatenate multiple changes sheet together, leaving the board item sheets as they are. E.g. merge sheets called "Changes_1598676317" and "Changes_1606150498" (created by the exporter) into one sheet called "Changes" and then run the importer. Remember! You will have issues with Lanes if the layouts of the boards are incompatible. 
 
 I will say it again in case you missed it: YOU MIGHT WANT TO MAKE SURE THE BOARD LAYOUT IS THE SAME.
 
-and: DO NOT PUT ANY LANE WIP LIMITS IN PLACE ON THE DESTINATION BOARD. REMOVE AND RESET AFTER IMPORTING
+and: DO NOT PUT ANY LANE WIP LIMITS IN PLACE ON THE DESTINATION BOARD UNLESS YOU HAVE CORRECTLY ADDED AN OVERRIDE COMMENT. REMOVE AND REPLACE AFTER IMPORTING
 
 All items that cannot be put into a correct lane will end up in the default drop lane - this can get messy. To recover, you can delete all the items in the default drop lane that aren't supposed to be there and set the value in the Group column in the Changes sheet to something memorable (e.g. 99) for those items you want to recreate and modify. Then rerun the importer with the -g option with that group number.
  
@@ -72,3 +72,14 @@ If you are manually creating the importer spreadsheet, you will need to bear thi
 # Assigned Users on Import
 
 If your destination system does not have the correct users set up (with access to the board), the users are ignored. The tool tries to match the "username" which is usually of emailAddress format.
+
+The importer will take the spreadsheet field as a comma separated list of users.
+
+# Lane WIP Limits
+
+To add/move a card to a lane which might cause the WIP limit to be exceeded, add an override comment to the lane field. To do this, add a "," and then the override comment itself,
+e.g:
+
+"Backlog|Next Sprint Backlog|Committed,Expedited" 
+
+will move the card to the sub-lane Committed under "Next Sprint Backlog" which is under "Backlog" and add the wipOverrideComment of "Expedited"
