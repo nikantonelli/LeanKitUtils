@@ -13,6 +13,7 @@ import com.planview.lkutility.leankit.BoardUser;
 import com.planview.lkutility.leankit.Card;
 import com.planview.lkutility.leankit.CustomField;
 import com.planview.lkutility.leankit.CustomIcon;
+import com.planview.lkutility.leankit.Lane;
 import com.planview.lkutility.leankit.User;
 
 import org.apache.poi.ss.usermodel.Cell;
@@ -160,8 +161,8 @@ public class Importer {
                 d.p(Debug.INFO, "Create card \"%s\" (changes row %s)\n", id, change.getRowNum());
             } else {
                 id = doAction(change, item);
-                d.p(Debug.INFO, "Mod: \"%s\" on card \"%s\" (changes row %s)\n", change.getCell(cc.field).getStringCellValue(),
-                        id, change.getRowNum());
+                d.p(Debug.INFO, "Mod: \"%s\" on card \"%s\" (changes row %s)\n",
+                        change.getCell(cc.field).getStringCellValue(), id, change.getRowNum());
             }
 
             if (id == null) {
@@ -279,24 +280,36 @@ public class Importer {
                         break;
                     }
                     case "customIcon": {
-                        //Incoming customIcon value is a name. We need to translate to
+                        // Incoming customIcon value is a name. We need to translate to
                         // an id
                         CustomIcon ci = Utils.findCustomIcon(cfg, cfg.destination, field);
                         vals.put("value", ci.id);
-                            fld.put("customIconId", vals);
+                        fld.put("customIconId", vals);
+                        break;
+                    }
+                    case "lane": {
+                        String[] bits = ((String) Utils.fetchCell(change, cc.value)).split(",");
+                        Lane foundLane = Utils.findLaneFromBoard(cfg, cfg.destination, bits[0]);
+                        if (foundLane != null) {
+                            vals.put("value", foundLane.id);
+                            if (bits.length > 1) {
+                                vals.put("value2", bits[1]);
+                            }
+                            fld.put("Lane", vals);
+                        }
                         break;
                     }
 
                     default: {
                         // Check if this is a standard/custom field and redo the 'put'
-                        
+
                         CustomField cf = Utils.findCustomField(cfg, cfg.destination, field);
                         if (cf != null) {
                             vals.put("value", field);
                             vals.put("value2", Utils.fetchCell(change, cc.value));
                             fld.put("CustomField", vals);
                         }
-                        //May be special case or satandard field, so let it through.
+                        // May be special case or satandard field, so let it through.
                         else {
                             vals.put("value", Utils.fetchCell(change, cc.value));
                             fld.put(change.getCell(cc.field).getStringCellValue(), vals);
@@ -305,7 +318,7 @@ public class Importer {
                         break;
                     }
                 }
-                
+
                 newCard = Utils.updateCard(cfg, cfg.destination, card.id, fld);
                 if (newCard == null) {
                     d.p(Debug.ERROR, "Could not modify card \"%s\" on board %s with details: %s", card.id,

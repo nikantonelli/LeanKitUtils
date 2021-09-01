@@ -58,7 +58,6 @@ public class SupportedXlsxFields {
      * 
     public String customIconId, customIconLabel, iconPath;
     public Connections connections;
-    public CustomIcon customIcon;
     
     public Board board;
 

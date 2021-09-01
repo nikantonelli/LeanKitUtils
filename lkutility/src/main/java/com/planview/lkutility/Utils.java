@@ -643,9 +643,13 @@ public class Utils {
                             flds.put("laneType", laneType);
                         }
                     } else {
-                        lane = Utils.findLaneFromBoard(cfg, accessCfg, laneType);
+                        String[] bits = laneType.split(",");
+                        lane = Utils.findLaneFromBoard(cfg, accessCfg, bits[0]);
                         if (lane != null) {
                             flds.put("laneId", lane.id);
+                            if (bits.length > 1){
+                                flds.put("wipOverrideComment", bits[1]);
+                            }
                         }
                     }
                     break;
