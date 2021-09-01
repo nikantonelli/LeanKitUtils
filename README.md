@@ -75,7 +75,7 @@ If your destination system does not have the correct users set up (with access t
 
 The importer will take the spreadsheet field as a comma separated list of users.
 
-## Lane WIP Limits
+## Lanes and WIP Limits
 
 To add/move a card to a lane which might cause the WIP limit to be exceeded, add an override comment to the lane field. To do this, add a "," and then the override comment itself,
 e.g:
