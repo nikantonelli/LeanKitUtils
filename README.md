@@ -23,12 +23,12 @@ To get the board id, log into the system at the url, navigate to the board of in
 ## Command Line Options
 Option | Argument | Description 
 ------ | -------- | -----------
--f | \<file\> | Name of the Xlsx file to use for reading/writing
--x | \<level\> |  Output levels of debug statements: 0 = Errors, 1 = +Warnings, 2 = +Info, 3 = +Debug, 4 = +Verbose
+-f | \<file\> | (String) Name of the Xlsx file to use for reading/writing
+-x | \<level\> | (Integer) Output levels of debug statements: 0 = Errors, 1 = +Warnings, 2 = +Info, 3 = +Debug, 4 = +Verbose
 -i |  | Run importer only
 -e |  | Run exporter only 
 -t |  | Run importer and exporter sequentially
--g | \<group\> | Mark exported items with this groupId ready for selection on import. Select only items marked with this group for import
+-g | \<group\> | (Integer)  Mark exported items with this groupId ready for selection on import. Select only items marked with this group for import
 -O |  | Include _Older_ archived items during export
 -A |  | Include _Attachments_ in export/import - these get placed in your current working directory 
 -T |  | Include _Tasks_ in export/import
@@ -55,6 +55,15 @@ java -jar lkutility\target\lkutility-1.0-jar-with-dependencies.jar -f "file.xlsx
 * To get an example spreadsheet of what the importer requires, you can run the export (only, using -e) on a board that has parent/child, attachment, comment, etc., data already set up.
 * To get an idea of the progress that the exporter/importer is making, use the option "-x 3".
 * The importer does not check validity of data before performing its work. Any incorrect data might cause the card to not be imported as expected, i.e. incorrect data is ignored where possible.
+
+## Spreadsheet Row Formats
+### Changes
+
+The Changes sheet can contain either 'Create' rows or 'Modify' rows. The fields in the Changes sheet need to be listed in the first row and are: "Group", "Item Sheet", "Item Row", "Action", "Field", "Value"
+
+Field and Value cells are only used when the Action cell is set to Modify.
+Action cells set to Create instruct the importer to reference the data in the sheet/row named in the Item Sheet/Item Row cell pair.
+The Group is compared to that on the command line (-g option) and only those rows matching will be used.
  
 ## Parent/Child Relationships
  
@@ -85,7 +94,7 @@ will move the card to the sub-lane Committed under "Next Sprint Backlog" which i
 
 The exporter will recognise the writeable fields. All read-only are ignored. Some fields are represented in the spreadsheet through the use of pseudo-fieldnames, e.g: "Parent" or "Task". These are translated by the importer into the relevant fields.
 
-Fields that are valid in an item 'Create' row are:
+Fields that are valid for an item in a board sheet (connected to a 'Create' in the Changes sheet) row are:
 
 * assignedUsers
 * blockReason
