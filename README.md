@@ -54,7 +54,7 @@ java -jar lkutility\target\lkutility-1.0-jar-with-dependencies.jar -f "file.xlsx
  
 * To get an example spreadsheet of what the importer requires, you can run the export (only, using -e) on a board that has parent/child, attachment, comment, etc., data already set up.
 * To get an idea of the progress that the exporter/importer is making, use the option "-x 3".
-* The importer does not check validity of data before performing its work. Any incorrect data might cause the card to not be imported, i.e. incorrect data is ignored where possible.
+* The importer does not check validity of data before performing its work. Any incorrect data might cause the card to not be imported as expected, i.e. incorrect data is ignored where possible.
  
 ## Parent/Child Relationships
  
