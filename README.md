@@ -81,6 +81,38 @@ e.g:
 
 will move the card to the sub-lane Committed under "Next Sprint Backlog" which is under "Backlog" and add the wipOverrideComment of "Expedited"
 
+## Supported fields
+
+The exporter will recognise the writeable fields. All read-only are ignored. Some fields are represented in the spreadsheet through the use of pseudo-fieldnames, e.g: "Parent" or "Task". These are translated by the importer into the relevant fields.
+
+Fields that are valid in an item 'Create' row are:
+
+* assignedUsers
+* blockReason
+* color
+* comment
+* customIcon
+* description
+* externalLink
+* index
+* lane
+* plannedFinish
+* plannedStart
+* prority
+* size
+* tags
+* title
+
+## Pseudo Fields
+
+*Parent
+
+This field can be only used as part of a "Modify" line in the Changes sheet and not in the board sheet. The value in the field needs to be an equation that points to the cell that will hold the Id of the parent (e.g. ='1587279792'!A6 )
+
+*Task
+
+This field can be only used as part of a "Modify" line in the Changes sheet and not in the board sheet. The value in the field needs to be an equation that points to the cell that will hold the Id of the child task (e.g. ='1587279792'!A8 )
+
 ## Custom Fields
 
 Custom fields get listed in the export as would built-in fields. The importer checks all fieldnames against standard ones and then against custom fieldnames and decides what to do accordingly. If still unknown, then the field is ignored.
