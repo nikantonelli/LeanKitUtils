@@ -2,7 +2,7 @@
 
 Currently this is limited to an exporter/importer app. The same app will do both directions independently. Future development may make it do both at once, i.e 'simultaneous transfer'
 
-With this tool, you can make a backup of the current state of cards on your board - recreate a copy of the cards on the same, or different, board - merge boards together into a single destination board. 
+With this tool, you can make a backup of the current state of cards on your board - recreate a copy of the cards on the same, or different, board - merge cards from boards together into a single destination board. 
 
 It will copy current cards (with option to include archived) with tasks, comments and attachments (if indicated), as well as marking the source of the copy by adding an additional comment in the destination card. AssignedUsers are preserved if the same login name exists on the source and destination.
 
