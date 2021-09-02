@@ -171,7 +171,7 @@ public class Exporter {
             Card c = ic.next();
 
             /**
-             * Due to the seemingly brain-dead api, we have to re-fetch the cards to get the
+             * We have to re-fetch the cards to get the
              * relevant parent information.
              */
             c = Utils.getCard(cfg, c.id);
@@ -195,8 +195,6 @@ public class Exporter {
         /**
          * Now scan the parent/child register and add "Modify" lines
          */
-
-        // ArrayList<Connection> Utils.getConnectionsForThisBoard(cfg.source.boardId);
 
         Iterator<ParentChild> pci = parentChild.iterator();
         while (pci.hasNext()) {
@@ -256,7 +254,7 @@ public class Exporter {
                             User[] au = (User[]) fv;
                             for (int j = 0; j < au.length; j++) {
                                 /**
-                                 * Another case of brain-deadness. I have to fetch the realuser because the
+                                 * I have to fetch the realuser because the
                                  * assignedUser != boardUser != user
                                  */
                                 User realUser = Utils.fetchUser(cfg, cfg.source, au[j].id);
