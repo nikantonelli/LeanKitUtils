@@ -59,11 +59,23 @@ java -jar lkutility\target\lkutility-1.0-jar-with-dependencies.jar -f "file.xlsx
 ## Spreadsheet Row Formats
 ### Changes
 
-The Changes sheet can contain either 'Create' rows or 'Modify' rows. The fields in the Changes sheet need to be listed in the first row and are: "Group", "Item Sheet", "Item Row", "Action", "Field", "Value"
+The fields in the Changes sheet need to be listed in the first row and are: "Group", "Item Sheet", "Item Row", "Action", "Field", "Value".
+
+The Changes sheet can contain either 'Create' rows or 'Modify' rows. 
 
 Field and Value cells are only used when the Action cell is set to Modify.
 Action cells set to Create instruct the importer to reference the data in the sheet/row named in the Item Sheet/Item Row cell pair.
 The Group is compared to that on the command line (-g option) and only those rows matching will be used.
+
+Entries in the Changes sheets are instructions to the importer on what to do.
+
+### Board Sheets
+
+Board sheets are normally reference by the board Id. However, if you are making your own set of import data, it can be whatever you want within the bounds of what Excel will allow. Board sheets list the data for the items to be re-created/imported.
+
+For the importer to function it requires two columns named "ID" and "srcID" (both text based) and at least the "title" of the card to be created as this is a mandatory field (LeanKit defined). Other columns can be any number of supported fieldnames as listed below. If you duplicate fieldnames, the last-found field value will be used.
+
+To import Custom Fields, see below.
  
 ## Parent/Child Relationships
  
@@ -124,4 +136,4 @@ This field can be only used as part of a "Modify" line in the Changes sheet and 
 
 ## Custom Fields
 
-Custom fields get listed in the export as would built-in fields. The importer checks all fieldnames against standard ones and then against custom fieldnames and decides what to do accordingly. If still unknown, then the field is ignored.
+Custom fields get listed in the export spreadsheet as would built-in fields. The importer checks all fieldnames against standard ones and then against custom fieldnames and decides what to do accordingly. If still unknown, then the field is ignored.
