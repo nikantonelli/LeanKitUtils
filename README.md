@@ -105,11 +105,11 @@ Fields that are valid in an item 'Create' row are:
 
 ## Pseudo Fields
 
-*Parent
+* Parent
 
 This field can be only used as part of a "Modify" line in the Changes sheet and not in the board sheet. The value in the field needs to be an equation that points to the cell that will hold the Id of the parent (e.g. ='1587279792'!A6 )
 
-*Task
+* Task
 
 This field can be only used as part of a "Modify" line in the Changes sheet and not in the board sheet. The value in the field needs to be an equation that points to the cell that will hold the Id of the child task (e.g. ='1587279792'!A8 )
 
