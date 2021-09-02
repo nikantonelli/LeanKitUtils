@@ -57,9 +57,13 @@ java -jar lkutility\target\lkutility-1.0-jar-with-dependencies.jar -f "file.xlsx
 * The importer does not check validity of data before performing its work. Any incorrect data might cause the card to not be imported as expected, i.e. incorrect data is ignored where possible.
 
 ## Spreadsheet Row Formats
+
+### Config
+The columns listed in the first row of the Config sheet must be: 'direction', 'url', 'username', 'password', 'apiKey' and 'boardId'. The first row found with 'src' as the entry under direction will be used by the exporter. The first row found with 'dst' will be used by the importer.
+
 ### Changes
 
-The fields in the Changes sheet need to be listed in the first row and are: "Group", "Item Sheet", "Item Row", "Action", "Field", "Value".
+The columns in the Changes sheet need to be listed in the first row and are: "Group", "Item Sheet", "Item Row", "Action", "Field", "Value".
 
 The Changes sheet can contain either 'Create' rows or 'Modify' rows. 
 
@@ -73,7 +77,7 @@ Entries in the Changes sheets are instructions to the importer on what to do.
 
 Board sheets are normally reference by the board Id. However, if you are making your own set of import data, it can be whatever you want within the bounds of what Excel will allow. Board sheets list the data for the items to be re-created/imported.
 
-For the importer to function it requires two columns named "ID" and "srcID" (both text based) and at least the "title" of the card to be created as this is a mandatory field (LeanKit defined). Other columns can be any number of supported fieldnames as listed below. If you duplicate fieldnames, the last-found field value will be used.
+For the importer to function it requires two columns named "ID" and "srcID" (both text based) and at least the "title" of the card to be created as this is a mandatory field (LeanKit defined). Other columns can be any number of supported fieldnames as listed below. If you duplicate fieldnames, the last-found field value will be used. The fieldnames to be set should be listed in the first row.
 
 To import Custom Fields, see below.
  
