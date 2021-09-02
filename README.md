@@ -123,6 +123,7 @@ Fields that are valid for an item in a board sheet (connected to a 'Create' in t
 * size
 * tags
 * title
+* type
 
 ## Pseudo Fields
 
