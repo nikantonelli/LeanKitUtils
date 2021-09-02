@@ -37,23 +37,18 @@ Option | Argument | Description
  
 ## Features and Usage
  
-The exporter will create sheets in the Xlsx file that correspond to the boardId that will be needed by the importer (if you progress to that stage). If you run with only the -e option, then there are two sheets created per board: "Changes_\<boardid\>" and "\<boardid\>". If you run with the -t, then this will just be "Changes" and "\<boardId\> as requried by the importer.
-
-The exporter does not export any history (i.e. dates of changes, createdBy, ActualFinish, etc., etc.) information and takes a snapshot of what is there right now. As this app is all about recreating new items afresh, all that data is irrelevant. To get those dates, please use the standard in-built exporter (to csv).
- 
-You can re-use the same spreadsheet to export multiple boards (with -e option only).
-
-If you are running the export in order to run the importer some time later, you must copy (or rename) the sheet entitled Changes_\<boardid\> to a sheet called "Changes" so that the importer can find it.
- 
-If you want to merge boards together into one destination board, you can concatenate multiple changes sheet together, leaving the board item sheets as they are. E.g. merge sheets called "Changes_1598676317" and "Changes_1606150498" (created by the exporter) into one sheet called "Changes" and then run the importer. Remember! You will have issues with Lanes if the layouts of the boards are incompatible. 
+* The exporter will create sheets in the Xlsx file that correspond to the boardId that will be needed by the importer (if you progress to that stage). If you run with only the -e option, then there are two sheets created per board: "Changes_\<boardid\>" and "\<boardid\>". If you run with the -t, then this will just be "Changes" and "\<boardId\> as requried by the importer.
+* The exporter does not export any history (i.e. dates of changes, createdBy, ActualFinish, etc., etc.) information and takes a snapshot of what is there right now. As this app is all about recreating new items afresh, all that data is irrelevant. To get those dates, please use the standard in-built exporter (to csv).
+* You can re-use the same spreadsheet to export multiple boards (with -e option only).
+* If you are running the export in order to run the importer some time later, you must copy (or rename) the sheet entitled Changes_\<boardid\> to a sheet called "Changes" so that the importer can find it.
+* If you want to merge boards together into one destination board, you can concatenate multiple changes sheet together, leaving the board item sheets as they are. E.g. merge sheets called "Changes_1598676317" and "Changes_1606150498" (created by the exporter) into one sheet called "Changes" and then run the importer. Remember! You will have issues with Lanes if the layouts of the boards are incompatible. 
 
 I will say it again in case you missed it: YOU MIGHT WANT TO MAKE SURE THE BOARD LAYOUT IS THE SAME.
 
 and: DO NOT PUT ANY LANE WIP LIMITS IN PLACE ON THE DESTINATION BOARD UNLESS YOU HAVE CORRECTLY ADDED AN OVERRIDE COMMENT. Removing the WIP limits is the best option.
 
-All items that cannot be put into a correct lane will end up in the default drop lane - this can get messy. To recover, you can delete all the items in the default drop lane that aren't supposed to be there and set the value in the Group column in the Changes sheet to something memorable (e.g. 99) for those items you want to recreate and modify. Then rerun the importer with the -g option with that group number.
- 
-To run both the importer and exporter sequentially, for example, you can use the following command line:
+* All items that cannot be put into a correct lane will end up in the default drop lane - this can get messy. To recover, you can delete all the items in the default drop lane that aren't supposed to be there and set the value in the Group column in the Changes sheet to something memorable (e.g. 99) for those items you want to recreate and modify. Then rerun the importer with the -g option with that group number.
+* To run both the importer and exporter sequentially, for example, you can use the following command line:
  
 java -jar lkutility\target\lkutility-1.0-jar-with-dependencies.jar -f "file.xlsx" -t  -A -T -S -C
  
