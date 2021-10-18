@@ -412,9 +412,10 @@ public class Utils {
 
         if (searchLanes.size() == 0) {
             d.p(Debug.WARN, "Cannot find lane \"%s\"on board \"%s\"\n", name, brd.title);
+            return null;
         }
         if (searchLanes.size() > 1) {
-            d.p(Debug.WARN, "Ambiguous lane name \"%s\"on board \"%s\"\n", name, brd.title);
+            d.p(Debug.WARN, "Ambiguous lane name \"%s\"on board \"%s\" using lane \"%s\"\n", name, brd.title, searchLanes.get(0).id);
         }
 
         return searchLanes.get(0);

@@ -357,6 +357,10 @@ public class Exporter {
                             CardType ct = Utils.findCardTypeFromBoard(cfg, cfg.source, c.type.title);
                             if (ct.isTaskType) {
                                 Lane taskLane = (Lane) fv;
+                                if (taskLane.laneType.equals("untyped")){
+                                    d.p(Debug.ERROR, "Cannot set lane! Invalid card type - check \"Task\" setting on %s\n", c.type.title);
+                                    break;
+                                }
                                 iRow.createCell(fieldCounter, CellType.STRING).setCellValue(taskLane.laneType);
                             } else {
                                 iRow.createCell(fieldCounter, CellType.STRING)

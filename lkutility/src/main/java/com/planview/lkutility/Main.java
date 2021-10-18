@@ -319,10 +319,9 @@ public class Main {
         }
 
         // Creds are now found and set. If not, you're buggered.
+        
         /**
-         * We can opt to use username/password or apikey. Unfortunately, we have to hard
-         * code the field names in here, even though I was trying to use the fields from
-         * the Configuration class.
+         * We can opt to use username/password or apikey. 
          **/
         if ((config.source.url != null) && (setToExport || config.dualFlow)) {
             if (((config.source.apiKey == null) || (config.source.boardId == null))
