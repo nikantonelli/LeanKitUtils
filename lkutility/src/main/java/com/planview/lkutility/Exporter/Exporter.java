@@ -203,7 +203,7 @@ public class Exporter {
             Integer childRow = Utils.findRowBySourceId(cfg.itemSheet, pc.childId);
 
             if ((parentRow == null) || (childRow == null)) {
-                d.p(Debug.WARN, "Unexpected row result from %s/%s. Is parent archived?", pc.parentId, pc.childId);
+                d.p(Debug.WARN, "Ignoring parent due to unexpected row result from %s/%s. Is parent archived?\n", pc.parentId, pc.childId);
             } else {
                 createChangeRow(chgRowIdx, childRow, "Modify", "Parent",
                         "='" + cfg.source.boardId + "'!A" + (parentRow + 1));
