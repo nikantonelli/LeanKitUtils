@@ -358,10 +358,14 @@ public class Exporter {
                             if (ct.isTaskType) {
                                 Lane taskLane = (Lane) fv;
                                 if (taskLane.laneType.equals("untyped")){
-                                    d.p(Debug.ERROR, "Cannot set lane! Invalid card type - check \"Task\" setting on %s\n", c.type.title);
-                                    break;
+                                    String lane = Utils.getLanePathFromId(cfg, cfg.source, ((Lane) fv).id);
+                                    d.p(Debug.ERROR, "Invalid card type - check \"Task\" setting on \"%s\". Opting to use lane \"%s\"\n", c.type.title, lane);
+                                    iRow.createCell(fieldCounter, CellType.STRING)
+                                        .setCellValue(Utils.getLanePathFromId(cfg, cfg.source, ((Lane) fv).id));
+                        
+                                } else {
+                                    iRow.createCell(fieldCounter, CellType.STRING).setCellValue(taskLane.laneType);
                                 }
-                                iRow.createCell(fieldCounter, CellType.STRING).setCellValue(taskLane.laneType);
                             } else {
                                 iRow.createCell(fieldCounter, CellType.STRING)
                                         .setCellValue(Utils.getLanePathFromId(cfg, cfg.source, ((Lane) fv).id));
