@@ -211,11 +211,15 @@ public class Importer {
 
             JSONObject flds = Utils.jsonCardFromRow(cfg, cfg.destination, fieldLst, item, null);
 
-            flds.put("boardId", cfg.destination.boardId);
+            if (!fieldLst.has("boardId")) {
+                flds.put("boardId", cfg.destination.boardId);
+            } else {
+                flds.put("boardId", Utils.fetchCell(item, fieldLst.getInt("boardId")));
+            }
             Card card = Utils.createCard(cfg, cfg.destination, flds); // Change from human readable to API fields on
             // the way
             if (card == null) {
-                d.p(Debug.ERROR, "Could not create card on board \"%s\" with details: \"%s\"", cfg.destination.boardId,
+                d.p(Debug.ERROR, "Could not create card on board \"%s\" with details: \"%s\"", flds.get("boardId"),
                         flds.toString());
                 System.exit(16);
             }
@@ -227,9 +231,13 @@ public class Importer {
             Card newCard = null;
 
             if (card == null) {
-                d.p(Debug.ERROR, "Could not locate card \"%s\" on board \"%s\"\n",
-                        item.getCell(idCol).getStringCellValue(), cfg.destination.boardId);
+                d.p(Debug.ERROR, "Could not locate card \"%s\"\n",
+                        item.getCell(idCol).getStringCellValue());
             } else {
+                //Don't need this when modifying an existing item.
+                if (fieldLst.has("boardId")) {
+                    fieldLst.remove("boardId");
+                }
                 JSONObject fld = new JSONObject();
                 JSONObject vals = new JSONObject();
 
@@ -241,6 +249,7 @@ public class Importer {
                         CellReference ca = new CellReference(cf);
                         XSSFSheet cSheet = cfg.wb.getSheet(ca.getSheetName());
                         Row task = cSheet.getRow(ca.getRow());
+                        
                         JSONObject jsonTask = Utils.jsonCardFromRow(cfg, cfg.destination, fieldLst, task, card.id);
                         if (task.getCell(idCol) == null) {
 
@@ -289,7 +298,7 @@ public class Importer {
                     }
                     case "lane": {
                         String[] bits = ((String) Utils.fetchCell(change, cc.value)).split(",");
-                        Lane foundLane = Utils.findLaneFromBoard(cfg, cfg.destination, bits[0]);
+                        Lane foundLane = Utils.findLaneFromBoard(cfg, cfg.destination, cfg.destination.boardId, bits[0]);
                         if (foundLane != null) {
                             vals.put("value", foundLane.id);
                             if (bits.length > 1) {

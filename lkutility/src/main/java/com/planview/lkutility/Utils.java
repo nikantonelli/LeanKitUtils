@@ -193,7 +193,7 @@ public class Utils {
     public static String getLanePathFromId(InternalConfig iCfg, Configuration accessCfg, String laneId) {
         Lane[] lanes = null;
         if (iCfg.cache != null) {
-            Board brd = iCfg.cache.getBoard();
+            Board brd = iCfg.cache.getBoard(accessCfg.boardId);
             if (brd != null) {
                 lanes = brd.lanes;
             }
@@ -248,7 +248,7 @@ public class Utils {
     public static Board getBoard(InternalConfig iCfg, Configuration accessCfg) {
         Board brd = null;
         if (iCfg.cache != null) {
-            brd = iCfg.cache.getBoard();
+            brd = iCfg.cache.getBoard(accessCfg.boardId);
         }
         return brd;
     }
@@ -271,23 +271,23 @@ public class Utils {
         return tasks;
     }
 
-    public static ArrayList<CardType> readCardsTypesFromBoard(InternalConfig iCfg, Configuration accessCfg) {
+    public static ArrayList<CardType> readCardsTypesFromBoard(InternalConfig iCfg, Configuration accessCfg, String boardId) {
         LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
         ArrayList<CardType> types = null;
         if (iCfg.cache != null) {
-            Board brd = iCfg.cache.getBoard();
+            Board brd = iCfg.cache.getBoard(boardId);
             types = new ArrayList<>();
             for (int i = 0; i < brd.cardTypes.length; i++) {
                 types.add(brd.cardTypes[i]);
             }
         } else {
-            types = lka.fetchCardTypes(accessCfg.boardId);
+            types = lka.fetchCardTypes(boardId);
         }
         return types;
     }
 
-    public static CardType findCardTypeFromBoard(InternalConfig iCfg, Configuration accessCfg, String name) {
-        return findCardTypeFromList(readCardsTypesFromBoard(iCfg, accessCfg), name);
+    public static CardType findCardTypeFromBoard(InternalConfig iCfg, Configuration accessCfg, String name, String boardId) {
+        return findCardTypeFromList(readCardsTypesFromBoard(iCfg, accessCfg, boardId), name);
     }
 
     public static CardType findCardTypeFromList(ArrayList<CardType> cardTypes, String name) {
@@ -322,7 +322,7 @@ public class Utils {
 
         if (iCfg.cache != null) {
             card = iCfg.cache.getCard(cardId);
-            brd = iCfg.cache.getBoard();
+            brd = iCfg.cache.getBoard(accessCfg.boardId);
         } else {
             card = lka.fetchCard(cardId);
             brd = lka.fetchBoardFromId(accessCfg.boardId);
@@ -359,13 +359,13 @@ public class Utils {
         return ln;
     }
 
-    public static Lane findLaneFromBoard(InternalConfig iCfg, Configuration accessCfg, String name) {
+    public static Lane findLaneFromBoard(InternalConfig iCfg, Configuration accessCfg, String boardId, String name) {
         Board brd = null;
         if (iCfg.cache != null) {
-            brd = iCfg.cache.getBoard();
+            brd = iCfg.cache.getBoard(boardId);
         } else {
             LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
-            brd = lka.fetchBoardFromId(accessCfg.boardId);
+            brd = lka.fetchBoardFromId(boardId);
         }
         if (brd != null)
             return findLaneFromString(brd, name);
@@ -465,7 +465,17 @@ public class Utils {
     }
 
     public static CustomIcon findCustomIcon(InternalConfig iCfg, Configuration accessCfg, String name) {
-        CustomIcon[] cfs = fetchCustomIcons(iCfg, accessCfg);
+        CustomIcon[] cfs = fetchCustomIcons(iCfg, accessCfg, accessCfg.boardId);
+        for (int j = 0; j < cfs.length; j++){
+            if (cfs[j].name.equals(name)){
+                return cfs[j];
+            }
+        }
+        return null;
+    }
+
+    public static CustomIcon findCustomIcon(InternalConfig iCfg, Configuration accessCfg, String name, String boardId) {
+        CustomIcon[] cfs = fetchCustomIcons(iCfg, accessCfg, boardId);
         for (int j = 0; j < cfs.length; j++){
             if (cfs[j].name.equals(name)){
                 return cfs[j];
@@ -476,23 +486,27 @@ public class Utils {
 
 
     public static CustomField[] fetchCustomFields(InternalConfig iCfg, Configuration accessCfg) {
+        return fetchCustomFields(iCfg, accessCfg, accessCfg.boardId);
+    }
+
+    public static CustomField[] fetchCustomFields(InternalConfig iCfg, Configuration accessCfg, String boardId) {
         CustomField[] fields = null;
         if (iCfg.cache != null) {
-            fields = iCfg.cache.getCustomFields();
+            fields = iCfg.cache.getCustomFields(boardId);
         } else {
             LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
-            fields = lka.fetchCustomFields(accessCfg.boardId).customFields;
+            fields = lka.fetchCustomFields(boardId).customFields;
         }
         return fields;
     }
 
-    public static CustomIcon[] fetchCustomIcons(InternalConfig iCfg, Configuration accessCfg) {
+    public static CustomIcon[] fetchCustomIcons(InternalConfig iCfg, Configuration accessCfg, String boardId) {
         CustomIcon[] fields = null;
         if (iCfg.cache != null) {
-            fields = iCfg.cache.getCustomIcons();
+            fields = iCfg.cache.getCustomIcons(boardId);
         } else {
             LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
-            fields = lka.fetchCustomIcons(accessCfg.boardId).customIcons;
+            fields = lka.fetchCustomIcons(boardId).customIcons;
         }
         return fields;
     }
@@ -596,7 +610,14 @@ public class Utils {
                     //Incoming customIcon value is a name. We need to translate to
                     // an id
                     String iconName = (String) Utils.fetchCell(item, fieldLst.getInt(key));
-                    CustomIcon ci = Utils.findCustomIcon(cfg, cfg.destination, iconName);
+                    CustomIcon ci = null;
+                    if (fieldLst.has("boardId")){
+                        ci = Utils.findCustomIcon(cfg, cfg.destination, iconName, 
+                            item.getCell(fieldLst.getInt("boardId")).getStringCellValue());
+                    } else {
+                        ci = Utils.findCustomIcon(cfg, cfg.destination, iconName);
+                    }
+                    
                     if (ci != null) {
                         flds.put("customIconId", ci.id);
                     }
@@ -645,7 +666,12 @@ public class Utils {
                         }
                     } else {
                         String[] bits = laneType.split(",");
-                        lane = Utils.findLaneFromBoard(cfg, accessCfg, bits[0]);
+                        if (fieldLst.has("boardId")){
+                            lane = Utils.findLaneFromBoard(cfg, accessCfg, 
+                                item.getCell(fieldLst.getInt("boardId")).getStringCellValue(), bits[0]);
+                        } else {
+                            lane = Utils.findLaneFromBoard(cfg, accessCfg, accessCfg.boardId, bits[0]);
+                        }
                         if (lane != null) {
                             flds.put("laneId", lane.id);
                             if (bits.length > 1){
@@ -678,14 +704,18 @@ public class Utils {
                     break;
                 }
                 case "type": {
-
                     String cardtype = (String) Utils.fetchCell(item, fieldLst.getInt(key));
-                    ArrayList<CardType> cts = Utils.readCardsTypesFromBoard(cfg, cfg.destination);
+                    ArrayList<CardType> cts = null;
+                    if (fieldLst.has("boardId")){
+                        cts = Utils.readCardsTypesFromBoard(cfg, cfg.destination,  
+                            item.getCell(fieldLst.getInt("boardId")).getStringCellValue());
+                    } else {
+                        cts = Utils.readCardsTypesFromBoard(cfg, cfg.destination, cfg.destination.boardId);
+                    }
                     CardType ct = Utils.findCardTypeFromList(cts, cardtype);
                     if (ct != null) {
                         flds.put("typeId", ct.id);
                     }
-
                     break;
                 }
                 default: {
@@ -707,7 +737,14 @@ public class Utils {
                                 flds.put(key, obj);
                         }
                     } else {
-                        CustomField[] customFields = Utils.fetchCustomFields(cfg, cfg.destination);
+                        CustomField[] customFields = null;
+
+                        if (fieldLst.has("boardId")){
+                            customFields = Utils.fetchCustomFields(cfg, cfg.destination,  
+                                item.getCell(fieldLst.getInt("boardId")).getStringCellValue());
+                        } else {
+                            customFields = Utils.fetchCustomFields(cfg, cfg.destination);
+                        }
                         CustomField cf = new CustomField();
                         for (int i = 0; i < customFields.length; i++) {
                             if (customFields[i].label.equals(key)) {

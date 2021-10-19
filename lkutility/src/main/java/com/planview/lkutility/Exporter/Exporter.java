@@ -354,7 +354,7 @@ public class Exporter {
                     case "lane": {
                         Object fv = c.getClass().getField(pbFields[i]).get(c);
                         if (fv != null) { // Might be a task
-                            CardType ct = Utils.findCardTypeFromBoard(cfg, cfg.source, c.type.title);
+                            CardType ct = Utils.findCardTypeFromBoard(cfg, cfg.source, c.type.title, cfg.source.boardId);
                             if (ct.isTaskType) {
                                 Lane taskLane = (Lane) fv;
                                 if (taskLane.laneType.equals("untyped")){

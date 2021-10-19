@@ -28,20 +28,25 @@ public class AccessCache {
         accessCfg = accCfg;
     }
 
-    public void setCustomFields(CustomField[] cfm) {
-        if (customFieldMap.get(accessCfg.boardId) != null){
-            customFieldMap.remove(accessCfg.boardId);
+    public void setCustomFields(CustomField[] cfm, String boardId) {
+        if (customFieldMap.get(boardId) != null){
+            customFieldMap.remove(boardId);
         }
-        customFieldMap.put(accessCfg.boardId, cfm);
+        customFieldMap.put(boardId, cfm);
     }
 
+
     public CustomField[] getCustomFields(){
-        CustomField[] cfm = customFieldMap.get(accessCfg.boardId);
+        return getCustomFields(accessCfg.boardId);
+    }
+
+    public CustomField[] getCustomFields(String boardId){
+        CustomField[] cfm = customFieldMap.get(boardId);
         if (cfm == null) {
             LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
-            cfm = lka.fetchCustomFields(accessCfg.boardId).customFields;
+            cfm = lka.fetchCustomFields(boardId).customFields;
             if (cfm != null) {
-                setCustomFields(cfm);
+                setCustomFields(cfm, boardId);
             }
         }
         return cfm;
@@ -54,11 +59,11 @@ public class AccessCache {
         boardMap.put(brd.id, brd);
     }
 
-    public Board getBoard(){
-        Board brd = boardMap.get(accessCfg.boardId);
+    public Board getBoard(String boardId){
+        Board brd = boardMap.get(boardId);
         if (brd == null) {
             LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
-            brd = lka.fetchBoardFromId(accessCfg.boardId);
+            brd = lka.fetchBoardFromId(boardId);
             if (brd != null) {
                 setBoard(brd);
             }
@@ -157,20 +162,20 @@ public class AccessCache {
         return users;
     }
 
-    public void setCustomIcons(CustomIcon[] cfm) {
-        if (customIconMap.get(accessCfg.boardId) != null){
-            customIconMap.remove(accessCfg.boardId);
+    public void setCustomIcons(CustomIcon[] cfm, String boardId) {
+        if (customIconMap.get(boardId) != null){
+            customIconMap.remove(boardId);
         }
-        customIconMap.put(accessCfg.boardId, cfm);
+        customIconMap.put(boardId, cfm);
     }
 
-    public CustomIcon[] getCustomIcons(){
-        CustomIcon[] cfm = customIconMap.get(accessCfg.boardId);
+    public CustomIcon[] getCustomIcons(String boardId){
+        CustomIcon[] cfm = customIconMap.get(boardId);
         if (cfm == null) {
             LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
-            cfm = lka.fetchCustomIcons(accessCfg.boardId).customIcons;
+            cfm = lka.fetchCustomIcons(boardId).customIcons;
             if (cfm != null) {
-                setCustomIcons(cfm);
+                setCustomIcons(cfm, boardId);
             }
         }
         return cfm;
