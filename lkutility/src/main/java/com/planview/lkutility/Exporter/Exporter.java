@@ -112,7 +112,6 @@ public class Exporter {
 
         // These next lines are the fixed format of the Changes sheet
         chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Group");
-        chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Item Sheet");
         chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Item Row");
         chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Action");
         chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Field");
@@ -535,8 +534,7 @@ public class Exporter {
         Integer localCellIdx = 0;
         Row chgRow = cfg.changesSheet.createRow(CRIdx);
         chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(cfg.group);
-        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(cfg.source.boardId);
-        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(IRIdx + 1);
+        chgRow.createCell(localCellIdx++, CellType.FORMULA).setCellFormula("'"+cfg.source.boardId+"'!B" + (IRIdx+1));
         chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(action); // "Action"
         chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(field); // "Field"
 
@@ -549,20 +547,4 @@ public class Exporter {
             chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(value); // "Value"
         }
     }
-
-    // private void createChangeRow(Integer CRIdx, Integer IRIdx, String action,
-    // String field, Integer value) {
-    // Integer localCellIdx = 0;
-    // Row chgRow = cfg.changesSheet.createRow(CRIdx);
-    // chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(cfg.group);
-    // chgRow.createCell(localCellIdx++,
-    // CellType.STRING).setCellValue(cfg.source.boardId);
-    // chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(IRIdx + 1);
-    // chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(action); //
-    // "Action"
-    // chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(field); //
-    // "Field"
-    // chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(value); //
-    // "Value"
-    // }
 }

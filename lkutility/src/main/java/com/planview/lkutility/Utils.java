@@ -42,16 +42,15 @@ public class Utils {
             return null;
         ChangesColumns cc = new ChangesColumns();
         cc.group = findColumnFromSheet(changesSht, "Group");
-        cc.itmSht = findColumnFromSheet(changesSht, "Item Sheet");
         cc.row = findColumnFromSheet(changesSht, "Item Row");
         cc.action = findColumnFromSheet(changesSht, "Action");
         cc.field = findColumnFromSheet(changesSht, "Field");
         cc.value = findColumnFromSheet(changesSht, "Value");
 
-        if ((cc.group == null) || (cc.itmSht == null) || (cc.row == null) || (cc.action == null) || (cc.field == null)
+        if ((cc.group == null) || (cc.row == null) || (cc.action == null) || (cc.field == null)
                 || (cc.value == null)) {
             d.p(Debug.ERROR,
-                    "Could not find all required columns in %s sheet: \"Group\", \"Item Sheet\", \"Item Row\", \"Action\", \"Field\", \"Value\"\n",
+                    "Could not find all required columns in %s sheet: \"Group\", \"Item Row\", \"Action\", \"Field\", \"Value\"\n",
                     changesSht.getSheetName());
             return null;
         }
