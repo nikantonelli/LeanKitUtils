@@ -1,9 +1,10 @@
 package com.planview.lkutility.leankit;
 
 public class ParentChild {
-    public String parentId, childId;
+    public String boardId, parentId, childId;
 
-    public ParentChild(String parent, String child){
+    public ParentChild(String board, String parent, String child){
+        boardId = board;
         parentId = parent;
         childId = child;
     }

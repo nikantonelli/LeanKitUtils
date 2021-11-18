@@ -209,17 +209,11 @@ public class Main {
             System.exit(7);
         }
 
-        // These two should come first in the file and must be present
-
         configSht = config.wb.getSheet("Config");
         if (configSht == null) {
             d.p(Debug.ERROR, "%s", "Did not detect required sheet in the spreadsheet: \"Config\"");
             System.exit(8);
         }
-
-        /**
-         * Check Config sheet has the correct columns and data in them
-         */
     }
 
     private static Boolean parseRow(Row drRow, Configuration cfg, Field[] p, HashMap<String, Object> fieldMap,
@@ -237,7 +231,8 @@ public class Main {
                     if (cell != null) {
                         switch (cell.getCellType()) {
                             case STRING:
-                                p[i].set(cfg, (cell != null ? drRow.getCell(Integer.parseInt(val)).getStringCellValue()
+                            //When you copy'n'paste on WIndows, it sometimes picks up the whitespace too - so remove it.
+                                p[i].set(cfg, (cell != null ? drRow.getCell(Integer.parseInt(val)).getStringCellValue().trim()
                                         : ""));
                                 break;
                             case NUMERIC:
@@ -260,7 +255,6 @@ public class Main {
             }
             return true;
         }
-
         return false;
     }
 

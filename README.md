@@ -8,6 +8,8 @@ It will copy current cards (with option to include archived) with tasks, comment
 
 If you wish, you can create your own spreadsheet and import a particular set of cards - handy if you want to have 'template' sets you want to tailor to some specific use-case, e.g a repeatable set of actions for a scrum team.
 
+Version 1.1 added a way to maintain relationships between cards on different boards (with some caveats!)
+
 ## Setup
 
 The app does its work through the medium of an Excel spreadsheet. This has more flexibility that using a CSV file as I can do stuff to implement parent/child relationships fairly easily. In addition, comments, descriptions, etc. can cause issues if they contain the "," character in CSV files.
@@ -37,10 +39,15 @@ Option | Argument | Description
  
 ## Features and Usage
  
-* The exporter will create sheets in the Xlsx file that correspond to the boardId that will be needed by the importer (if you progress to that stage). If you run with only the -e option, then there are two sheets created per board: "Changes_\<boardid\>" and "\<boardid\>". If you run with the -t, then this will just be "Changes" and "\<boardId\> as requried by the importer.
+* The exporter will create sheets in the Xlsx file that correspond to the boardId that will be needed by the importer (if you progress to that stage). If you run with only the -e option, then there are two sheets created per board: "Changes_\<boardid\>" and "\<boardid\>".
 * The exporter does not export any history (i.e. dates of changes, createdBy, ActualFinish, etc., etc.) information and takes a snapshot of what is there right now. As this app is all about recreating new items afresh, all that data is irrelevant. To get those dates, please use the standard in-built exporter (to csv).
 * You can re-use the same spreadsheet to export multiple boards (with -e option only).
-* If you are running the export in order to run the importer some time later, you must copy (or rename) the sheet entitled Changes_\<boardid\> to a sheet called "Changes" so that the importer can find it.
+* If you are running the export in order to run the importer some time later, you must update the src/dst boardIds in the correct sequence. There are a few scenarios:
+ * If you want to just export, then the Config sheet only need contain one line containing the 'src' info
+ * If you want to import, then just the 'dst' line is needed
+ * If you want to transfer, then both are needed
+ * If you want to copy multiple boards from one system to another and there are parent/child relationships between cards on different boards, then you need to ensure that you export in the correct order. This is so the program can find the items and make the equations up so that the parent links are recreated properly on import. An example of this is when you have a Portfolio board with Initiatives on that have Epics as children on an Agile Release Train board, that itself has Features as children on a Team board (that may or may not have stories). You must export in the order, Portfolio, ART, Team. 
+  * When you come to import, make sure you update both the src and dst boardIds as these are used to determine which Change_\<boardId\> sheet to use to send to the destination. (This is a new feature in 1.1)
 * If you want to merge boards together into one destination board, you can concatenate multiple changes sheet together, leaving the board item sheets as they are. E.g. merge sheets called "Changes_1598676317" and "Changes_1606150498" (created by the exporter) into one sheet called "Changes" and then run the importer. Remember! You will have issues with Lanes if the layouts of the boards are incompatible. 
 
 I will say it again in case you missed it: YOU MIGHT WANT TO MAKE SURE THE BOARD LAYOUT IS THE SAME.

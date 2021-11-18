@@ -39,12 +39,11 @@ public class Importer {
          */
 
         if (cfg.changesSheet == null) {
-            cfg.changesSheet = cfg.wb.getSheet(InternalConfig.CHANGES_SHEET_NAME);
-            cfg.itemSheet = cfg.wb.getSheet(cfg.destination.boardId);
+            cfg.changesSheet = cfg.wb.getSheet(InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.source.boardId);
         }
 
         if (null == cfg.changesSheet) {
-            d.p(Debug.ERROR, "Cannot find Changes sheet in file: %s\n", cfg.xlsxfn);
+            d.p(Debug.ERROR, "Cannot find required Changes sheet in file: %s\n", cfg.xlsxfn);
             System.exit(1);
         }
         ChangesColumns cc = Utils.checkChangeSheetColumns(cfg.changesSheet);
