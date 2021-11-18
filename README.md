@@ -43,12 +43,12 @@ Option | Argument | Description
 * The exporter does not export any history (i.e. dates of changes, createdBy, ActualFinish, etc., etc.) information and takes a snapshot of what is there right now. As this app is all about recreating new items afresh, all that data is irrelevant. To get those dates, please use the standard in-built exporter (to csv).
 * You can re-use the same spreadsheet to export multiple boards (with -e option only).
 * If you are running the export in order to run the importer some time later, you must update the src/dst boardIds in the correct sequence. There are a few scenarios:
- - If you want to just export, then the Config sheet only need contain one line containing the 'src' info
- - If you want to import, then just the 'dst' line is needed
- - If you want to transfer, then both are needed
- - If you want to copy multiple boards from one system to another and there are parent/child relationships between cards on different boards, then you need to ensure that you export in the correct order. This is so the program can find the items and make the equations up so that the parent links are recreated properly on import. An example of this is when you have a Portfolio board with Initiatives on that have Epics as children on an Agile Release Train board, that itself has Features as children on a Team board (that may or may not have stories). You must export in the order, Portfolio, ART, Team. 
-  * When you come to import, make sure you update both the src and dst boardIds as these are used to determine which Change_\<boardId\> sheet to use to send to the destination. (This is a new feature in 1.1)
-* If you want to merge boards together into one destination board, you can concatenate multiple changes sheet together, leaving the board item sheets as they are. E.g. merge sheets called "Changes_1598676317" and "Changes_1606150498" (created by the exporter) into one sheet called "Changes" and then run the importer. Remember! You will have issues with Lanes if the layouts of the boards are incompatible. 
+  * If you want to just export, then the Config sheet only need contain one line containing the 'src' info
+  * If you want to import, then just the 'dst' line is needed
+  * If you want to transfer, then both are needed
+  * If you want to copy multiple boards from one system to another and there are parent/child relationships between cards on different boards, then you need to ensure that you export in the correct order. This is so the program can find the items and make the equations up so that the parent links are recreated properly on import. An example of this is when you have a Portfolio board with Initiatives on that have Epics as children on an Agile Release Train board, that itself has Features as children on a Team board (that may or may not have stories). You must export in the order, Portfolio, ART, Team. 
+* When you come to import, make sure you update both the src and dst boardIds as these are used to determine which Change_\<boardId\> sheet to use to send to the destination. (This is a new feature in 1.1)
+* If you want to merge boards together into one destination board, you can concatenate multiple changes sheet together, leaving the board item sheets as they are. E.g. copy sheets called "Changes_1598676317" and "Changes_1606150498" (created by the exporter) into one sheet called "Changes_Combined" and then set the src boardId to "Combined" to run the importer. Remember! You will have issues with Lanes if the layouts of the boards are incompatible. 
 
 I will say it again in case you missed it: YOU MIGHT WANT TO MAKE SURE THE BOARD LAYOUT IS THE SAME.
 
@@ -57,7 +57,7 @@ and: DO NOT PUT ANY LANE WIP LIMITS IN PLACE ON THE DESTINATION BOARD UNLESS YOU
 * All items that cannot be put into a correct lane will end up in the default drop lane - this can get messy. To recover, you can delete all the items in the default drop lane that aren't supposed to be there and set the value in the Group column in the Changes sheet to something memorable (e.g. 99) for those items you want to recreate and modify. Then rerun the importer with the -g option with that group number.
 * To run both the importer and exporter sequentially, for example, you can use the following command line:
  
-java -jar lkutility\target\lkutility-1.0-jar-with-dependencies.jar -f "file.xlsx" -t  -A -T -S -C
+java -jar lkutility\target\lkutility-1.1-jar-with-dependencies.jar -f "file.xlsx" -t  -A -T -S -C
  
 * To get an example spreadsheet of what the importer requires, you can run the export (only, using -e) on a board that has parent/child, attachment, comment, etc., data already set up.
 * To get an idea of the progress that the exporter/importer is making, use the option "-x 3".
