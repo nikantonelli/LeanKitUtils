@@ -10,7 +10,9 @@ public class Card implements Comparable<Card> {
     public Connections connections;
     public ExternalLink externalLink;
     public String[] tags, assignedUserIds;
-    public Integer commentsCount, childCommentsCount, size, index, scoreTotal;
+    public Integer commentsCount, childCommentsCount, size, index, scoreOverride;
+    public Double confidenceTotal, scoreTotal;
+    public Score scores[];
     public Date updatedOn, movedOn, createdOn, archivedOn, plannedStart, plannedFinish, actualStart, actualFinish;
     public CustomField[] customFields;
     public CustomIcon customIcon;
