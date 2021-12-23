@@ -15,7 +15,7 @@ public class SupportedXlsxFields {
     public String title, description, priority;
     
     public Date plannedStart, plannedFinish;    //ISO8601 format
-    public Integer size;
+    public Integer size, scoreTotal;
     public Lane lane;
     public String[] tags;  
     public CustomId customId; 
