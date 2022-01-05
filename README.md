@@ -14,6 +14,8 @@ Version 1.1 added a way to maintain relationships between cards on different boa
 
 The app does its work through the medium of an Excel spreadsheet. This has more flexibility that using a CSV file as I can do stuff to implement parent/child relationships fairly easily. In addition, comments, descriptions, etc. can cause issues if they contain the "," character in CSV files.
 
+If you have the Excel file open when this app is trying to run, it may fail whilst trying to save its updates. Please ensure to close the Excel file after edits. This is an Excel/filesystem issue and relates to how the OS keeps track of reads/writes to (auto-save,open, etc.) files.
+
 The app may also require you to have read/write access on the directory you are running it from. This is to store the attachment files if you have asked for them to be exported.
 
 The basic requirement to fire off the app is a file with a single sheet in it. The columns of the sheet must be: 'direction', 'url', 'username', 'password', 'apiKey' and 'boardId'. The first row found with 'src' as the entry under direction will be used by the exporter. The first row found with 'dst' will be used by the importer.
