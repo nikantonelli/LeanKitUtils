@@ -13,12 +13,12 @@ import com.planview.lkutility.leankit.*;
 public class SupportedXlsxFields {
     public class Modifiable {
         public String srcID;
+        public String title, description;
         public ItemType type;
-        public String title, description, priority;
-
         public Date plannedStart, plannedFinish; // ISO8601 format
         public Integer size;
         public Lane lane;
+        public String priority;
         public String[] tags;
         public CustomId customId;
         public String color, blockReason;
@@ -50,15 +50,16 @@ public class SupportedXlsxFields {
     }
 
     public class ReadOnly {
-        public Date createdOn, archivedOn, updatedOn, movedOn;
+        public Date createdOn, updatedOn, movedOn, archivedOn, sctualStart, actualFinish;
         public Integer commentsCount, childCommentsCount, version;
-        public User archivedBy, updatedBy, createdBy;
+        public User createdBy, updatedBy, archivedBy;
     }
 
     /**
      * These are pseudo-fields. When these are seen, some extra
      * activity needs to take place and not be sent to the spreadsheet
-     * Compiler gives 'unused' warning, which we will ignore.
+     * Compiler gives 'unused' warning, which we will ignore. We just use the names
+     * of the fields in a big switch statement.
      */
     public class Pseudo {
         private ParentCard[] parentCards;
