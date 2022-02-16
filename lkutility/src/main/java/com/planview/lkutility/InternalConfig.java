@@ -33,5 +33,7 @@ public class InternalConfig {
     public Boolean dualFlow = false;
     public XSSFSheet changesSheet = null;
     public XSSFSheet itemSheet = null;
+    public String archive;
+    public boolean roFieldExport;
 }
 

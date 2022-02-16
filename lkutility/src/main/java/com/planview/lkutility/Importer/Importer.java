@@ -1,5 +1,6 @@
 package com.planview.lkutility.importer;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
@@ -7,6 +8,7 @@ import java.util.Iterator;
 import com.planview.lkutility.ChangesColumns;
 import com.planview.lkutility.Debug;
 import com.planview.lkutility.InternalConfig;
+import com.planview.lkutility.SupportedXlsxFields;
 import com.planview.lkutility.Utils;
 import com.planview.lkutility.leankit.AccessCache;
 import com.planview.lkutility.leankit.BoardUser;
@@ -81,11 +83,11 @@ public class Importer {
             Row change = cItor.next();
             // Get the item that this change refers to
             // First check the validity of the info
-            if ( (change.getCell(cc.row) == null) || (change.getCell(cc.action) == null)) {
+            if ((change.getCell(cc.row) == null) || (change.getCell(cc.action) == null)) {
                 d.p(Debug.WARN, "Cannot decode change info in row \"%d\" - skipping\n", change.getRowNum());
                 continue;
             }
-            
+
             // In case the changes get repositioned, we use the formula to keep track of
             // where the row 'actually' is
             // Excel updates the formula for us if the user edits the changes
@@ -180,12 +182,12 @@ public class Importer {
     }
 
     private String doAction(Row change, Row item) {
-       
+
         ChangesColumns cc = Utils.checkChangeSheetColumns(cfg.changesSheet);
         String cf = change.getCell(cc.row).getCellFormula();
         CellReference ca = new CellReference(cf);
         XSSFSheet iSht = cfg.wb.getSheet(ca.getSheetName());
-        
+
         /**
          * We need to get the header row for this sheet and work out which columns the
          * fields are in. It is possible that fields could be different between sheets,
@@ -249,90 +251,100 @@ public class Importer {
                 JSONObject vals = new JSONObject();
 
                 String field = change.getCell(cc.field).getStringCellValue();
-                switch (field) {
-                case "Task": {
-                    // Get row for the task
-                    String tcf = change.getCell(cc.value).getCellFormula();
-                    CellReference tca = new CellReference(tcf);
-                    XSSFSheet cSheet = cfg.wb.getSheet(tca.getSheetName());
-                    Row task = cSheet.getRow(tca.getRow());
+                SupportedXlsxFields allFields = new SupportedXlsxFields();
 
-                    JSONObject jsonTask = Utils.jsonCardFromRow(cfg, cfg.destination, fieldLst, task, card.id);
-                    if (task.getCell(idCol) == null) {
+                try {
+                    //If its part of the fields we don't want, then ignore
+                    Field nf = (allFields.new ReadOnly()).getClass().getField(field);
+                } catch (NoSuchFieldException e) {
 
-                        task.createCell(idCol);
-                    }
-                    task.getCell(idCol).setCellValue(Utils.addTask(cfg, cfg.destination, card.id, jsonTask).id);
-                    break;
-                }
-                case "assignedUsers": {
-                    /**
-                     * We need to try and match the email address in the destination and fetch the
-                     * userID
-                     */
-                    String usersList = change.getCell(cc.value).getStringCellValue();
-                    if (usersList != null) {
-                        ArrayList<BoardUser> boardUsers = Utils.fetchUsers(cfg, cfg.destination); // Fetch the board
-                                                                                                  // users
-                        if (boardUsers != null) {
+                    switch (field) {
+                        case "Task": {
+                            // Get row for the task
+                            String tcf = change.getCell(cc.value).getCellFormula();
+                            CellReference tca = new CellReference(tcf);
+                            XSSFSheet cSheet = cfg.wb.getSheet(tca.getSheetName());
+                            Row task = cSheet.getRow(tca.getRow());
 
+                            JSONObject jsonTask = Utils.jsonCardFromRow(cfg, cfg.destination, fieldLst, task, card.id);
+                            if (task.getCell(idCol) == null) {
+
+                                task.createCell(idCol);
+                            }
+                            task.getCell(idCol).setCellValue(Utils.addTask(cfg, cfg.destination, card.id, jsonTask).id);
+                            break;
+                        }
+                        case "assignedUsers": {
+                            /**
+                             * We need to try and match the email address in the destination and fetch the
+                             * userID
+                             */
+                            String usersList = change.getCell(cc.value).getStringCellValue();
                             if (usersList != null) {
-                                String[] users = usersList.split(",");
-                                ArrayList<String> usersToPut = new ArrayList<>();
-                                for (int i = 0; i < users.length; i++) {
-                                    User realUser = Utils.fetchUser(cfg, cfg.destination, users[i]);
+                                ArrayList<BoardUser> boardUsers = Utils.fetchUsers(cfg, cfg.destination); // Fetch the
+                                                                                                          // board
+                                                                                                          // users
+                                if (boardUsers != null) {
 
-                                    // Check if they are a board user so we don't error.
-                                    for (int j = 0; j < boardUsers.size(); j++) {
-                                        if (realUser.id.equals(boardUsers.get(j).id)) {
-                                            usersToPut.add(realUser.id);
+                                    if (usersList != null) {
+                                        String[] users = usersList.split(",");
+                                        ArrayList<String> usersToPut = new ArrayList<>();
+                                        for (int i = 0; i < users.length; i++) {
+                                            User realUser = Utils.fetchUser(cfg, cfg.destination, users[i]);
+
+                                            // Check if they are a board user so we don't error.
+                                            for (int j = 0; j < boardUsers.size(); j++) {
+                                                if (realUser.id.equals(boardUsers.get(j).id)) {
+                                                    usersToPut.add(realUser.id);
+                                                }
+                                            }
                                         }
+                                        fld.put("assignedUserIds", usersToPut.toArray());
                                     }
                                 }
-                                fld.put("assignedUserIds", usersToPut.toArray());
                             }
+                            break;
+                        }
+                        case "customIcon": {
+                            // Incoming customIcon value is a name. We need to translate to
+                            // an id
+                            CustomIcon ci = Utils.findCustomIcon(cfg, cfg.destination, field);
+                            vals.put("value", ci.id);
+                            fld.put("customIconId", vals);
+                            break;
+                        }
+                        case "lane": {
+                            String[] bits = ((String) Utils.fetchCell(change, cc.value)).split(",");
+                            Lane foundLane = Utils.findLaneFromBoard(cfg, cfg.destination, cfg.destination.boardId,
+                                    bits[0]);
+                            if (foundLane != null) {
+                                vals.put("value", foundLane.id);
+                                if (bits.length > 1) {
+                                    vals.put("value2", bits[1]);
+                                }
+                                fld.put("Lane", vals);
+                            }
+                            break;
+                        }
+
+                        default: {
+                            // Check if this is a standard/custom field and redo the 'put'
+
+                            CustomField ctmf = Utils.findCustomField(cfg, cfg.destination, field);
+                            if (ctmf != null) {
+                                vals.put("value", field);
+                                vals.put("value2", Utils.fetchCell(change, cc.value));
+                                fld.put("CustomField", vals);
+                            }
+                            // May be special case or satandard field, so let it through.
+                            else {
+                                vals.put("value", Utils.fetchCell(change, cc.value));
+                                fld.put(change.getCell(cc.field).getStringCellValue(), vals);
+                            }
+
+                            break;
                         }
                     }
-                    break;
-                }
-                case "customIcon": {
-                    // Incoming customIcon value is a name. We need to translate to
-                    // an id
-                    CustomIcon ci = Utils.findCustomIcon(cfg, cfg.destination, field);
-                    vals.put("value", ci.id);
-                    fld.put("customIconId", vals);
-                    break;
-                }
-                case "lane": {
-                    String[] bits = ((String) Utils.fetchCell(change, cc.value)).split(",");
-                    Lane foundLane = Utils.findLaneFromBoard(cfg, cfg.destination, cfg.destination.boardId, bits[0]);
-                    if (foundLane != null) {
-                        vals.put("value", foundLane.id);
-                        if (bits.length > 1) {
-                            vals.put("value2", bits[1]);
-                        }
-                        fld.put("Lane", vals);
-                    }
-                    break;
-                }
-
-                default: {
-                    // Check if this is a standard/custom field and redo the 'put'
-
-                    CustomField ctmf = Utils.findCustomField(cfg, cfg.destination, field);
-                    if (ctmf != null) {
-                        vals.put("value", field);
-                        vals.put("value2", Utils.fetchCell(change, cc.value));
-                        fld.put("CustomField", vals);
-                    }
-                    // May be special case or satandard field, so let it through.
-                    else {
-                        vals.put("value", Utils.fetchCell(change, cc.value));
-                        fld.put(change.getCell(cc.field).getStringCellValue(), vals);
-                    }
-
-                    break;
-                }
                 }
 
                 newCard = Utils.updateCard(cfg, cfg.destination, card.id, fld);

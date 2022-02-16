@@ -33,6 +33,8 @@ public class Main {
      * specified. If the command line contains a -i flag, this is set to false.
      */
     static Boolean setToExport = true;
+    static Boolean setToImport = false;
+    static Boolean setToDiff = false;
 
     /**
      * One line sheet that contains the credentials to access the Leankit Server.
@@ -58,13 +60,15 @@ public class Main {
         if (setToExport == true) {
             Exporter expt = new Exporter();
             expt.go(config);
-            if (config.dualFlow == true) {
+            if (setToImport == true) {
                 Importer impt = new Importer();
                 impt.go(config);
             }
-        } else {
+        } else if (setToImport == true) {
             Importer impt = new Importer();
             impt.go(config);
+        } else {
+
         }
         try {
             config.wb.close();
@@ -84,17 +88,25 @@ public class Main {
         Option impO = new Option("i", "import", false, "run importer");
         Option expO = new Option("e", "export", false, "run exporter");
         Option tnsO = new Option("t", "transfer", false, "run transfer");
+        Option diffO = new Option("d", "diff", true, "compare to previous transfer: (s)rc or (d)est");
+
+        diffO.setRequired(false);
         impO.setRequired(false);
         expO.setRequired(false);
         tnsO.setRequired(false);
         impExpOpt.addOption(impO);
         impExpOpt.addOption(expO);
         impExpOpt.addOption(tnsO);
+        impExpOpt.addOption(diffO);
         impExpOpt.addRequiredOption("f", "filename", true, "XLSX Spreadsheet (must contain API config!)");
 
         Option groupOpt = new Option("g", "group", true, "Identifier of group to process (if present)");
         groupOpt.setRequired(false);
         impExpOpt.addOption(groupOpt);
+
+        Option moveOpt = new Option("m", "move", true, "Lane to modify unwanted cards with (for diff only)");
+        moveOpt.setRequired(false);
+        impExpOpt.addOption(moveOpt);
 
         Option dbp = new Option("x", "debug", true,
                 "Print out loads of helpful stuff: 0 - Error, 1 - And Info, 2 - And Warnings, 3 - And Debugging, 4 - Verbose");
@@ -116,6 +128,9 @@ public class Main {
         Option originOpt = new Option("S", "origin", false, "Add comment for source artifact recording");
         originOpt.setRequired(false);
         impExpOpt.addOption(originOpt);
+        Option readOnlyOpt = new Option("R", "ro", false, "Export Read Only fields (Not Imported!)");
+        readOnlyOpt.setRequired(false);
+        impExpOpt.addOption(readOnlyOpt);
 
         try {
             impExpCl = p.parse(impExpOpt, args, true);
@@ -125,6 +140,10 @@ public class Main {
             d.p(Debug.ERROR, "(13): %s\n", e.getMessage());
             hf.printHelp(" ", impExpOpt);
             System.exit(5);
+        }
+
+        if (impExpCl.hasOption("ro")) {
+            config.roFieldExport = true;
         }
 
         if (impExpCl.hasOption("debug")) {
@@ -137,31 +156,46 @@ public class Main {
             }
         }
 
-        /**
-         * Import takes precedence if option present, then export, then transfer
+        /** 
+         * If we are doing a diff, we don't want to think about import/export via the
+         * normal route. We need to export the board again into a temporary sheet and then
+         * scan it for differences between it and the original.
+         * We then can use the diff to create a 'reset' changes sheet. Any cards in excess of
+         * those in the original can be moved to the archive lane
          */
-        if (impExpCl.hasOption("import")) {
-            d.p(Debug.INFO, "Setting to Import mode\n");
+        if (impExpCl.hasOption("diff")) {
+            d.p(Debug.INFO, "Setting to diff mode.\n");
+            setToDiff = true;
             setToExport = false;
-        } else if (!impExpCl.hasOption("export")) {
-            if (!impExpCl.hasOption("transfer")) {
-                d.p(Debug.INFO, "Defaulting to Export mode\n");
+            if (impExpCl.hasOption("move")) {
+                config.archive = impExpCl.getOptionValue("move");
+            }
+            System.exit(0);
+        } else {
+            /**
+             * Import takes precedence if option present, then export, then transfer
+             */
+            if (impExpCl.hasOption("import")) {
+                if (impExpCl.hasOption("transfer") || impExpCl.hasOption("export")){
+                    d.p(Debug.INFO, "Invalid options specified (-i with another). Defaulting to Import mode.\n");    
+                } else {
+                    d.p(Debug.INFO, "Setting to Import mode.\n");
+                }
+                setToExport = false;
+                setToImport = true;
             } else {
-                d.p(Debug.INFO, "Setting to Dual mode\n");
-                config.dualFlow = true;
+                if (impExpCl.hasOption("export")) {
+                    if (impExpCl.hasOption("transfer")) {
+                        d.p(Debug.INFO, "Invalid options specified (-e and -t) Defaulting to Export mode\n");
+                    }
+                } else if (impExpCl.hasOption("transfer")) {
+                    d.p(Debug.INFO, "Setting to Dual mode\n");
+                    setToImport = true;
+                }
             }
         }
 
         config.xlsxfn = impExpCl.getOptionValue("filename");
-
-        if (impExpCl.hasOption("debug")) {
-            String optVal = impExpCl.getOptionValue("debug");
-            if (optVal != null) {
-                config.debugLevel = Integer.parseInt(optVal);
-            } else {
-                config.debugLevel = 99;
-            }
-        }
 
         // We now need to check for all the other unique options
 
@@ -231,9 +265,11 @@ public class Main {
                     if (cell != null) {
                         switch (cell.getCellType()) {
                             case STRING:
-                            //When you copy'n'paste on WIndows, it sometimes picks up the whitespace too - so remove it.
-                                p[i].set(cfg, (cell != null ? drRow.getCell(Integer.parseInt(val)).getStringCellValue().trim()
-                                        : ""));
+                                // When you copy'n'paste on WIndows, it sometimes picks up the whitespace too -
+                                // so remove it.
+                                p[i].set(cfg,
+                                        (cell != null ? drRow.getCell(Integer.parseInt(val)).getStringCellValue().trim()
+                                                : ""));
                                 break;
                             case NUMERIC:
                                 p[i].set(cfg, (cell != null ? drRow.getCell(Integer.parseInt(val)).getNumericCellValue()
@@ -313,18 +349,18 @@ public class Main {
         }
 
         // Creds are now found and set. If not, you're buggered.
-        
+
         /**
-         * We can opt to use username/password or apikey. 
+         * We can opt to use username/password or apikey.
          **/
-        if ((config.source.url != null) && (setToExport || config.dualFlow)) {
+        if ((config.source.url != null) && setToExport) {
             if (((config.source.apiKey == null) || (config.source.boardId == null))
                     && ((config.source.username == null) || (config.source.password == null))) {
                 d.p(Debug.ERROR, "%s", "Did not detect enough source info: apikey or username/password pair");
                 System.exit(13);
             }
         }
-        if ((config.destination.url != null) && ((!setToExport) || config.dualFlow)) {
+        if ((config.destination.url != null) && setToImport) {
             if (((config.destination.apiKey == null) || (config.destination.boardId == null))
                     && ((config.destination.username == null) || (config.destination.password == null))) {
                 d.p(Debug.ERROR, "%s", "Did not detect enough destination info: apikey or username/password pair");

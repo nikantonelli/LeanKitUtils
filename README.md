@@ -38,6 +38,7 @@ Option | Argument | Description
 -T |  | Include _Tasks_ in export/import
 -C |  | Include  _Comments_ in export/import
 -S |  | Include a comment in export containing link to original _Source_ (will not get imported if -C not used)
+-R |  | Export some Read Only fields (which will not be imported)
  
 ## Features and Usage
  
