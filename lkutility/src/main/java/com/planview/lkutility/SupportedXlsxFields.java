@@ -50,7 +50,7 @@ public class SupportedXlsxFields {
     }
 
     public class ReadOnly {
-        public Date createdOn, updatedOn, movedOn, archivedOn, sctualStart, actualFinish;
+        public Date createdOn, updatedOn, movedOn, archivedOn, actualStart, actualFinish;
         public Integer commentsCount, childCommentsCount, version;
         public User createdBy, updatedBy, archivedBy;
     }
