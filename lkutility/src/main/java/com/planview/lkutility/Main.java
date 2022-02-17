@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import com.planview.lkutility.diff.Diff;
 import com.planview.lkutility.exporter.Exporter;
 import com.planview.lkutility.importer.Importer;
 
@@ -57,19 +58,26 @@ public class Main {
         getConfigFromFile();
         config.cm.setMaxTotal(5); // Recommendation fron LeanKit
 
-        if (setToExport == true) {
-            Exporter expt = new Exporter();
-            expt.go(config);
-            if (setToImport == true) {
-                Importer impt = new Importer();
-                impt.go(config);
-            }
-        } else if (setToImport == true) {
-            Importer impt = new Importer();
-            impt.go(config);
-        } else {
+        /**
+         * These options are carefully crafted in the getCommandLine routine to
+         * be either set to diff or to choose between import, export and transfer(both)
+         */
 
+        if (setToExport == true) {
+            Exporter expt = new Exporter(config);
+            expt.go();
         }
+
+        if (setToImport == true) {
+            Importer impt = new Importer(config);
+            impt.go();
+        }
+
+        if (setToDiff == true) {
+            Diff diff = new Diff(config);
+            diff.go();
+        } 
+
         try {
             config.wb.close();
         } catch (IOException e) {
@@ -88,7 +96,8 @@ public class Main {
         Option impO = new Option("i", "import", false, "run importer");
         Option expO = new Option("e", "export", false, "run exporter");
         Option tnsO = new Option("t", "transfer", false, "run transfer");
-        Option diffO = new Option("d", "diff", true, "compare to previous transfer: (s)rc or (d)est");
+        Option diffO = new Option("d", "diff", true,
+                "compare dst URL to a previous transfer - 1: dst sheet, 2: src sheet, 3: src URL");
 
         diffO.setRequired(false);
         impO.setRequired(false);
@@ -156,28 +165,30 @@ public class Main {
             }
         }
 
-        /** 
+        /**
          * If we are doing a diff, we don't want to think about import/export via the
-         * normal route. We need to export the board again into a temporary sheet and then
+         * normal route. We need to export the board again into a temporary sheet and
+         * then
          * scan it for differences between it and the original.
-         * We then can use the diff to create a 'reset' changes sheet. Any cards in excess of
+         * We then can use the diff to create a 'reset' changes sheet. Any cards in
+         * excess of
          * those in the original can be moved to the archive lane
          */
         if (impExpCl.hasOption("diff")) {
             d.p(Debug.INFO, "Setting to diff mode.\n");
+            config.diffMode = impExpCl.getOptionValue("diff");
             setToDiff = true;
             setToExport = false;
             if (impExpCl.hasOption("move")) {
                 config.archive = impExpCl.getOptionValue("move");
             }
-            System.exit(0);
         } else {
             /**
              * Import takes precedence if option present, then export, then transfer
              */
             if (impExpCl.hasOption("import")) {
-                if (impExpCl.hasOption("transfer") || impExpCl.hasOption("export")){
-                    d.p(Debug.INFO, "Invalid options specified (-i with another). Defaulting to Import mode.\n");    
+                if (impExpCl.hasOption("transfer") || impExpCl.hasOption("export")) {
+                    d.p(Debug.INFO, "Invalid options specified (-i with another). Defaulting to Import mode.\n");
                 } else {
                     d.p(Debug.INFO, "Setting to Import mode.\n");
                 }

@@ -69,41 +69,54 @@ public class Exporter {
     ArrayList<ParentChild> parentChild = new ArrayList<>();
     Debug d = new Debug();
 
-    public void go(InternalConfig config) {
+    public Exporter(InternalConfig config) {
+        cfg = config;
+    }
+
+    public void go() {
 
         /**
          * Check that the workbook doesn't have the "Changes" sheet in
          */
 
-        cfg = config;
-        d.setLevel(config.debugLevel);
-        cfg.cache = new AccessCache(cfg, cfg.source);
+
+        d.setLevel(cfg.debugLevel);
 
         d.p(Debug.INFO, "Starting Export at: %s\n", new Date());
-        Integer chShtIdx = null;
+        String cShtName = cleanSheets();
+        newSheets(cShtName);
+    }
 
+    public String cleanSheets(){
+        Integer chShtIdx = null;
+        String cShtName = InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.source.boardId;
+        
         // Clean away any previous 'conflicting' sheets
         chShtIdx = cfg.wb.getSheetIndex(InternalConfig.CHANGES_SHEET_NAME);
         if (chShtIdx >= 0) {
             cfg.wb.removeSheetAt(chShtIdx);
         }
-
-        String cShtName = InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.source.boardId;
+        
         chShtIdx = cfg.wb.getSheetIndex(cShtName);
         if (chShtIdx >= 0) {
             cfg.wb.removeSheetAt(chShtIdx);
         }
+        
+        // Now make sure we don't have any left over item information
+        chShtIdx = cfg.wb.getSheetIndex(cfg.source.boardId);
+        if (chShtIdx >= 0) {
+            cfg.wb.removeSheetAt(chShtIdx);
+        }
+        return cShtName;
+        
+    }
 
+    public void newSheets(String cShtName){
         // Make a new one
         cfg.changesSheet = cfg.wb.createSheet(cShtName);
         // And update the sheet index
         chShtIdx = cfg.wb.getSheetIndex(cShtName);
 
-        // Now make sure we don't have any left over item information
-        Integer itemShtIdx = cfg.wb.getSheetIndex(cfg.source.boardId);
-        if (itemShtIdx >= 0) {
-            cfg.wb.removeSheetAt(itemShtIdx);
-        }
         cfg.itemSheet = cfg.wb.createSheet(cfg.source.boardId);
 
         /**
@@ -121,6 +134,14 @@ public class Exporter {
         chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Field");
         chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Value");
 
+        doExport();
+        
+    }
+    
+    public void doExport() {
+        
+        cfg.cache = new AccessCache(cfg, cfg.source);
+        
         /**
          * Now create the Item Sheet layout
          */
@@ -147,7 +168,7 @@ public class Exporter {
         Integer outFieldsLength = rwFields.length + customFields.length;
         Integer checkFieldsLength = rwFields.length + customFields.length + pseudoFields.length;
 
-        if (config.roFieldExport){
+        if (cfg.roFieldExport){
             outFieldsLength += roFields.length;
             checkFieldsLength += roFields.length;
         }
@@ -163,7 +184,7 @@ public class Exporter {
             checkFields[cfi++] = rwFields[i].getName();
         }
 
-        if (config.roFieldExport) {
+        if (cfg.roFieldExport) {
             for (int i = 0; i < roFields.length; i++) {
                 outFields[ofi++] = roFields[i].getName();
                 checkFields[cfi++] = roFields[i].getName();

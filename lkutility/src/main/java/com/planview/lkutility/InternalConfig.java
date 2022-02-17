@@ -35,5 +35,6 @@ public class InternalConfig {
     public XSSFSheet itemSheet = null;
     public String archive;
     public boolean roFieldExport;
+    public String diffMode;
 }
 

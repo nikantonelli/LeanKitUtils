@@ -1,6 +1,5 @@
 package com.planview.lkutility.importer;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
@@ -30,8 +29,12 @@ public class Importer {
 
     InternalConfig cfg = null;
 
-    public void go(InternalConfig config) {
+    public  Importer(InternalConfig config) {
         cfg = config;
+    }
+
+    public void go() {
+
         cfg.cache = new AccessCache(cfg, cfg.destination);
         d.setLevel(cfg.debugLevel);
         d.p(Debug.INFO, "Starting Import at: %s\n", new Date());
@@ -255,7 +258,7 @@ public class Importer {
 
                 try {
                     //If its part of the fields we don't want, then ignore
-                    Field nf = (allFields.new ReadOnly()).getClass().getField(field);
+                    (allFields.new ReadOnly()).getClass().getField(field);
                 } catch (NoSuchFieldException e) {
 
                     switch (field) {
