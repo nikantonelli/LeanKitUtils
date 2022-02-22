@@ -9,7 +9,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 
 import com.planview.lkutility.Changes;
@@ -64,7 +63,7 @@ public class Exporter {
     int itmRowIdx = 0;
     int chgRowIdx = 0;
 
-    Integer chShtIdx = -1; // Set to invalid as a precaution for misuse.
+    Integer chgShtIdx = -1; // Set to invalid as a precaution for misuse.
 
     ArrayList<ParentChild> parentChild = new ArrayList<>();
     Debug d = new Debug();
@@ -74,28 +73,18 @@ public class Exporter {
     }
 
     public void go() {
-
-        /**
-         * Check that the workbook doesn't have the "Changes" sheet in
-         */
-
-
         d.setLevel(cfg.debugLevel);
-
         d.p(Debug.INFO, "Starting Export at: %s\n", new Date());
-        String cShtName = cleanSheets();
-        newSheets(cShtName);
+        doExport(setUpNewSheets(cleanSheets()));
+    }
+
+    public String getSheetName(){
+        return  InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.source.boardId;
     }
 
     public String cleanSheets(){
         Integer chShtIdx = null;
-        String cShtName = InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.source.boardId;
-        
-        // Clean away any previous 'conflicting' sheets
-        chShtIdx = cfg.wb.getSheetIndex(InternalConfig.CHANGES_SHEET_NAME);
-        if (chShtIdx >= 0) {
-            cfg.wb.removeSheetAt(chShtIdx);
-        }
+        String cShtName = getSheetName();
         
         chShtIdx = cfg.wb.getSheetIndex(cShtName);
         if (chShtIdx >= 0) {
@@ -111,20 +100,20 @@ public class Exporter {
         
     }
 
-    public void newSheets(String cShtName){
+    public String[] setUpNewSheets(String cShtName){
+        newChgSheet(cShtName);
+        return newItmSheet();
+    }
+
+    public void newChgSheet(String cShtName){
         // Make a new one
         cfg.changesSheet = cfg.wb.createSheet(cShtName);
-        // And update the sheet index
-        chShtIdx = cfg.wb.getSheetIndex(cShtName);
-
-        cfg.itemSheet = cfg.wb.createSheet(cfg.source.boardId);
 
         /**
          * Create the Changes Sheet layout
          */
 
         int chgCellIdx = 0;
-
         Row chgHdrRow = cfg.changesSheet.createRow(chgRowIdx++);
 
         // These next lines are the fixed format of the Changes sheet
@@ -132,16 +121,14 @@ public class Exporter {
         chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Item Row");
         chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Action");
         chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Field");
-        chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Value");
+        chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Value");;
 
-        doExport();
-        
     }
-    
-    public void doExport() {
-        
+
+    public String[] newItmSheet(){
+        cfg.itemSheet = cfg.wb.createSheet(cfg.source.boardId); 
         cfg.cache = new AccessCache(cfg, cfg.source);
-        
+        d.setLevel(cfg.debugLevel); //Do this again here because we can bypass it above in go()
         /**
          * Now create the Item Sheet layout
          */
@@ -149,10 +136,7 @@ public class Exporter {
         Row itmHdrRow = cfg.itemSheet.createRow(itmRowIdx++);
 
         int itmCellIdx = 0;
-        itmHdrRow.createCell(itmCellIdx, CellType.STRING).setCellValue("ID");
-        // Put all the fields into a map for later on
-        HashMap<String, Object> fieldMap = new HashMap<>();
-        fieldMap.put("ID", itmCellIdx++);
+        itmHdrRow.createCell(itmCellIdx++, CellType.STRING).setCellValue("ID");
 
         // Now write out the fields
         SupportedXlsxFields allFields = new SupportedXlsxFields();
@@ -160,39 +144,31 @@ public class Exporter {
                                                                                 // as columns
         Field[] roFields = (allFields.new ReadOnly()).getClass().getFields();
 
-        Field[] pseudoFields = (allFields.new Pseudo()).getClass().getDeclaredFields(); // Inlcudes pseudo fields that
+        Field[] pseudoFields = (allFields.new Pseudo()).getClass().getFields(); // Inlcudes pseudo fields that
                                                                                         // will
                                                                                         // cause alternative actions
         CustomField[] customFields = Utils.fetchCustomFields(cfg, cfg.source);
 
-        Integer outFieldsLength = rwFields.length + customFields.length;
         Integer checkFieldsLength = rwFields.length + customFields.length + pseudoFields.length;
 
         if (cfg.roFieldExport){
-            outFieldsLength += roFields.length;
             checkFieldsLength += roFields.length;
         }
 
-        String[] outFields = new String[outFieldsLength];
         String[] checkFields = new String[checkFieldsLength];
-
-        Integer ofi = 0;
         Integer cfi = 0;
 
         for (int i = 0; i < rwFields.length; i++) {
-            outFields[ofi++] = rwFields[i].getName();
             checkFields[cfi++] = rwFields[i].getName();
         }
 
         if (cfg.roFieldExport) {
             for (int i = 0; i < roFields.length; i++) {
-                outFields[ofi++] = roFields[i].getName();
                 checkFields[cfi++] = roFields[i].getName();
             }
         }
 
         for (int i = 0; i < customFields.length; i++) {
-            outFields[ofi++] = customFields[i].label;
             checkFields[cfi++] = customFields[i].label;
         }
 
@@ -200,12 +176,14 @@ public class Exporter {
             checkFields[cfi++] = pseudoFields[i].getName();
         }
 
-        // Store the indexes for the spreadsheet columns
-        for (int i = 0; i < outFields.length; i++) {
-            itmHdrRow.createCell(itmCellIdx, CellType.STRING).setCellValue(outFields[i]);
-            fieldMap.put(outFields[i], itmCellIdx++);
+        //Put column headers out
+        for (int i = 0; i < checkFieldsLength; i++) {
+            itmHdrRow.createCell(itmCellIdx++, CellType.STRING).setCellValue(checkFields[i]);
         }
-
+        return checkFields;
+    }
+    
+    public void doExport(String[] checkFields) {
         /**
          * Read all the normal cards on the board - up to a limit?
          */

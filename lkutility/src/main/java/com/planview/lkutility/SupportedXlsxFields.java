@@ -62,10 +62,10 @@ public class SupportedXlsxFields {
      * of the fields in a big switch statement.
      */
     public class Pseudo {
-        private ParentCard[] parentCards;
-        private Comment[] comments;
-        private Attachment[] attachments;
-        private TaskBoardStats taskBoardStats;
+        public ParentCard[] parentCards;
+        public Comment[] comments;
+        public Attachment[] attachments;
+        public TaskBoardStats taskBoardStats;
     }
 
     /**

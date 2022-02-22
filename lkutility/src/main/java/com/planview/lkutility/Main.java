@@ -96,8 +96,8 @@ public class Main {
         Option impO = new Option("i", "import", false, "run importer");
         Option expO = new Option("e", "export", false, "run exporter");
         Option tnsO = new Option("t", "transfer", false, "run transfer");
-        Option diffO = new Option("d", "diff", true,
-                "compare dst URL to a previous transfer - 1: dst sheet, 2: src sheet, 3: src URL");
+        Option diffO = new Option("d", "diff", false,
+                "compare dst URL to a previous transfer");
 
         diffO.setRequired(false);
         impO.setRequired(false);

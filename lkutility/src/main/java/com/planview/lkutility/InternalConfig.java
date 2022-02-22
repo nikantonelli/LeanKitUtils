@@ -33,8 +33,9 @@ public class InternalConfig {
     public Boolean dualFlow = false;
     public XSSFSheet changesSheet = null;
     public XSSFSheet itemSheet = null;
-    public String archive;
+    public String archive = null;
     public boolean roFieldExport;
     public String diffMode;
+    public XSSFSheet resetSheet;
 }
 
