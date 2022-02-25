@@ -56,7 +56,6 @@ public class Main {
 
         checkXlsx();
         getConfigFromFile();
-        config.cm.setMaxTotal(5); // Recommendation fron LeanKit
 
         /**
          * These options are carefully crafted in the getCommandLine routine to
@@ -76,7 +75,7 @@ public class Main {
         if (setToDiff == true) {
             Diff diff = new Diff(config);
             diff.go();
-        } 
+        }
 
         try {
             config.wb.close();
@@ -98,8 +97,10 @@ public class Main {
         Option tnsO = new Option("t", "transfer", false, "run transfer");
         Option diffO = new Option("d", "diff", false,
                 "compare dst URL to a previous transfer");
-
         diffO.setRequired(false);
+        Option repO = new Option("r", "replay", false,
+                "auto-run the reset of the destination during diff");
+        repO.setRequired(false);
         impO.setRequired(false);
         expO.setRequired(false);
         tnsO.setRequired(false);
@@ -107,6 +108,8 @@ public class Main {
         impExpOpt.addOption(expO);
         impExpOpt.addOption(tnsO);
         impExpOpt.addOption(diffO);
+        impExpOpt.addOption(repO);
+
         impExpOpt.addRequiredOption("f", "filename", true, "XLSX Spreadsheet (must contain API config!)");
 
         Option groupOpt = new Option("g", "group", true, "Identifier of group to process (if present)");
@@ -118,7 +121,7 @@ public class Main {
         impExpOpt.addOption(moveOpt);
 
         Option dbp = new Option("x", "debug", true,
-                "Print out loads of helpful stuff: 0 - Error, 1 - And Info, 2 - And Warnings, 3 - And Debugging, 4 - Verbose");
+                "Print out loads of helpful stuff: 0 - Error, 1 - And Warnings, 2 - And Info, 3 - And Debugging, 4 - And Network");
         dbp.setRequired(false);
         impExpOpt.addOption(dbp);
         Option archiveOpt = new Option("O", "archived", false, "Include older Archived cards in export (if present)");
@@ -153,6 +156,10 @@ public class Main {
 
         if (impExpCl.hasOption("ro")) {
             config.roFieldExport = true;
+        }
+
+        if (impExpCl.hasOption("replay")) {
+            config.replay = true;
         }
 
         if (impExpCl.hasOption("debug")) {

@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.Iterator;
 
 import com.planview.lkutility.ChangesColumns;
+import com.planview.lkutility.ColNames;
 import com.planview.lkutility.Debug;
 import com.planview.lkutility.InternalConfig;
 import com.planview.lkutility.SupportedXlsxFields;
@@ -99,7 +100,7 @@ public class Importer {
             XSSFSheet iSht = cfg.wb.getSheet(ca.getSheetName());
             item = iSht.getRow(ca.getRow());
 
-            Integer idCol = Utils.findColumnFromSheet(iSht, "ID");
+            Integer idCol = Utils.findColumnFromSheet(iSht, ColNames.ID);
             Integer titleCol = Utils.findColumnFromSheet(iSht, "title");
             Integer typeCol = Utils.findColumnFromSheet(iSht, "type");
 
@@ -148,7 +149,7 @@ public class Importer {
                 }
             } else {
                 // Check if this is a 'create' operation. If it is, ignore and continue past.
-                if (change.getCell(cc.action).getStringCellValue().equals("Create")) {
+                if (change.getCell(cc.action).getStringCellValue().equals("Create") && !cfg.replay) {
                     d.p(Debug.WARN,
                             "Ignoring action \"%s\" on item \"%s\" (attempting create on existing ID in item row: %d)\n",
                             change.getCell(cc.action).getStringCellValue(), item.getCell(titleCol).getStringCellValue(),
@@ -208,10 +209,10 @@ public class Importer {
         while (cItor.hasNext()) {
             Cell cl = cItor.next();
             String nm = cl.getStringCellValue();
-            if (nm.toLowerCase().equals("id")) {
+            if (nm.equals(ColNames.ID)) {
                 idCol = cl.getColumnIndex();
                 continue;
-            } else if (nm.toLowerCase().equals("srcid")) {
+            } else if (nm.equals(ColNames.SOURCE_ID)) {
                 continue;
             }
             fieldLst.put(nm, cl.getColumnIndex());

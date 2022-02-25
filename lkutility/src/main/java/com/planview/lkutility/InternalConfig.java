@@ -2,7 +2,6 @@ package com.planview.lkutility;
 
 import com.planview.lkutility.leankit.AccessCache;
 
-import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -19,15 +18,15 @@ public class InternalConfig {
      * command line.
      */
     public XSSFWorkbook wb = null;
-    public PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
+    
     public Integer debugLevel = -1;
     public Configuration source = new Configuration();
     public Configuration destination = new Configuration();
-    public Boolean exportArchived = false;
-    public Boolean exportTasks = false;
-    public Boolean exportAttachments = false;
-    public Boolean exportComments = false;
-    public Boolean addComment = false;
+    public boolean exportArchived = false;
+    public boolean exportTasks = false;
+    public boolean exportAttachments = false;
+    public boolean exportComments = false;
+    public boolean addComment = false;
     public Integer group = 0;
     public AccessCache cache = null;    //Set later.
     public Boolean dualFlow = false;
@@ -36,6 +35,7 @@ public class InternalConfig {
     public String archive = null;
     public boolean roFieldExport;
     public String diffMode;
-    public XSSFSheet resetSheet;
+    public XSSFSheet replaySheet;
+    public boolean replay;
 }
 

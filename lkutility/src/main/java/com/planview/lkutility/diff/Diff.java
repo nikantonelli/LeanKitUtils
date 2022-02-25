@@ -2,17 +2,21 @@ package com.planview.lkutility.diff;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import com.planview.lkutility.ColNames;
 import com.planview.lkutility.Debug;
 import com.planview.lkutility.InternalConfig;
 import com.planview.lkutility.Utils;
 import com.planview.lkutility.exporter.Exporter;
+import com.planview.lkutility.importer.Importer;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 
 public class Diff {
@@ -44,22 +48,22 @@ public class Diff {
          * ..3....src URL....dst URL
          */
         Integer firstShtIdx = cfg.wb.getSheetIndex(cfg.source.boardId); // First item sheets go in here
-        Integer firstChgSht = cfg.wb.getSheetIndex(InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.source.boardId);
+        Integer firstChgIdx = cfg.wb.getSheetIndex(InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.source.boardId);
         Integer secondShtIdx = null; // second item sheets go in here
-        Integer secondChgSht = null;
+        Integer secondChgIdx = null;
 
         Boolean found = false;
 
         String dateNow = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss"));
 
-        if ((firstShtIdx  > -1) && (firstChgSht  > -1)) {
+        if ((firstShtIdx > -1) && (firstChgIdx > -1)) {
             found = true;
         }
         if (!found) {
             d.p(Debug.ERROR, "diff option 2: incorrect sheets found for src board: %s\n", cfg.source.boardId);
         }
 
-        if ((firstChgSht == null) || (firstShtIdx == null)) {
+        if ((firstChgIdx == null) || (firstShtIdx == null)) {
             d.p(Debug.ERROR, " Cannot locate required data to compare\n");
             System.exit(0);
         }
@@ -68,9 +72,9 @@ public class Diff {
         // For all cases, we should be set up to move the dst sheet away if present
         if ((secondShtIdx = cfg.wb.getSheetIndex(cfg.destination.boardId)) > -1) {
             cfg.wb.setSheetName(secondShtIdx, "orig_" + cfg.destination.boardId + dateNow);
-            if ((secondChgSht = cfg.wb.getSheetIndex(
+            if ((secondChgIdx = cfg.wb.getSheetIndex(
                     InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.destination.boardId)) > -1) {
-                cfg.wb.setSheetName(secondChgSht,
+                cfg.wb.setSheetName(secondChgIdx,
                         "orig_" + InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.destination.boardId + dateNow);
                 found = true;
             }
@@ -86,21 +90,12 @@ public class Diff {
          * droplane or
          * to the lane specified by the -m option
          */
-        Integer resetSht = -1;
-        if ((resetSht = cfg.wb.getSheetIndex("reset_" + cfg.destination.boardId)) > -1) {
-            cfg.wb.removeSheetAt(resetSht);
+        Integer replaySht = -1;
+        if ((replaySht = cfg.wb.getSheetIndex("replay_" + cfg.destination.boardId)) > -1) {
+            cfg.wb.removeSheetAt(replaySht);
         }
 
-        cfg.resetSheet = cfg.wb.createSheet("reset_" + cfg.destination.boardId);
-        int chgCellIdx = 0;
-        Row chgHdrRow = cfg.resetSheet.createRow(chgCellIdx);
-         // These next lines are the fixed format of the Changes sheet
-         chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Group");
-         chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Item Row");
-         chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Action");
-         chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Field");
-         chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Value");;
- 
+        cfg.replaySheet = Utils.newChgSheet(cfg, "replay_" + cfg.destination.boardId);
 
         // Now create a config to pass to the exporter so that we get a new destination
         // board data set. This is to maintain the standard exporter that only uses
@@ -124,9 +119,9 @@ public class Diff {
         if ((secondShtIdx = cfg.wb.getSheetIndex(cfg.destination.boardId)) > -1) {
             String sheetName = cfg.destination.boardId + "_" + dateNow;
             cfg.wb.setSheetName(secondShtIdx, sheetName);
-            if ((secondChgSht = cfg.wb.getSheetIndex(
+            if ((secondChgIdx = cfg.wb.getSheetIndex(
                     InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.destination.boardId)) > -1) {
-                cfg.wb.setSheetName(secondChgSht, InternalConfig.CHANGES_SHEET_NAME + "_" + sheetName);
+                cfg.wb.setSheetName(secondChgIdx, InternalConfig.CHANGES_SHEET_NAME + "_" + sheetName);
                 found = true;
             }
         }
@@ -188,15 +183,15 @@ public class Diff {
 
         while (firstShtRow.hasNext()) {
             Row tr = firstShtRow.next();
-            missing.put(tr.getCell(firstCols.get("ID")).getStringCellValue(), tr.getRowNum() + 1);
+            missing.put(tr.getCell(firstCols.get(ColNames.ID)).getStringCellValue(), tr.getRowNum());
         }
         while (secondShtRow.hasNext()) {
             Row tr = secondShtRow.next();
-            missing.computeIfAbsent(tr.getCell(secondCols.get("srcID")).getStringCellValue(), s -> {
-                extras.put(s, tr.getRowNum() + 1);
+            missing.computeIfAbsent(tr.getCell(secondCols.get(ColNames.SOURCE_ID)).getStringCellValue(), s -> {
+                extras.put(s, tr.getRowNum());
                 return null;
             });
-            missing.computeIfPresent(tr.getCell(secondCols.get("srcID")).getStringCellValue(), (s, i) -> {
+            missing.computeIfPresent(tr.getCell(secondCols.get(ColNames.SOURCE_ID)).getStringCellValue(), (s, i) -> {
                 common.put(s, i);
                 return null;
             });
@@ -209,50 +204,204 @@ public class Diff {
             if (cfg.archive != null) {
                 lane = cfg.archive;
             }
-            Row dr = cfg.resetSheet.createRow(cfg.resetSheet.getLastRowNum()+1);
+            Row dr = cfg.replaySheet.createRow(cfg.replaySheet.getLastRowNum() + 1);
             Integer localCellIdx = 0;
             dr.createCell(localCellIdx++, CellType.STRING).setCellValue(cfg.group);
             dr.createCell(localCellIdx++, CellType.FORMULA)
-                    .setCellFormula("'" + secondSht.getSheetName() + "'!B" + idx);
-            dr.createCell(localCellIdx++, CellType.STRING).setCellValue("Modify"); // "Action"
+                    .setCellFormula("'" + secondSht.getSheetName() + "'!B" + (idx + 1)); // RowNum is 1-based not
+                                                                                         // 0-based
+            dr.createCell(localCellIdx++, CellType.STRING).setCellValue("Modify");
             dr.createCell(localCellIdx++, CellType.STRING).setCellValue("lane");
             dr.createCell(localCellIdx++, CellType.STRING).setCellValue(lane);
-        });
 
-        missing.forEach((itm,idx) -> {
-            Row sr = cfg.wb.getSheetAt(firstChgSht).getRow(idx-1);
-            Iterator<Cell> srci = sr.iterator();
-            Row dr = cfg.resetSheet.createRow(cfg.resetSheet.getLastRowNum()+1);
-            int cellIdx = 0;
-            while (srci.hasNext()){
-                Cell sc = srci.next();
-                Cell dc = dr.createCell(cellIdx++, sc.getCellType());
-                
-                switch (sc.getCellType()){
-                    case STRING: {
-                        dc.setCellValue(sc.getStringCellValue());
-                        break;
-                    }
-                    case NUMERIC: {
-                        dc.setCellValue(sc.getNumericCellValue());
-                        break;
-                    }
-                    case FORMULA: {
-                        dc.setCellFormula(sc.getCellFormula());
-                        break;
-                    }
-                    default: {
-                        dc.setCellValue("");
-                        break;
-                    }
+            Cell a = secondSht.getRow(idx).getCell(Utils.findColumnFromSheet(secondSht, ColNames.SOURCE_ID));
+            Cell b = secondSht.getRow(idx).getCell(Utils.findColumnFromSheet(secondSht, ColNames.ID));
+            if (b == null){
+                b = secondSht.getRow(idx).createCell(Utils.findColumnFromSheet(secondSht, ColNames.ID));
+            }
+            switch (a.getCellType()) {
+                case NUMERIC: {
+                    b.setCellValue(a.getNumericCellValue());
+                    break;
+                }
+                case STRING: {
+                    b.setCellValue(a.getStringCellValue());
+                    break;
+                }
+                case FORMULA: {
+                    String cf = a.getCellFormula();
+                    CellReference ca = new CellReference(cf);
+                    XSSFSheet iSht = cfg.wb.getSheet(ca.getSheetName());
+                    Row item = iSht.getRow(ca.getRow());
+                    Cell cell = item.getCell(ca.getCol());
+                    b.setCellValue(cell.getStringCellValue());
+                    break;
+                }
+                default: {
+                    break;
                 }
             }
-            XSSFSheet itmSht = cfg.wb.getSheetAt(firstShtIdx);
-            sr = itmSht.getRow(idx-1);
-            Cell srcCell = sr.getCell(Utils.findColumnFromSheet(itmSht, "ID"));
-            srcCell.setCellValue("");
         });
-     
+
+        // Hackady doodees alert! I am assuming that idx is the same between itmsht and
+        // chgsht!
+
+        missing.forEach((itm, idx) -> {
+            Row sr = cfg.wb.getSheetAt(firstChgIdx).getRow(idx);
+            Row dr = cfg.replaySheet.createRow(cfg.replaySheet.getLastRowNum() + 1);
+            Utils.copyRow(sr, dr);
+
+            // We could potentially clear out the ID to indicate which ones need replaying
+            // or we could ignore the check (in Importer.java) if we are doing a replay - I
+            // chose this option
+
+            // sr = firstSht.getRow(idx);
+            // Cell srcCell = sr.getCell(Utils.findColumnFromSheet(firstSht, ColNames.ID));
+            // if (cfg.replay)
+            // srcCell.setCellValue("");
+
+            /**
+             * We need to remake the parent/child relationships that the orginal had - OMG!
+             * TODO
+             */
+            // First extract from this row the value of the one that is going to be
+            // replicated
+            int col = Utils.findColumnFromSheet(cfg.replaySheet, ColNames.ITEM_ROW);
+
+            String original = null;
+            if (dr.getCell(col).getCellType().equals(CellType.STRING)) {
+                original = dr.getCell(col).getStringCellValue();
+            } else if (dr.getCell(col).getCellType().equals(CellType.NUMERIC)) {
+                original = Double.toString(dr.getCell(col).getNumericCellValue());
+            } else {
+                String cf = dr.getCell(col).getCellFormula();
+                CellReference ca = new CellReference(cf);
+                XSSFSheet iSht = cfg.wb.getSheet(ca.getSheetName());
+                Row item = iSht.getRow(ca.getRow());
+                Cell cell = item.getCell(ca.getCol());
+                original = cell.getStringCellValue();
+            }
+
+            // Then by using the mapped new ID....
+            sr = Utils.findRowByFieldValue(firstSht, ColNames.SOURCE_ID, original);
+            String newOne = sr.getCell(Utils.findColumnFromSheet(firstSht, ColNames.ID)).getStringCellValue();
+
+            // .... find all those rows that have "Modify" for that item.
+            ArrayList<Row> rows = Utils.getRowsByFieldStringValue(icfg, icfg.wb.getSheetAt(firstChgIdx), ColNames.VALUE,
+                    newOne);
+            rows.addAll(
+                    Utils.getRowsByFieldStringValue(icfg, icfg.wb.getSheetAt(firstChgIdx), ColNames.ITEM_ROW, newOne));
+
+            rows.forEach((row) -> {
+                Row ldr = cfg.replaySheet.createRow(cfg.replaySheet.getLastRowNum() + 1);
+                Utils.copyRow(row, ldr);
+            });
+
+        });
+
+        common.forEach((itm, idx) -> {
+
+            /**
+             * Need to compare the records
+             */
+            Row src = Utils.findRowByFieldValue(firstSht, ColNames.ID, itm);
+            Row dst = Utils.findRowByFieldValue(secondSht, ColNames.SOURCE_ID, itm);
+            firstCols.forEach((item, indx) -> {
+                // src and ID are internal so we ignore
+                if (!item.equals(ColNames.SOURCE_ID) && !item.equals(ColNames.ID)) {
+                    // If cells are not equivalent....
+                    String srcCellStr = null;
+                    Double srcCellDbl = null;
+                    Cell srcCell = src.getCell(indx);
+                    if (srcCell != null) { // Empty cells can be blank or null
+                        switch (srcCell.getCellType()) {
+                            case STRING: {
+                                srcCellStr = srcCell.getStringCellValue();
+                                break;
+                            }
+                            case NUMERIC: {
+                                srcCellDbl = srcCell.getNumericCellValue();
+                                break;
+                            }
+                            default: {
+                                break;
+                            }
+                        }
+                        Cell dstCell = dst.getCell(Utils.findColumnFromSheet(secondSht, item));
+                        String dstCellStr = null;
+                        Double dstCellDbl = null;
+                        boolean compTruth = false;
+                        switch (dstCell.getCellType()) {
+                            case NUMERIC: {
+                                dstCellDbl = dstCell.getNumericCellValue();
+                                if (dstCellDbl.equals(srcCellDbl)) {
+                                    compTruth = true;
+                                }
+                                break;
+                            }
+                            case STRING: {
+                                dstCellStr = dstCell.getStringCellValue();
+                                if (dstCellStr.equals(srcCellStr)) {
+                                    compTruth = true;
+                                }
+                                break;
+                            }
+                            case BLANK: {
+                                break;
+                            }
+                            case FORMULA: {
+                                dstCell.setCellFormula(srcCell.getCellFormula());
+                                break;
+                            }
+                            default: {
+                                d.p(Debug.ERROR, "Default called in error for dstCell type\n");
+                                break;
+                            }
+                        }
+
+                        if (!compTruth) {
+                            // ...write out modify line
+                            if (!srcCell.getCellType().equals(CellType.BLANK)) {
+                                Row dr = cfg.replaySheet.createRow(cfg.replaySheet.getLastRowNum() + 1);
+                                Integer localCellIdx = 0;
+                                dr.createCell(localCellIdx++, CellType.STRING).setCellValue(cfg.group);
+                                // RowNum is 1-based not 0-based
+                                dr.createCell(localCellIdx++, CellType.FORMULA)
+                                        .setCellFormula("'" + firstSht.getSheetName() + "'!B" + (idx + 1));
+                                dr.createCell(localCellIdx++, CellType.STRING).setCellValue("Modify");
+                                dr.createCell(localCellIdx++, CellType.STRING).setCellValue(item);
+                                switch (srcCell.getCellType()) {
+                                    case STRING: {
+                                        dr.createCell(localCellIdx++, CellType.STRING).setCellValue(srcCellStr);
+                                        break;
+                                    }
+                                    case NUMERIC: {
+                                        dr.createCell(localCellIdx++, CellType.NUMERIC).setCellValue(srcCellDbl);
+                                        break;
+                                    }
+                                    default: {
+                                        d.p(Debug.DEBUG, "Unknown srcCell type %s\n", srcCell.getCellType().toString());
+                                        dr.createCell(localCellIdx++);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+        /**
+         * Now we have a sheet called replay_<boardID> which we can get an Importer to
+         * execute if the
+         * replay flag is set on the commandline
+         */
+        if (cfg.replay) {
+            cfg.changesSheet = cfg.replaySheet;
+            Importer ipmt = new Importer(cfg);
+            ipmt.go();
+        }
         /**
          * Open the output stream and send the file back out.
          */

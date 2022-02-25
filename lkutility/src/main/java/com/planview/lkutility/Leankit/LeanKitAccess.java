@@ -54,9 +54,8 @@ public class LeanKitAccess {
     PoolingHttpClientConnectionManager cm = null;
     Debug d = new Debug();
 
-    public LeanKitAccess(Configuration configp, Integer debugLevel, PoolingHttpClientConnectionManager cmp) {
+    public LeanKitAccess(Configuration configp, Integer debugLevel) {
         config = configp;
-        cm = cmp;
         d.setLevel(debugLevel);
 
         // Check URL has a trailing '/' and remove

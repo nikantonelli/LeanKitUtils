@@ -12,6 +12,7 @@ import java.util.Date;
 import java.util.Iterator;
 
 import com.planview.lkutility.Changes;
+import com.planview.lkutility.ColNames;
 import com.planview.lkutility.Debug;
 import com.planview.lkutility.InternalConfig;
 import com.planview.lkutility.SupportedXlsxFields;
@@ -101,29 +102,11 @@ public class Exporter {
     }
 
     public String[] setUpNewSheets(String cShtName){
-        newChgSheet(cShtName);
+        cfg.changesSheet = Utils.newChgSheet(cfg,cShtName);
+        chgRowIdx = 1;    //Start after header row
         return newItmSheet();
     }
 
-    public void newChgSheet(String cShtName){
-        // Make a new one
-        cfg.changesSheet = cfg.wb.createSheet(cShtName);
-
-        /**
-         * Create the Changes Sheet layout
-         */
-
-        int chgCellIdx = 0;
-        Row chgHdrRow = cfg.changesSheet.createRow(chgRowIdx++);
-
-        // These next lines are the fixed format of the Changes sheet
-        chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Group");
-        chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Item Row");
-        chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Action");
-        chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Field");
-        chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue("Value");;
-
-    }
 
     public String[] newItmSheet(){
         cfg.itemSheet = cfg.wb.createSheet(cfg.source.boardId); 
@@ -136,9 +119,19 @@ public class Exporter {
         Row itmHdrRow = cfg.itemSheet.createRow(itmRowIdx++);
 
         int itmCellIdx = 0;
-        itmHdrRow.createCell(itmCellIdx++, CellType.STRING).setCellValue("ID");
+        itmHdrRow.createCell(itmCellIdx++, CellType.STRING).setCellValue(ColNames.ID);
 
-        // Now write out the fields
+        /** Now write out the fields
+         * There are user accessible fields - some are r/w, some are r/o (outFields)
+         * There are also fields we might want to check as part of the program, but are
+         * not exported directly (checkFields). They actually cause other things to happen, 
+         * e.g. a Modify line is added to the changes sheet.
+         * 
+         * The outFields and checkFields are kept in line by this software. If you change something,
+         * make sure they are aligned
+         * 
+         * */
+
         SupportedXlsxFields allFields = new SupportedXlsxFields();
         Field[] rwFields = (allFields.new Modifiable()).getClass().getFields(); // Public fields that will be written
                                                                                 // as columns
@@ -150,26 +143,30 @@ public class Exporter {
         CustomField[] customFields = Utils.fetchCustomFields(cfg, cfg.source);
 
         Integer checkFieldsLength = rwFields.length + customFields.length + pseudoFields.length;
+        Integer outFieldsLength   = rwFields.length + customFields.length;
 
         if (cfg.roFieldExport){
             checkFieldsLength += roFields.length;
+            outFieldsLength   += roFields.length;
         }
 
         String[] checkFields = new String[checkFieldsLength];
         Integer cfi = 0;
+        String[] outFields = new String[outFieldsLength];
+        Integer ofi = 0;
 
         for (int i = 0; i < rwFields.length; i++) {
-            checkFields[cfi++] = rwFields[i].getName();
+            outFields[ofi++] = checkFields[cfi++] = rwFields[i].getName();
         }
 
         if (cfg.roFieldExport) {
             for (int i = 0; i < roFields.length; i++) {
-                checkFields[cfi++] = roFields[i].getName();
+                outFields[ofi++] = checkFields[cfi++] = roFields[i].getName();
             }
         }
 
         for (int i = 0; i < customFields.length; i++) {
-            checkFields[cfi++] = customFields[i].label;
+            outFields[ofi++] = checkFields[cfi++] = customFields[i].label;
         }
 
         for (int i = 0; i < pseudoFields.length; i++) {
@@ -177,9 +174,15 @@ public class Exporter {
         }
 
         //Put column headers out
-        for (int i = 0; i < checkFieldsLength; i++) {
-            itmHdrRow.createCell(itmCellIdx++, CellType.STRING).setCellValue(checkFields[i]);
+        for (int i = 0; i < outFieldsLength; i++) {
+            itmHdrRow.createCell(itmCellIdx++, CellType.STRING).setCellValue(outFields[i]);
         }
+
+        Integer col = Utils.findColumnFromSheet(cfg.itemSheet, ColNames.ID);
+        cfg.itemSheet.setColumnWidth(col, 18*256);    //First two columns are usually ID and srcID
+        col = Utils.findColumnFromSheet(cfg.itemSheet, ColNames.SOURCE_ID);
+        cfg.itemSheet.setColumnWidth(col, 18*256);
+
         return checkFields;
     }
     
@@ -227,8 +230,8 @@ public class Exporter {
             Integer parentShtIdx = cfg.wb.getSheetIndex(pc.boardId);
             if (parentShtIdx >= 0) {
                 XSSFSheet pSht = cfg.wb.getSheetAt(parentShtIdx);
-                Integer parentRow = Utils.findRowBySourceId(pSht, pc.parentId);
-                Integer childRow = Utils.findRowBySourceId(cfg.itemSheet, pc.childId);
+                Integer parentRow = Utils.findRowIdxByFieldValue(pSht, ColNames.SOURCE_ID, pc.parentId);
+                Integer childRow = Utils.findRowIdxByFieldValue(cfg.itemSheet, ColNames.SOURCE_ID, pc.childId);
 
                 if ((parentRow == null) || (childRow == null)) {
                     d.p(Debug.WARN, "Ignoring parent/child relationship for: %s/%s. Is parent archived?\n",
@@ -414,7 +417,7 @@ public class Exporter {
                         }
                         break;
                     }
-                    case "srcID": {
+                    case ColNames.SOURCE_ID: {
                         iRow.createCell(fieldCounter, CellType.STRING).setCellValue(c.id);
                         if (cfg.addComment) {
                             chgRow++;
@@ -565,8 +568,8 @@ public class Exporter {
         chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(cfg.group);
         chgRow.createCell(localCellIdx++, CellType.FORMULA)
                 .setCellFormula("'" + cfg.source.boardId + "'!B" + (IRIdx + 1));
-        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(action); // "Action"
-        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(field); // "Field"
+        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(action);
+        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(field);
 
         if (value.startsWith("=")) {
             FormulaEvaluator evaluator = cfg.wb.getCreationHelper().createFormulaEvaluator();
@@ -574,7 +577,7 @@ public class Exporter {
             cell.setCellFormula(value.substring(1));
             evaluator.evaluateFormulaCell(cell);
         } else {
-            chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(value); // "Value"
+            chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(value);
         }
     }
 }

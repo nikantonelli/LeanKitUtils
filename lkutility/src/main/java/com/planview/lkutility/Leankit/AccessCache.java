@@ -43,7 +43,7 @@ public class AccessCache {
     public CustomField[] getCustomFields(String boardId){
         CustomField[] cfm = customFieldMap.get(boardId);
         if (cfm == null) {
-            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
             cfm = lka.fetchCustomFields(boardId).customFields;
             if (cfm != null) {
                 setCustomFields(cfm, boardId);
@@ -62,7 +62,7 @@ public class AccessCache {
     public Board getBoard(String boardId){
         Board brd = boardMap.get(boardId);
         if (brd == null) {
-            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
             brd = lka.fetchBoardFromId(boardId);
             if (brd != null) {
                 setBoard(brd);
@@ -74,7 +74,7 @@ public class AccessCache {
     public User getUserById(String id){
         User user = userIdMap.get(id);
         if (user == null) {
-            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
             user = lka.fetchUserById(id);
             if (user != null) {
                 setUser(user);
@@ -85,7 +85,7 @@ public class AccessCache {
     public User getUserByName(String username){
         User user = usernameMap.get(username);
         if (user == null) {
-            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
             user = lka.fetchUserByName(username);
             if (user != null) {
                 setUser(user);
@@ -115,7 +115,7 @@ public class AccessCache {
     public Card getCard(String cardId){
         Card card = cardMap.get(cardId);
         if (card == null) {
-            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
         card = lka.fetchCard(cardId);
             if (card != null) {
                 setCard(card);
@@ -134,7 +134,7 @@ public class AccessCache {
     public ArrayList <Lane> getTaskBoard(String cardId){
         ArrayList<Lane> lanes = taskBoardMap.get(cardId);
         if ( lanes == null) {
-            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
             lanes = lka.fetchTaskLanes(cardId);
             if (lanes != null) {
                 setTaskBoard(cardId, lanes);
@@ -153,7 +153,7 @@ public class AccessCache {
     public ArrayList <BoardUser> getBoardUsers(String brdId){
         ArrayList<BoardUser> users = boardUserMap.get(brdId);
         if ( users == null) {
-            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
             users = lka.fetchUsers(brdId);
             if (users != null) {
                 setBoardUsers(brdId, users);
@@ -172,7 +172,7 @@ public class AccessCache {
     public CustomIcon[] getCustomIcons(String boardId){
         CustomIcon[] cfm = customIconMap.get(boardId);
         if (cfm == null) {
-            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
             cfm = lka.fetchCustomIcons(boardId).customIcons;
             if (cfm != null) {
                 setCustomIcons(cfm, boardId);

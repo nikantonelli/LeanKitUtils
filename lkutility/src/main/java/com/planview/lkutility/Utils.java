@@ -25,10 +25,11 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.json.JSONObject;
 import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class Utils {
     static Debug d = new Debug();
@@ -37,31 +38,121 @@ public class Utils {
      * First put all the spreadsheet related routines here:
      */
 
+    public static ArrayList<Row> getRowsByFieldStringValue(InternalConfig cfg, XSSFSheet sht, String name, String value) {
+        ArrayList<Row> list = new ArrayList<>();
+
+        // Check for daft stuff.
+        if (sht == null) {
+            d.p(Debug.ERROR, "getRowsByFieldStringValue() passed null sheet\n");
+            return new ArrayList<>();
+        }
+        Integer cellIdx = Utils.findColumnFromSheet(sht, name);
+        if (cellIdx < 0) {
+            d.p(Debug.ERROR, "getRowsByFieldStringValue() passed incorrect field name\n");
+            return new ArrayList<>();
+        }
+
+        Iterator<Row> iRow = sht.iterator();
+        while (iRow.hasNext()) {
+            Row row = iRow.next();
+            Cell cell = row.getCell(cellIdx);
+
+            if (cell != null) {
+                if (cell.getCellType().equals(CellType.STRING)) {
+                    if (cell.getStringCellValue().equals(value)) {
+                        list.add(row);
+                    }
+                } else if (cell.getCellType().equals(CellType.FORMULA)) {
+                    String cf = cell.getCellFormula();
+                    CellReference ca = new CellReference(cf);
+                    XSSFSheet iSht = cfg.wb.getSheet(ca.getSheetName());
+                    Row item = iSht.getRow(ca.getRow());
+                    Cell cll = item.getCell(ca.getCol());
+                    if (cll.getCellType().equals(CellType.STRING)) {
+                        if (cll.getStringCellValue().equals(value)) {
+                            list.add(row);
+                        }
+                    } else if (cll.getCellType().equals(CellType.NUMERIC)){
+                        if (Double.toString(cll.getNumericCellValue()).equals(value)){
+                            list.add(row);
+                        }
+                    }
+                }
+            }
+        }
+        return list;
+    }
+
+    public static XSSFSheet newChgSheet(InternalConfig cfg, String cShtName) {
+        // Make a new one
+        XSSFSheet changesSheet = cfg.wb.createSheet(cShtName);
+
+        /**
+         * Create the Changes Sheet layout
+         */
+
+        int chgCellIdx = 0;
+        Row chgHdrRow = changesSheet.createRow(0);
+
+        // These next lines are the fixed format of the Changes sheet
+        chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue(ColNames.GROUP);
+
+        Integer col = chgCellIdx;
+        chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue(ColNames.ITEM_ROW);
+        changesSheet.setColumnWidth(col, 18 * 256); // Set the width so that the ID string is fully visible
+
+        chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue(ColNames.ACTION);
+        chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue(ColNames.FIELD);
+
+        col = chgCellIdx;
+        chgHdrRow.createCell(chgCellIdx++, CellType.STRING).setCellValue(ColNames.VALUE);
+        changesSheet.setColumnWidth(col, 30 * 256);
+
+        return changesSheet;
+    }
+
     public static ChangesColumns checkChangeSheetColumns(XSSFSheet changesSht) {
         if (changesSht == null)
             return null;
         ChangesColumns cc = new ChangesColumns();
-        cc.group = findColumnFromSheet(changesSht, "Group");
-        cc.row = findColumnFromSheet(changesSht, "Item Row");
-        cc.action = findColumnFromSheet(changesSht, "Action");
-        cc.field = findColumnFromSheet(changesSht, "Field");
-        cc.value = findColumnFromSheet(changesSht, "Value");
+        cc.group = findColumnFromSheet(changesSht, ColNames.GROUP);
+        cc.row = findColumnFromSheet(changesSht, ColNames.ITEM_ROW);
+        cc.action = findColumnFromSheet(changesSht, ColNames.ACTION);
+        cc.field = findColumnFromSheet(changesSht, ColNames.FIELD);
+        cc.value = findColumnFromSheet(changesSht, ColNames.VALUE);
 
         if ((cc.group == null) || (cc.row == null) || (cc.action == null) || (cc.field == null)
                 || (cc.value == null)) {
             d.p(Debug.ERROR,
-                    "Could not find all required columns in %s sheet: \"Group\", \"Item Row\", \"Action\", \"Field\", \"Value\"\n",
-                    changesSht.getSheetName());
+                    "Could not find all required columns in %s sheet: \"%s\", \"%s\", \"%s\", \"%s\", \"%s\"\n",
+                    changesSht.getSheetName(),
+                    ColNames.GROUP,
+                    ColNames.ITEM_ROW,
+                    ColNames.ACTION,
+                    ColNames.FIELD,
+                    ColNames.VALUE);
             return null;
         }
         return cc;
     }
 
-    public static Integer findRowBySourceId(XSSFSheet itemSht, String cardId) {
+    public static Integer findRowIdxByFieldValue(XSSFSheet itemSht, String fieldName, String value) {
         for (int rowIndex = 1; rowIndex <= itemSht.getLastRowNum(); rowIndex++) {
             Row row = itemSht.getRow(rowIndex);
-            if (row != null && row.getCell(findColumnFromSheet(itemSht, "srcID")).getStringCellValue().equals(cardId)) {
+            if (row != null
+                    && row.getCell(findColumnFromSheet(itemSht, fieldName)).getStringCellValue().equals(value)) {
                 return rowIndex;
+            }
+        }
+        return null;
+    }
+
+    public static Row findRowByFieldValue(XSSFSheet itemSht, String fieldName, String value) {
+        for (int rowIndex = 1; rowIndex <= itemSht.getLastRowNum(); rowIndex++) {
+            Row row = itemSht.getRow(rowIndex);
+            if (row != null
+                    && row.getCell(findColumnFromSheet(itemSht, fieldName)).getStringCellValue().equals(value)) {
+                return row;
             }
         }
         return null;
@@ -132,6 +223,33 @@ public class Utils {
             }
         }
         return null;
+    }
+
+    public static void copyRow(Row row, Row ldr) {
+        Iterator<Cell> lsrci = row.iterator();
+        int lcellIdx = 0;
+        while (lsrci.hasNext()) {
+            Cell srcCell = lsrci.next();
+            Cell dstCell = ldr.createCell(lcellIdx++, srcCell.getCellType());
+
+            switch (srcCell.getCellType()) {
+                case STRING: {
+                    dstCell.setCellValue(srcCell.getStringCellValue());
+                    break;
+                }
+                case NUMERIC: {
+                    dstCell.setCellValue(srcCell.getNumericCellValue());
+                    break;
+                }
+                case FORMULA: {
+                    dstCell.setCellFormula(srcCell.getCellFormula());
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+        }
     }
 
     /**
@@ -227,7 +345,7 @@ public class Utils {
     }
 
     public static String getUrl(InternalConfig iCfg, Configuration accessCfg) {
-        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
         return lka.getCurrentUrl();
     }
 
@@ -240,7 +358,7 @@ public class Utils {
     }
 
     public static byte[] getAttachment(InternalConfig iCfg, Configuration accessCfg, String cardId, String attId) {
-        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
         return lka.fetchAttachment(cardId, attId);
     }
 
@@ -253,25 +371,26 @@ public class Utils {
     }
 
     public static ArrayList<Card> readCardIdsFromBoard(InternalConfig iCfg, Configuration accessCfg) {
-        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
         ArrayList<Card> cards = lka.fetchCardIdsFromBoard(accessCfg.boardId, iCfg.exportArchived);
         return cards;
     }
 
     public static ArrayList<Task> readTaskIdsFromCard(InternalConfig iCfg, Configuration accessCfg, String cardId) {
-        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
         ArrayList<Task> tasks = lka.fetchTaskIds(cardId);
         return tasks;
     }
 
     public static ArrayList<Task> readTasksFromCard(InternalConfig iCfg, Configuration accessCfg, String cardId) {
-        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
         ArrayList<Task> tasks = lka.fetchTasks(cardId);
         return tasks;
     }
 
-    public static ArrayList<CardType> readCardsTypesFromBoard(InternalConfig iCfg, Configuration accessCfg, String boardId) {
-        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+    public static ArrayList<CardType> readCardsTypesFromBoard(InternalConfig iCfg, Configuration accessCfg,
+            String boardId) {
+        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
         ArrayList<CardType> types = null;
         if (iCfg.cache != null) {
             Board brd = iCfg.cache.getBoard(boardId);
@@ -285,7 +404,8 @@ public class Utils {
         return types;
     }
 
-    public static CardType findCardTypeFromBoard(InternalConfig iCfg, Configuration accessCfg, String name, String boardId) {
+    public static CardType findCardTypeFromBoard(InternalConfig iCfg, Configuration accessCfg, String name,
+            String boardId) {
         return findCardTypeFromList(readCardsTypesFromBoard(iCfg, accessCfg, boardId), name);
     }
 
@@ -302,7 +422,7 @@ public class Utils {
     }
 
     public static Card createCard(InternalConfig iCfg, Configuration accessCfg, JSONObject fieldLst) {
-        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
         // First create an empty card and get back the full structure
 
         Card newCard = lka.createCard(fieldLst);
@@ -315,7 +435,7 @@ public class Utils {
     }
 
     public static Card updateCard(InternalConfig iCfg, Configuration accessCfg, String cardId, JSONObject updates) {
-        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
         Card card = null;
         Board brd = null;
 
@@ -363,7 +483,7 @@ public class Utils {
         if (iCfg.cache != null) {
             brd = iCfg.cache.getBoard(boardId);
         } else {
-            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
             brd = lka.fetchBoardFromId(boardId);
         }
         if (brd != null)
@@ -414,7 +534,8 @@ public class Utils {
             return null;
         }
         if (searchLanes.size() > 1) {
-            d.p(Debug.WARN, "Ambiguous lane name \"%s\"on board \"%s\" using lane \"%s\"\n", name, brd.title, searchLanes.get(0).id);
+            d.p(Debug.WARN, "Ambiguous lane name \"%s\"on board \"%s\" using lane \"%s\"\n", name, brd.title,
+                    searchLanes.get(0).id);
         }
 
         return searchLanes.get(0);
@@ -427,7 +548,7 @@ public class Utils {
         if (iCfg.cache != null) {
             lanes = iCfg.cache.getTaskBoard(cardId);
         } else {
-            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
             lanes = lka.fetchTaskLanes(cardId);
         }
         if (lanes != null) {
@@ -447,7 +568,7 @@ public class Utils {
         if (iCfg.cache != null) {
             user = iCfg.cache.getUserById(id);
         } else {
-            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
             user = lka.fetchUserById(id);
         }
         return user;
@@ -455,8 +576,8 @@ public class Utils {
 
     public static CustomField findCustomField(InternalConfig iCfg, Configuration accessCfg, String name) {
         CustomField[] cfs = fetchCustomFields(iCfg, accessCfg);
-        for (int j = 0; j < cfs.length; j++){
-            if (cfs[j].label.equals(name)){
+        for (int j = 0; j < cfs.length; j++) {
+            if (cfs[j].label.equals(name)) {
                 return cfs[j];
             }
         }
@@ -465,8 +586,8 @@ public class Utils {
 
     public static CustomIcon findCustomIcon(InternalConfig iCfg, Configuration accessCfg, String name) {
         CustomIcon[] cfs = fetchCustomIcons(iCfg, accessCfg, accessCfg.boardId);
-        for (int j = 0; j < cfs.length; j++){
-            if (cfs[j].name.equals(name)){
+        for (int j = 0; j < cfs.length; j++) {
+            if (cfs[j].name.equals(name)) {
                 return cfs[j];
             }
         }
@@ -475,14 +596,13 @@ public class Utils {
 
     public static CustomIcon findCustomIcon(InternalConfig iCfg, Configuration accessCfg, String name, String boardId) {
         CustomIcon[] cfs = fetchCustomIcons(iCfg, accessCfg, boardId);
-        for (int j = 0; j < cfs.length; j++){
-            if (cfs[j].name.equals(name)){
+        for (int j = 0; j < cfs.length; j++) {
+            if (cfs[j].name.equals(name)) {
                 return cfs[j];
             }
         }
         return null;
     }
-
 
     public static CustomField[] fetchCustomFields(InternalConfig iCfg, Configuration accessCfg) {
         return fetchCustomFields(iCfg, accessCfg, accessCfg.boardId);
@@ -493,7 +613,7 @@ public class Utils {
         if (iCfg.cache != null) {
             fields = iCfg.cache.getCustomFields(boardId);
         } else {
-            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
             fields = lka.fetchCustomFields(boardId).customFields;
         }
         return fields;
@@ -504,7 +624,7 @@ public class Utils {
         if (iCfg.cache != null) {
             fields = iCfg.cache.getCustomIcons(boardId);
         } else {
-            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
             fields = lka.fetchCustomIcons(boardId).customIcons;
         }
         return fields;
@@ -515,7 +635,7 @@ public class Utils {
         if (iCfg.cache != null) {
             user = iCfg.cache.getUserByName(username);
         } else {
-            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
             user = lka.fetchUserByName(username);
         }
         return user;
@@ -527,7 +647,7 @@ public class Utils {
         if (iCfg.cache != null) {
             users = iCfg.cache.getBoardUsers(accessCfg.boardId);
         } else {
-            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+            LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
             users = lka.fetchUsers(accessCfg.boardId);
         }
         return users;
@@ -606,17 +726,17 @@ public class Utils {
                     break;
                 }
                 case "customIcon": {
-                    //Incoming customIcon value is a name. We need to translate to
+                    // Incoming customIcon value is a name. We need to translate to
                     // an id
                     String iconName = (String) Utils.fetchCell(item, fieldLst.getInt(key));
                     CustomIcon ci = null;
-                    if (fieldLst.has("boardId")){
-                        ci = Utils.findCustomIcon(cfg, cfg.destination, iconName, 
-                            item.getCell(fieldLst.getInt("boardId")).getStringCellValue());
+                    if (fieldLst.has("boardId")) {
+                        ci = Utils.findCustomIcon(cfg, cfg.destination, iconName,
+                                item.getCell(fieldLst.getInt("boardId")).getStringCellValue());
                     } else {
                         ci = Utils.findCustomIcon(cfg, cfg.destination, iconName);
                     }
-                    
+
                     if (ci != null) {
                         flds.put("customIconId", ci.id);
                     }
@@ -665,15 +785,15 @@ public class Utils {
                         }
                     } else {
                         String[] bits = laneType.split(",");
-                        if (fieldLst.has("boardId")){
-                            lane = Utils.findLaneFromBoard(cfg, accessCfg, 
-                                item.getCell(fieldLst.getInt("boardId")).getStringCellValue(), bits[0]);
+                        if (fieldLst.has("boardId")) {
+                            lane = Utils.findLaneFromBoard(cfg, accessCfg,
+                                    item.getCell(fieldLst.getInt("boardId")).getStringCellValue(), bits[0]);
                         } else {
                             lane = Utils.findLaneFromBoard(cfg, accessCfg, accessCfg.boardId, bits[0]);
                         }
                         if (lane != null) {
                             flds.put("laneId", lane.id);
-                            if (bits.length > 1){
+                            if (bits.length > 1) {
                                 flds.put("wipOverrideComment", bits[1]);
                             }
                         }
@@ -705,9 +825,9 @@ public class Utils {
                 case "type": {
                     String cardtype = (String) Utils.fetchCell(item, fieldLst.getInt(key));
                     ArrayList<CardType> cts = null;
-                    if (fieldLst.has("boardId")){
-                        cts = Utils.readCardsTypesFromBoard(cfg, cfg.destination,  
-                            item.getCell(fieldLst.getInt("boardId")).getStringCellValue());
+                    if (fieldLst.has("boardId")) {
+                        cts = Utils.readCardsTypesFromBoard(cfg, cfg.destination,
+                                item.getCell(fieldLst.getInt("boardId")).getStringCellValue());
                     } else {
                         cts = Utils.readCardsTypesFromBoard(cfg, cfg.destination, cfg.destination.boardId);
                     }
@@ -738,9 +858,9 @@ public class Utils {
                     } else {
                         CustomField[] customFields = null;
 
-                        if (fieldLst.has("boardId")){
-                            customFields = Utils.fetchCustomFields(cfg, cfg.destination,  
-                                item.getCell(fieldLst.getInt("boardId")).getStringCellValue());
+                        if (fieldLst.has("boardId")) {
+                            customFields = Utils.fetchCustomFields(cfg, cfg.destination,
+                                    item.getCell(fieldLst.getInt("boardId")).getStringCellValue());
                         } else {
                             customFields = Utils.fetchCustomFields(cfg, cfg.destination);
                         }
@@ -777,7 +897,7 @@ public class Utils {
     }
 
     public static Card addTask(InternalConfig iCfg, Configuration accessCfg, String cardId, JSONObject item) {
-        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel, iCfg.cm);
+        LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
         Card card = lka.addTaskToCard(cardId, item);
         if (iCfg.cache != null) {
             iCfg.cache.setCard(card);
