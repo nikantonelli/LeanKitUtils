@@ -7,7 +7,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class InternalConfig {
 
-    public final static String CHANGES_SHEET_NAME = "Changes";
+    public final static String CHANGES_SHEET_NAME = "C_";
     public final static Integer MAX_CARDS_PER_BOARD = 10000;    //Maybe add an override on the command line?
 
     public String xlsxfn = "";

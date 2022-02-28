@@ -38,7 +38,7 @@ public class Utils {
      * First put all the spreadsheet related routines here:
      */
 
-    public static ArrayList<Row> getRowsByFieldStringValue(InternalConfig cfg, XSSFSheet sht, String name, String value) {
+    public static ArrayList<Row> getRowsByStringValue(InternalConfig cfg, XSSFSheet sht, String name, String value) {
         ArrayList<Row> list = new ArrayList<>();
 
         // Check for daft stuff.
@@ -46,7 +46,7 @@ public class Utils {
             d.p(Debug.ERROR, "getRowsByFieldStringValue() passed null sheet\n");
             return new ArrayList<>();
         }
-        Integer cellIdx = Utils.findColumnFromSheet(sht, name);
+        Integer cellIdx = Utils.firstColumnFromSheet(sht, name);
         if (cellIdx < 0) {
             d.p(Debug.ERROR, "getRowsByFieldStringValue() passed incorrect field name\n");
             return new ArrayList<>();
@@ -115,11 +115,11 @@ public class Utils {
         if (changesSht == null)
             return null;
         ChangesColumns cc = new ChangesColumns();
-        cc.group = findColumnFromSheet(changesSht, ColNames.GROUP);
-        cc.row = findColumnFromSheet(changesSht, ColNames.ITEM_ROW);
-        cc.action = findColumnFromSheet(changesSht, ColNames.ACTION);
-        cc.field = findColumnFromSheet(changesSht, ColNames.FIELD);
-        cc.value = findColumnFromSheet(changesSht, ColNames.VALUE);
+        cc.group = firstColumnFromSheet(changesSht, ColNames.GROUP);
+        cc.row = firstColumnFromSheet(changesSht, ColNames.ITEM_ROW);
+        cc.action = firstColumnFromSheet(changesSht, ColNames.ACTION);
+        cc.field = firstColumnFromSheet(changesSht, ColNames.FIELD);
+        cc.value = firstColumnFromSheet(changesSht, ColNames.VALUE);
 
         if ((cc.group == null) || (cc.row == null) || (cc.action == null) || (cc.field == null)
                 || (cc.value == null)) {
@@ -136,29 +136,30 @@ public class Utils {
         return cc;
     }
 
-    public static Integer findRowIdxByFieldValue(XSSFSheet itemSht, String fieldName, String value) {
+    public static Integer firstRowIdxByStringValue(XSSFSheet itemSht, String fieldName, String value) {
         for (int rowIndex = 1; rowIndex <= itemSht.getLastRowNum(); rowIndex++) {
             Row row = itemSht.getRow(rowIndex);
             if (row != null
-                    && row.getCell(findColumnFromSheet(itemSht, fieldName)).getStringCellValue().equals(value)) {
+                    && row.getCell(firstColumnFromSheet(itemSht, fieldName)).getStringCellValue().equals(value)) {
                 return rowIndex;
             }
         }
         return null;
     }
 
-    public static Row findRowByFieldValue(XSSFSheet itemSht, String fieldName, String value) {
+    public static Row firstRowByStringValue(XSSFSheet itemSht, String fieldName, String value) {
         for (int rowIndex = 1; rowIndex <= itemSht.getLastRowNum(); rowIndex++) {
             Row row = itemSht.getRow(rowIndex);
-            if (row != null
-                    && row.getCell(findColumnFromSheet(itemSht, fieldName)).getStringCellValue().equals(value)) {
+            if ((row != null)
+                && (row.getCell(firstColumnFromSheet(itemSht, fieldName)) != null)
+                    && row.getCell(firstColumnFromSheet(itemSht, fieldName)).getStringCellValue().equals(value)) {
                 return row;
             }
         }
         return null;
     }
 
-    public static Integer findColumnFromName(Row firstRow, String name) {
+    public static Integer firstColumnFromName(Row firstRow, String name) {
         Iterator<Cell> frtc = firstRow.iterator();
         // First, find the column that the "Day Delta" info is in
         int dayCol = -1;
@@ -179,13 +180,13 @@ public class Utils {
         return dayCol;
     }
 
-    public static Integer findColumnFromSheet(XSSFSheet sht, String name) {
+    public static Integer firstColumnFromSheet(XSSFSheet sht, String name) {
         Iterator<Row> row = sht.iterator();
         if (!row.hasNext()) {
             return null;
         }
         Row firstRow = row.next(); // Get the header row
-        Integer col = findColumnFromName(firstRow, name);
+        Integer col = firstColumnFromName(firstRow, name);
         if (col < 0) {
             return null;
         }

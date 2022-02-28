@@ -100,9 +100,9 @@ public class Importer {
             XSSFSheet iSht = cfg.wb.getSheet(ca.getSheetName());
             item = iSht.getRow(ca.getRow());
 
-            Integer idCol = Utils.findColumnFromSheet(iSht, ColNames.ID);
-            Integer titleCol = Utils.findColumnFromSheet(iSht, "title");
-            Integer typeCol = Utils.findColumnFromSheet(iSht, "type");
+            Integer idCol = Utils.firstColumnFromSheet(iSht, ColNames.ID);
+            Integer titleCol = Utils.firstColumnFromSheet(iSht, "title");
+            Integer typeCol = Utils.firstColumnFromSheet(iSht, "type");
 
             if ((idCol == null) || (titleCol == null)) {
                 d.p(Debug.WARN, "Cannot locate \"ID\" and \"title\" columns needed in sheet \"%s\" - skipping\n",
@@ -141,7 +141,8 @@ public class Importer {
                 // Check if this is a 'create' operation. If not, ignore and continue past.
                 if (!change.getCell(cc.action).getStringCellValue().equals("Create")
                         && !(change.getCell(cc.action).getStringCellValue().equals("Modify")
-                                && change.getCell(cc.field).getStringCellValue().equals("Task"))) {
+                                && change.getCell(cc.field).getStringCellValue().equals("Task"))
+                        && !cfg.replay) {
                     d.p(Debug.WARN, "Ignoring action \"%s\" on item \"%s\" (no ID present in item row: %d)\n",
                             change.getCell(cc.action).getStringCellValue(), item.getCell(titleCol).getStringCellValue(),
                             item.getRowNum());
@@ -206,6 +207,7 @@ public class Importer {
         JSONObject fieldLst = new JSONObject();
         Iterator<Cell> cItor = iFirst.iterator();
         Integer idCol = null;
+        Integer srcIdCol = null;
         while (cItor.hasNext()) {
             Cell cl = cItor.next();
             String nm = cl.getStringCellValue();
@@ -213,9 +215,18 @@ public class Importer {
                 idCol = cl.getColumnIndex();
                 continue;
             } else if (nm.equals(ColNames.SOURCE_ID)) {
+                srcIdCol = cl.getColumnIndex();
                 continue;
             }
             fieldLst.put(nm, cl.getColumnIndex());
+        }
+
+        //If we come in as a replay, the ID field may not be set if we are doing
+        //board to same-board
+        if (cfg.replay) {
+            if ( item.getCell(idCol) == null){
+                idCol = srcIdCol;
+            }
         }
 
         if (change.getCell(cc.action).getStringCellValue().equalsIgnoreCase("Create")) {

@@ -11,6 +11,13 @@ import com.planview.lkutility.leankit.*;
  */
 
 public class SupportedXlsxFields {
+
+    /**
+     * The order of these fields determine the order they are processed in
+     * This is importent, for example, when a Lane needs to be changed and 
+     * then the index set. If you set an index that is too high, LK just
+     * puts the item last
+     */
     public class Modifiable {
         public String srcID;
         public String title, description;

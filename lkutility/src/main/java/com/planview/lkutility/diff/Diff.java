@@ -5,6 +5,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 
 import com.planview.lkutility.ColNames;
 import com.planview.lkutility.Debug;
@@ -54,7 +55,7 @@ public class Diff {
 
         Boolean found = false;
 
-        String dateNow = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss"));
+        String dateNow = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMddHHmmss")); //Sheet names can only be 31 chars.
 
         if ((firstShtIdx > -1) && (firstChgIdx > -1)) {
             found = true;
@@ -71,11 +72,11 @@ public class Diff {
         found = false;
         // For all cases, we should be set up to move the dst sheet away if present
         if ((secondShtIdx = cfg.wb.getSheetIndex(cfg.destination.boardId)) > -1) {
-            cfg.wb.setSheetName(secondShtIdx, "orig_" + cfg.destination.boardId + dateNow);
+            cfg.wb.setSheetName(secondShtIdx, cfg.destination.boardId + "_" + dateNow + "_o");
             if ((secondChgIdx = cfg.wb.getSheetIndex(
                     InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.destination.boardId)) > -1) {
                 cfg.wb.setSheetName(secondChgIdx,
-                        "orig_" + InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.destination.boardId + dateNow);
+                        InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.destination.boardId + "_" + dateNow + "_o");
                 found = true;
             }
         }
@@ -153,8 +154,8 @@ public class Diff {
          * the spreadsheet manually
          */
 
-        HashMap<String, Integer> firstCols = new HashMap<String, Integer>();
-        HashMap<String, Integer> secondCols = new HashMap<String, Integer>();
+        LinkedHashMap<String, Integer> firstCols = new LinkedHashMap<>();
+        LinkedHashMap<String, Integer> secondCols = new LinkedHashMap<>();
 
         Row firstHdrRow = firstShtRow.next(); // then move to after title row
         Row secondHdrRow = secondShtRow.next(); // then move to after title row
@@ -183,7 +184,13 @@ public class Diff {
 
         while (firstShtRow.hasNext()) {
             Row tr = firstShtRow.next();
-            missing.put(tr.getCell(firstCols.get(ColNames.ID)).getStringCellValue(), tr.getRowNum());
+            Cell id = tr.getCell(firstCols.get(ColNames.ID));
+            //On replay, we might forget to update the ID field from the srcID field 
+            // if we are going back to the same board
+            if (id == null) {
+                id = tr.getCell(firstCols.get(ColNames.SOURCE_ID));
+            }
+            missing.put(id.getStringCellValue(), tr.getRowNum());
         }
         while (secondShtRow.hasNext()) {
             Row tr = secondShtRow.next();
@@ -214,10 +221,10 @@ public class Diff {
             dr.createCell(localCellIdx++, CellType.STRING).setCellValue("lane");
             dr.createCell(localCellIdx++, CellType.STRING).setCellValue(lane);
 
-            Cell a = secondSht.getRow(idx).getCell(Utils.findColumnFromSheet(secondSht, ColNames.SOURCE_ID));
-            Cell b = secondSht.getRow(idx).getCell(Utils.findColumnFromSheet(secondSht, ColNames.ID));
+            Cell a = secondSht.getRow(idx).getCell(Utils.firstColumnFromSheet(secondSht, ColNames.SOURCE_ID));
+            Cell b = secondSht.getRow(idx).getCell(Utils.firstColumnFromSheet(secondSht, ColNames.ID));
             if (b == null){
-                b = secondSht.getRow(idx).createCell(Utils.findColumnFromSheet(secondSht, ColNames.ID));
+                b = secondSht.getRow(idx).createCell(Utils.firstColumnFromSheet(secondSht, ColNames.ID));
             }
             switch (a.getCellType()) {
                 case NUMERIC: {
@@ -262,11 +269,10 @@ public class Diff {
 
             /**
              * We need to remake the parent/child relationships that the orginal had - OMG!
-             * TODO
              */
             // First extract from this row the value of the one that is going to be
             // replicated
-            int col = Utils.findColumnFromSheet(cfg.replaySheet, ColNames.ITEM_ROW);
+            int col = Utils.firstColumnFromSheet(cfg.replaySheet, ColNames.ITEM_ROW);
 
             String original = null;
             if (dr.getCell(col).getCellType().equals(CellType.STRING)) {
@@ -283,14 +289,14 @@ public class Diff {
             }
 
             // Then by using the mapped new ID....
-            sr = Utils.findRowByFieldValue(firstSht, ColNames.SOURCE_ID, original);
-            String newOne = sr.getCell(Utils.findColumnFromSheet(firstSht, ColNames.ID)).getStringCellValue();
+            sr = Utils.firstRowByStringValue(firstSht, ColNames.SOURCE_ID, original);
+            String newOne = sr.getCell(Utils.firstColumnFromSheet(firstSht, ColNames.ID)).getStringCellValue();
 
             // .... find all those rows that have "Modify" for that item.
-            ArrayList<Row> rows = Utils.getRowsByFieldStringValue(icfg, icfg.wb.getSheetAt(firstChgIdx), ColNames.VALUE,
+            ArrayList<Row> rows = Utils.getRowsByStringValue(icfg, icfg.wb.getSheetAt(firstChgIdx), ColNames.ITEM_ROW,
                     newOne);
             rows.addAll(
-                    Utils.getRowsByFieldStringValue(icfg, icfg.wb.getSheetAt(firstChgIdx), ColNames.ITEM_ROW, newOne));
+                    Utils.getRowsByStringValue(icfg, icfg.wb.getSheetAt(firstChgIdx), ColNames.VALUE, newOne));
 
             rows.forEach((row) -> {
                 Row ldr = cfg.replaySheet.createRow(cfg.replaySheet.getLastRowNum() + 1);
@@ -304,8 +310,17 @@ public class Diff {
             /**
              * Need to compare the records
              */
-            Row src = Utils.findRowByFieldValue(firstSht, ColNames.ID, itm);
-            Row dst = Utils.findRowByFieldValue(secondSht, ColNames.SOURCE_ID, itm);
+            Row lsrc = Utils.firstRowByStringValue(firstSht, ColNames.ID, itm);
+            //On replay, we might be board to same board, so ID will not be set
+            // by an importer
+            if (lsrc == null) {
+                lsrc = Utils.firstRowByStringValue(firstSht, ColNames.SOURCE_ID, itm);
+            }
+            //src must be virtual 'final' in the lambda below
+            Row src = lsrc;
+            Row dst = Utils.firstRowByStringValue(secondSht, ColNames.SOURCE_ID, itm);
+
+            
             firstCols.forEach((item, indx) -> {
                 // src and ID are internal so we ignore
                 if (!item.equals(ColNames.SOURCE_ID) && !item.equals(ColNames.ID)) {
@@ -327,7 +342,7 @@ public class Diff {
                                 break;
                             }
                         }
-                        Cell dstCell = dst.getCell(Utils.findColumnFromSheet(secondSht, item));
+                        Cell dstCell = dst.getCell(Utils.firstColumnFromSheet(secondSht, item));
                         String dstCellStr = null;
                         Double dstCellDbl = null;
                         boolean compTruth = false;

@@ -57,31 +57,38 @@ public class Main {
         checkXlsx();
         getConfigFromFile();
 
-        /**
-         * These options are carefully crafted in the getCommandLine routine to
-         * be either set to diff or to choose between import, export and transfer(both)
-         */
+        if (config.replay && !setToDiff) {
+            config.changesSheet = config.wb.getSheet("replay_" + config.destination.boardId);
+            if (config.changesSheet != null){
+                Importer impt = new Importer(config);
+                impt.go();
+            }
+            else {
+                d.p(Debug.ERROR," Replay sheet not found. Run with -d before (or with) -r\n");
+            }
+        } else {
 
-        if (setToExport == true) {
-            Exporter expt = new Exporter(config);
-            expt.go();
+            if (setToExport == true) {
+                Exporter expt = new Exporter(config);
+                expt.go();
+            }
+
+            if (setToImport == true) {
+                Importer impt = new Importer(config);
+                impt.go();
+            }
+
+            if (setToDiff == true) {
+                Diff diff = new Diff(config);
+                diff.go();
+            }
         }
-
-        if (setToImport == true) {
-            Importer impt = new Importer(config);
-            impt.go();
-        }
-
-        if (setToDiff == true) {
-            Diff diff = new Diff(config);
-            diff.go();
-        }
-
         try {
             config.wb.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
+
         d.p(Debug.INFO, "Finished at: %s\n", new Date());
     }
 
@@ -190,10 +197,18 @@ public class Main {
                 config.archive = impExpCl.getOptionValue("move");
             }
         } else {
+            if (impExpCl.hasOption("replay")) {
+                if (impExpCl.hasOption("transfer") || impExpCl.hasOption("export") || impExpCl.hasOption("import")) {
+                    d.p(Debug.INFO, "Invalid options specified (-r with another). Defaulting to Replay mode.\n");
+                } else {
+                    d.p(Debug.INFO, "Setting to Replay mode.\n");
+                }
+                config.replay = true;
+            }
             /**
              * Import takes precedence if option present, then export, then transfer
              */
-            if (impExpCl.hasOption("import")) {
+            else if (impExpCl.hasOption("import")) {
                 if (impExpCl.hasOption("transfer") || impExpCl.hasOption("export")) {
                     d.p(Debug.INFO, "Invalid options specified (-i with another). Defaulting to Import mode.\n");
                 } else {

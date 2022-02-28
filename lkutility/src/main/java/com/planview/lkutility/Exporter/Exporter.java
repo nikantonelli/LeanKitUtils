@@ -178,9 +178,9 @@ public class Exporter {
             itmHdrRow.createCell(itmCellIdx++, CellType.STRING).setCellValue(outFields[i]);
         }
 
-        Integer col = Utils.findColumnFromSheet(cfg.itemSheet, ColNames.ID);
+        Integer col = Utils.firstColumnFromSheet(cfg.itemSheet, ColNames.ID);
         cfg.itemSheet.setColumnWidth(col, 18*256);    //First two columns are usually ID and srcID
-        col = Utils.findColumnFromSheet(cfg.itemSheet, ColNames.SOURCE_ID);
+        col = Utils.firstColumnFromSheet(cfg.itemSheet, ColNames.SOURCE_ID);
         cfg.itemSheet.setColumnWidth(col, 18*256);
 
         return checkFields;
@@ -230,15 +230,15 @@ public class Exporter {
             Integer parentShtIdx = cfg.wb.getSheetIndex(pc.boardId);
             if (parentShtIdx >= 0) {
                 XSSFSheet pSht = cfg.wb.getSheetAt(parentShtIdx);
-                Integer parentRow = Utils.findRowIdxByFieldValue(pSht, ColNames.SOURCE_ID, pc.parentId);
-                Integer childRow = Utils.findRowIdxByFieldValue(cfg.itemSheet, ColNames.SOURCE_ID, pc.childId);
+                Integer parentRow = Utils.firstRowIdxByStringValue(pSht, ColNames.SOURCE_ID, pc.parentId);
+                Integer childRow = Utils.firstRowIdxByStringValue(cfg.itemSheet, ColNames.SOURCE_ID, pc.childId);
 
                 if ((parentRow == null) || (childRow == null)) {
                     d.p(Debug.WARN, "Ignoring parent/child relationship for: %s/%s. Is parent archived?\n",
                             pc.parentId, pc.childId);
                 } else {
                     createChangeRow(chgRowIdx, childRow, "Modify", "Parent",
-                            "='" + pc.boardId + "'!A" + (parentRow + 1));
+                            "=IF(ISBLANK('" + pc.boardId + "'!A" + (parentRow + 1) + "),'" + pc.boardId + "'!B" + (parentRow + 1) + ",'"  + pc.boardId + "'!A" + (parentRow + 1) + ")");
                     chgRowIdx++;
                 }
             }
