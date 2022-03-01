@@ -26,10 +26,12 @@ public class Diff {
 
     public Diff(InternalConfig config) {
         cfg = config;
+        d.setLevel(cfg.debugLevel);
+        Utils.d.setLevel(cfg.debugLevel);
     }
 
     public void go() {
-        d.setLevel(cfg.debugLevel);
+
         /**
          * Check to see if correct sheet for the dst exists. If so, rename the existing
          * sheet something temporary,
@@ -49,19 +51,20 @@ public class Diff {
          * ..3....src URL....dst URL
          */
         Integer firstShtIdx = cfg.wb.getSheetIndex(cfg.source.boardId); // First item sheets go in here
-        Integer firstChgIdx = cfg.wb.getSheetIndex(InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.source.boardId);
+        Integer firstChgIdx = cfg.wb.getSheetIndex(InternalConfig.CHANGES_SHEET_NAME + cfg.source.boardId);
         Integer secondShtIdx = null; // second item sheets go in here
         Integer secondChgIdx = null;
 
         Boolean found = false;
 
-        String dateNow = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMddHHmmss")); //Sheet names can only be 31 chars.
+        String dateNow = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMddHHmmss")); // Sheet names can only
+                                                                                                // be 31 chars.
 
         if ((firstShtIdx > -1) && (firstChgIdx > -1)) {
             found = true;
         }
         if (!found) {
-            d.p(Debug.ERROR, "diff option 2: incorrect sheets found for src board: %s\n", cfg.source.boardId);
+            d.p(Debug.ERROR, "diff: incorrect sheets found for src board: %s\n", cfg.source.boardId);
         }
 
         if ((firstChgIdx == null) || (firstShtIdx == null)) {
@@ -70,13 +73,16 @@ public class Diff {
         }
 
         found = false;
-        // For all cases, we should be set up to move the dst sheet away if present
-        if ((secondShtIdx = cfg.wb.getSheetIndex(cfg.destination.boardId)) > -1) {
-            cfg.wb.setSheetName(secondShtIdx, cfg.destination.boardId + "_" + dateNow + "_o");
-            if ((secondChgIdx = cfg.wb.getSheetIndex(
-                    InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.destination.boardId)) > -1) {
-                cfg.wb.setSheetName(secondChgIdx,
-                        InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.destination.boardId + "_" + dateNow + "_o");
+        // For all transfer cases, we should be set up to move the dst sheet away if
+        // present
+        Integer saveShtIdx = -1;
+        Integer saveCfgIdx = -1;
+        if ((saveShtIdx = cfg.wb.getSheetIndex(cfg.destination.boardId)) > -1) {
+            cfg.wb.setSheetName(saveShtIdx, cfg.destination.boardId + "_save");
+            if ((saveCfgIdx = cfg.wb.getSheetIndex(
+                    InternalConfig.CHANGES_SHEET_NAME + cfg.destination.boardId)) > -1) {
+                cfg.wb.setSheetName(saveCfgIdx,
+                        InternalConfig.CHANGES_SHEET_NAME + cfg.destination.boardId + "_save");
                 found = true;
             }
         }
@@ -118,11 +124,11 @@ public class Diff {
          */
         found = false;
         if ((secondShtIdx = cfg.wb.getSheetIndex(cfg.destination.boardId)) > -1) {
-            String sheetName = cfg.destination.boardId + "_" + dateNow;
-            cfg.wb.setSheetName(secondShtIdx, sheetName);
+            cfg.wb.setSheetName(secondShtIdx, cfg.destination.boardId + "_" + dateNow);
             if ((secondChgIdx = cfg.wb.getSheetIndex(
-                    InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.destination.boardId)) > -1) {
-                cfg.wb.setSheetName(secondChgIdx, InternalConfig.CHANGES_SHEET_NAME + "_" + sheetName);
+                    InternalConfig.CHANGES_SHEET_NAME + cfg.destination.boardId)) > -1) {
+                cfg.wb.setSheetName(secondChgIdx,
+                        InternalConfig.CHANGES_SHEET_NAME + cfg.destination.boardId + "_" + dateNow);
                 found = true;
             }
         }
@@ -130,6 +136,9 @@ public class Diff {
             d.p(Debug.ERROR, "Oops! fetch of new data for board: %s failed\n", cfg.destination.boardId);
             // Don't need to undo anything as we haven't written the file out yet.
             System.exit(0);
+        } else {
+            cfg.wb.setSheetName(saveShtIdx, cfg.destination.boardId);
+            cfg.wb.setSheetName(saveCfgIdx, InternalConfig.CHANGES_SHEET_NAME + cfg.destination.boardId);
         }
 
         /**
@@ -185,7 +194,7 @@ public class Diff {
         while (firstShtRow.hasNext()) {
             Row tr = firstShtRow.next();
             Cell id = tr.getCell(firstCols.get(ColNames.ID));
-            //On replay, we might forget to update the ID field from the srcID field 
+            // On replay, we might forget to update the ID field from the srcID field
             // if we are going back to the same board
             if (id == null) {
                 id = tr.getCell(firstCols.get(ColNames.SOURCE_ID));
@@ -223,7 +232,7 @@ public class Diff {
 
             Cell a = secondSht.getRow(idx).getCell(Utils.firstColumnFromSheet(secondSht, ColNames.SOURCE_ID));
             Cell b = secondSht.getRow(idx).getCell(Utils.firstColumnFromSheet(secondSht, ColNames.ID));
-            if (b == null){
+            if (b == null) {
                 b = secondSht.getRow(idx).createCell(Utils.firstColumnFromSheet(secondSht, ColNames.ID));
             }
             switch (a.getCellType()) {
@@ -290,7 +299,13 @@ public class Diff {
 
             // Then by using the mapped new ID....
             sr = Utils.firstRowByStringValue(firstSht, ColNames.SOURCE_ID, original);
-            String newOne = sr.getCell(Utils.firstColumnFromSheet(firstSht, ColNames.ID)).getStringCellValue();
+            Integer lcol = Utils.firstColumnFromSheet(firstSht, ColNames.ID);
+            Cell lcl = sr.getCell(lcol);
+            if (lcl == null) {
+                lcol = Utils.firstColumnFromSheet(firstSht, ColNames.SOURCE_ID);
+                lcl = sr.getCell(lcol);
+            }
+            String newOne = lcl.getStringCellValue();
 
             // .... find all those rows that have "Modify" for that item.
             ArrayList<Row> rows = Utils.getRowsByStringValue(icfg, icfg.wb.getSheetAt(firstChgIdx), ColNames.ITEM_ROW,
@@ -311,16 +326,15 @@ public class Diff {
              * Need to compare the records
              */
             Row lsrc = Utils.firstRowByStringValue(firstSht, ColNames.ID, itm);
-            //On replay, we might be board to same board, so ID will not be set
+            // On replay, we might be board to same board, so ID will not be set
             // by an importer
             if (lsrc == null) {
                 lsrc = Utils.firstRowByStringValue(firstSht, ColNames.SOURCE_ID, itm);
             }
-            //src must be virtual 'final' in the lambda below
+            // src must be virtual 'final' in the lambda below
             Row src = lsrc;
             Row dst = Utils.firstRowByStringValue(secondSht, ColNames.SOURCE_ID, itm);
 
-            
             firstCols.forEach((item, indx) -> {
                 // src and ID are internal so we ignore
                 if (!item.equals(ColNames.SOURCE_ID) && !item.equals(ColNames.ID)) {

@@ -32,12 +32,14 @@ public class Importer {
 
     public  Importer(InternalConfig config) {
         cfg = config;
+        d.setLevel(cfg.debugLevel);
+        Utils.d.setLevel(cfg.debugLevel);
     }
 
     public void go() {
 
         cfg.cache = new AccessCache(cfg, cfg.destination);
-        d.setLevel(cfg.debugLevel);
+
         d.p(Debug.INFO, "Starting Import at: %s\n", new Date());
         /**
          * cfg might contain the sheet info for the importer if it came from the
@@ -45,7 +47,7 @@ public class Importer {
          */
 
         if (cfg.changesSheet == null) {
-            cfg.changesSheet = cfg.wb.getSheet(InternalConfig.CHANGES_SHEET_NAME + "_" + cfg.source.boardId);
+            cfg.changesSheet = cfg.wb.getSheet(InternalConfig.CHANGES_SHEET_NAME + cfg.source.boardId);
         }
 
         if (null == cfg.changesSheet) {

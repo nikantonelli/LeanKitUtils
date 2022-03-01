@@ -23,16 +23,18 @@ import com.planview.lkutility.leankit.User;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.CellValue;
 import org.apache.poi.ss.usermodel.DateUtil;
+import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+
 public class Utils {
-    static Debug d = new Debug();
+    public static Debug d = new Debug();    //Use setLevel in your top level code
 
     /**
      * First put all the spreadsheet related routines here:
@@ -43,39 +45,29 @@ public class Utils {
 
         // Check for daft stuff.
         if (sht == null) {
-            d.p(Debug.ERROR, "getRowsByFieldStringValue() passed null sheet\n");
+            d.p(Debug.ERROR, "getRowsByStringValue() passed null sheet\n");
             return new ArrayList<>();
         }
         Integer cellIdx = Utils.firstColumnFromSheet(sht, name);
         if (cellIdx < 0) {
-            d.p(Debug.ERROR, "getRowsByFieldStringValue() passed incorrect field name\n");
+            d.p(Debug.ERROR, "getRowsByStringValue() passed incorrect field name\n");
             return new ArrayList<>();
         }
 
         Iterator<Row> iRow = sht.iterator();
         while (iRow.hasNext()) {
             Row row = iRow.next();
-            Cell cell = row.getCell(cellIdx);
-
-            if (cell != null) {
-                if (cell.getCellType().equals(CellType.STRING)) {
-                    if (cell.getStringCellValue().equals(value)) {
+            Cell rCell = row.getCell(cellIdx);
+            FormulaEvaluator evaluator = cfg.wb.getCreationHelper().createFormulaEvaluator();
+            CellValue cValue = evaluator.evaluate(rCell);
+            if (cValue != null) {
+                if (cValue.getCellType().equals(CellType.STRING)) {
+                    if (cValue.getStringValue().equals(value)) {
                         list.add(row);
                     }
-                } else if (cell.getCellType().equals(CellType.FORMULA)) {
-                    String cf = cell.getCellFormula();
-                    CellReference ca = new CellReference(cf);
-                    XSSFSheet iSht = cfg.wb.getSheet(ca.getSheetName());
-                    Row item = iSht.getRow(ca.getRow());
-                    Cell cll = item.getCell(ca.getCol());
-                    if (cll.getCellType().equals(CellType.STRING)) {
-                        if (cll.getStringCellValue().equals(value)) {
-                            list.add(row);
-                        }
-                    } else if (cll.getCellType().equals(CellType.NUMERIC)){
-                        if (Double.toString(cll.getNumericCellValue()).equals(value)){
-                            list.add(row);
-                        }
+                }else if (cValue.getCellType().equals(CellType.NUMERIC)){
+                    if (Double.toString(cValue.getNumberValue()).equals(value)){
+                        list.add(row);
                     }
                 }
             }
@@ -259,7 +251,7 @@ public class Utils {
      * @param wb
      */
     static public void writeFile(InternalConfig iCfg, String xlsxfn, XSSFWorkbook wb) {
-        d.setLevel(iCfg.debugLevel);
+
         Boolean donePrint = true;
         Integer loopCnt = 12;
         while (loopCnt > 0) {
@@ -291,7 +283,7 @@ public class Utils {
             then.add(Calendar.SECOND, 5);
             Long timeDiff = then.getTimeInMillis() - now.getTimeInMillis();
             if (donePrint) {
-                d.p(Debug.ERROR, "File \"%s\" in use. Please close to let this program continue\n", xlsxfn);
+                d.p(Debug.WARN, "File \"%s\" in use. Please close to let this program continue\n", xlsxfn);
                 donePrint = false;
             }
             try {
@@ -341,7 +333,7 @@ public class Utils {
                 return lanes[i];
             }
         }
-        d.p(Debug.WARN, "Failed to find lane %s in board\n", id);
+        d.p(Debug.ERROR, "Failed to find lane %s in board\n", id);
         return null;
     }
 
@@ -418,7 +410,7 @@ public class Utils {
                 return ct;
             }
         }
-        d.p(Debug.WARN, "Failed to find CardType %s in board\n", name);
+        d.p(Debug.ERROR, "Failed to find CardType %s in board\n", name);
         return null;
     }
 
@@ -506,6 +498,15 @@ public class Utils {
         ArrayList<Lane> searchLanes = new ArrayList<>(Arrays.asList(brd.lanes));
         int j = 0;
         ArrayList<Lane> lanesToCheck = findLanesFromName(searchLanes, lanes[j]);
+        Lane defaultDropLane = null;
+        Iterator<Lane> ddlIter = searchLanes.iterator();
+        while (ddlIter.hasNext()) {
+            Lane cl = ddlIter.next();
+            if (cl.isDefaultDropLane) {
+                defaultDropLane = cl;
+                break;
+            }
+        }
         do {
             if (++j >= lanes.length) {
                 searchLanes = lanesToCheck;
@@ -531,7 +532,11 @@ public class Utils {
         } while (true);
 
         if (searchLanes.size() == 0) {
-            d.p(Debug.WARN, "Cannot find lane \"%s\"on board \"%s\"\n", name, brd.title);
+            if (defaultDropLane != null) {
+                d.p(Debug.INFO, "Cannot find lane \"%s\" on board \"%s\" - defaulting to \"%s\"\n", name, brd.title, defaultDropLane.name);
+                return defaultDropLane;
+            }
+            d.p(Debug.ERROR, "Cannot find lane \"%s\"on board \"%s\"\n", name, brd.title);
             return null;
         }
         if (searchLanes.size() > 1) {
