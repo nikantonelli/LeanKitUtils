@@ -19,4 +19,5 @@ public class Board {
     public User[] users;
     public CardType[] cardTypes;
     public Priority[] priorities;
+    public IncrementSeries[] planningSeries;
 }

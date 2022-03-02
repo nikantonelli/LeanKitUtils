@@ -30,6 +30,11 @@ public class Card implements Comparable<Card> {
     public TaskBoardStats taskBoardStats;
     public Attachment[] attachments;
     public Comment[] comments;
+    public PlanningIncrement planningIncrement;
+    public PlanningIncrement[] planningIncrements;
+    public Boolean isTemplateChanged;
+
+    public Scoring scoring;
 
     //Sorting by index
     public int compareTo(Card card){

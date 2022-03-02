@@ -317,6 +317,7 @@ public class Diff {
             modifyRows.addAll(Utils.getRowsByStringValue(icfg, icfg.wb.getSheetAt(firstChgIdx), ColNames.VALUE,
                     newOne));
         });
+        //Need to put all 'Create' rows before 'Modify' rows because of parentage.
         createRows.forEach((row) -> {
             if (row.getCell(Utils.firstColumnFromSheet(icfg.wb.getSheetAt(firstChgIdx), ColNames.ACTION))
                     .getStringCellValue().equals("Create")) {
