@@ -16,6 +16,8 @@ import com.planview.lkutility.importer.Importer;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.CellValue;
+import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
@@ -137,8 +139,10 @@ public class Diff {
             // Don't need to undo anything as we haven't written the file out yet.
             System.exit(0);
         } else {
-            cfg.wb.setSheetName(saveShtIdx, cfg.destination.boardId);
-            cfg.wb.setSheetName(saveCfgIdx, InternalConfig.CHANGES_SHEET_NAME + cfg.destination.boardId);
+            if (saveShtIdx >= 0)
+                cfg.wb.setSheetName(saveShtIdx, cfg.destination.boardId);
+            if (saveCfgIdx >= 0)
+                cfg.wb.setSheetName(saveCfgIdx, InternalConfig.CHANGES_SHEET_NAME + cfg.destination.boardId);
         }
 
         /**
@@ -261,11 +265,13 @@ public class Diff {
 
         // Hackady doodees alert! I am assuming that idx is the same between itmsht and
         // chgsht!
+        ArrayList<Row> createRows = new ArrayList<>();
+        ArrayList<Row> modifyRows = new ArrayList<>();
 
         missing.forEach((itm, idx) -> {
             Row sr = cfg.wb.getSheetAt(firstChgIdx).getRow(idx);
-            Row dr = cfg.replaySheet.createRow(cfg.replaySheet.getLastRowNum() + 1);
-            Utils.copyRow(sr, dr);
+//            Row dr = cfg.replaySheet.createRow(cfg.replaySheet.getLastRowNum() + 1);
+//            Utils.copyRow(sr, dr);
 
             // We could potentially clear out the ID to indicate which ones need replaying
             // or we could ignore the check (in Importer.java) if we are doing a replay - I
@@ -284,17 +290,14 @@ public class Diff {
             int col = Utils.firstColumnFromSheet(cfg.replaySheet, ColNames.ITEM_ROW);
 
             String original = null;
-            if (dr.getCell(col).getCellType().equals(CellType.STRING)) {
-                original = dr.getCell(col).getStringCellValue();
-            } else if (dr.getCell(col).getCellType().equals(CellType.NUMERIC)) {
-                original = Double.toString(dr.getCell(col).getNumericCellValue());
+            if (sr.getCell(col).getCellType().equals(CellType.STRING)) {
+                original = sr.getCell(col).getStringCellValue();
+            } else if (sr.getCell(col).getCellType().equals(CellType.NUMERIC)) {
+                original = Double.toString(sr.getCell(col).getNumericCellValue());
             } else {
-                String cf = dr.getCell(col).getCellFormula();
-                CellReference ca = new CellReference(cf);
-                XSSFSheet iSht = cfg.wb.getSheet(ca.getSheetName());
-                Row item = iSht.getRow(ca.getRow());
-                Cell cell = item.getCell(ca.getCol());
-                original = cell.getStringCellValue();
+                FormulaEvaluator evaluator = cfg.wb.getCreationHelper().createFormulaEvaluator();
+                CellValue cValue = evaluator.evaluate(sr.getCell(col));
+                original = cValue.getStringValue();
             }
 
             // Then by using the mapped new ID....
@@ -308,17 +311,27 @@ public class Diff {
             String newOne = lcl.getStringCellValue();
 
             // .... find all those rows that have "Modify" for that item.
-            ArrayList<Row> rows = Utils.getRowsByStringValue(icfg, icfg.wb.getSheetAt(firstChgIdx), ColNames.ITEM_ROW,
-                    newOne);
-            rows.addAll(
-                    Utils.getRowsByStringValue(icfg, icfg.wb.getSheetAt(firstChgIdx), ColNames.VALUE, newOne));
+            createRows.addAll(Utils.getRowsByStringValue(icfg, icfg.wb.getSheetAt(firstChgIdx), ColNames.ITEM_ROW,
+                    newOne));
 
-            rows.forEach((row) -> {
+            modifyRows.addAll(Utils.getRowsByStringValue(icfg, icfg.wb.getSheetAt(firstChgIdx), ColNames.VALUE,
+                    newOne));
+        });
+        createRows.forEach((row) -> {
+            if (row.getCell(Utils.firstColumnFromSheet(icfg.wb.getSheetAt(firstChgIdx), ColNames.ACTION))
+                    .getStringCellValue().equals("Create")) {
                 Row ldr = cfg.replaySheet.createRow(cfg.replaySheet.getLastRowNum() + 1);
                 Utils.copyRow(row, ldr);
-            });
-
+            }
         });
+        modifyRows.forEach((row) -> {
+            if (row.getCell(Utils.firstColumnFromSheet(icfg.wb.getSheetAt(firstChgIdx), ColNames.ACTION))
+                    .getStringCellValue().equals("Modify")) {
+                Row ldr = cfg.replaySheet.createRow(cfg.replaySheet.getLastRowNum() + 1);
+                Utils.copyRow(row, ldr);
+            }
+        });
+
 
         common.forEach((itm, idx) -> {
 
