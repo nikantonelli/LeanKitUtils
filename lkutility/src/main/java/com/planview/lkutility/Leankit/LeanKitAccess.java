@@ -133,6 +133,7 @@ public class LeanKitAccess {
                     // Got something to return
                     ObjectMapper om = new ObjectMapper();
                     om.configure(DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY, true);
+                    om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
                     JSONArray p = (JSONArray) jresp.get(fieldName);
                     Integer accumulatedCount = pageMeta.getInt("endRow");
 
@@ -189,6 +190,7 @@ public class LeanKitAccess {
             } else {
                 ArrayList<T> items = new ArrayList<T>();
                 ObjectMapper om = new ObjectMapper();
+                om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
                 switch (expectedResponseType.getSimpleName()) {
                     case "CardType":
                     case "Lane": {
@@ -250,6 +252,7 @@ public class LeanKitAccess {
         String result = processRequest();
         if (result != null) {
             ObjectMapper om = new ObjectMapper();
+            om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             try {
                 return om.readValue(result, expectedResponseType);
             } catch (JsonProcessingException e) {
@@ -328,7 +331,7 @@ public class LeanKitAccess {
             request.setURI(new URI(config.url + reqUrl + bldr));
             d.p(Debug.VERBOSE, "%s\n", request.toString());
             httpResponse = client.execute(request);
-            d.p(Debug.VERBOSE, "%s\n", httpResponse.toString());
+            d.p(Debug.VERBOSE, "%s\n", httpResponse.getStatusLine());
 
             Boolean entityTaken = false;
             switch (httpResponse.getStatusLine().getStatusCode()) {
@@ -387,7 +390,7 @@ public class LeanKitAccess {
                             break;
                         }
                     }
-                    d.p(Debug.WARN, "Parameter Error in request: %s \n%s\n", request.toString(), errReq);
+                    d.p(Debug.WARN, "Parameter Error in request: %s \n%s\n", request.toString(), EntityUtils.toString(httpResponse.getEntity()));
                     break;
                 }
                 case 404: { // Item not found
@@ -985,6 +988,7 @@ public class LeanKitAccess {
         reqHdrs.clear();
         String results = processRequest();
         ObjectMapper om = new ObjectMapper();
+        om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             try {
                 return om.readValue(results, CustomFieldResult.class);
             } catch (JsonProcessingException e) {
@@ -1000,6 +1004,7 @@ public class LeanKitAccess {
         reqHdrs.clear();
         String results = processRequest();
         ObjectMapper om = new ObjectMapper();
+        om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             try {
                 return om.readValue(results, CustomIconResult.class);
             } catch (JsonProcessingException e) {
