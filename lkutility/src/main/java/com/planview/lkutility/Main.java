@@ -89,7 +89,7 @@ public class Main {
             e.printStackTrace();
         }
 
-        d.p(Debug.INFO, "Finished at: %s\n", new Date());
+        d.p(Debug.ALWAYS, "Finished at: %s\n", new Date());
     }
 
     public static void getCommandLine(String[] args) {

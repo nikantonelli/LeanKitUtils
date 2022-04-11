@@ -40,7 +40,7 @@ public class Importer {
 
         cfg.cache = new AccessCache(cfg, cfg.destination);
 
-        d.p(Debug.INFO, "Starting Import at: %s\n", new Date());
+        d.p(Debug.ALWAYS, "Starting Import at: %s\n", new Date());
         /**
          * cfg might contain the sheet info for the importer if it came from the
          * exporter directly

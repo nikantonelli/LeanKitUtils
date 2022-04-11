@@ -1,6 +1,7 @@
 package com.planview.lkutility;
 
 public class Debug {
+    public final static Integer ALWAYS = -1;
     public final static Integer ERROR = 0;
     public final static Integer INFO = 2;
     public final static Integer WARN = 1;
@@ -45,6 +46,9 @@ public class Debug {
             case 4: {
                 lp = "VERBOSE: ";
                 break;
+            }
+            default: {
+                lp = "NOTE: ";
             }
         }
         if (level <= debugPrint) {

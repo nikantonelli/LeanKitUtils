@@ -3,6 +3,7 @@ package com.planview.lkutility.diff;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -52,6 +53,8 @@ public class Diff {
          * ..2....src sheet..dst URL
          * ..3....src URL....dst URL
          */
+        d.p(Debug.ALWAYS, "Starting diff at: %s\n", new Date());
+        
         Integer firstShtIdx = cfg.wb.getSheetIndex(cfg.source.boardId); // First item sheets go in here
         Integer firstChgIdx = cfg.wb.getSheetIndex(InternalConfig.CHANGES_SHEET_NAME + cfg.source.boardId);
         Integer secondShtIdx = null; // second item sheets go in here

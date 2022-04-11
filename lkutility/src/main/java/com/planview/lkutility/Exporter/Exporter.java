@@ -77,7 +77,7 @@ public class Exporter {
 
     public void go() {
 
-        d.p(Debug.INFO, "Starting Export at: %s\n", new Date());
+        d.p(Debug.ALWAYS, "Starting Export at: %s\n", new Date());
         doExport(setUpNewSheets(cleanSheets()));
     }
 
