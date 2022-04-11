@@ -375,21 +375,6 @@ public class LeanKitAccess {
                     break;
                 }
                 case 422: { // Unprocessable Parameter
-                    String errReq = "";
-                    switch (request.getMethod()) {
-                        case "POST": {
-                            errReq = EntityUtils.toString(httpResponse.getEntity());
-                            break;
-                        }
-                        case "PATCH": {
-                            errReq = EntityUtils.toString(httpResponse.getEntity());
-                            break;
-                        }
-                        default: {
-                            errReq = request.toString();
-                            break;
-                        }
-                    }
                     d.p(Debug.WARN, "Parameter Error in request: %s \n%s\n", request.toString(), EntityUtils.toString(httpResponse.getEntity()));
                     break;
                 }
