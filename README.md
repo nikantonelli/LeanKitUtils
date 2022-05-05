@@ -109,10 +109,10 @@ The importer will take the spreadsheet field as a comma separated list of users.
 
 ## Lanes and WIP Limits
 
-To add/move a card to a lane which might cause the WIP limit to be exceeded, add an override comment to the lane field. To do this, add a "," and then the override comment itself,
+To add/move a card to a lane which might cause the WIP limit to be exceeded, add an override comment to the lane field. To do this, add a "^" and then the override comment itself,
 e.g:
 
-"Backlog|Next Sprint Backlog|Committed,Expedited" 
+"Backlog|Next Sprint Backlog|Committed^Expedited" 
 
 will move the card to the sub-lane Committed under "Next Sprint Backlog" which is under "Backlog" and add the wipOverrideComment of "Expedited"
 
