@@ -790,7 +790,7 @@ public class Utils {
                             flds.put("laneType", laneType);
                         }
                     } else {
-                        String[] bits = laneType.split(",");
+                        String[] bits = laneType.split("^");
                         if (fieldLst.has("boardId")) {
                             lane = Utils.findLaneFromBoard(cfg, accessCfg,
                                     item.getCell(fieldLst.getInt("boardId")).getStringCellValue(), bits[0]);
