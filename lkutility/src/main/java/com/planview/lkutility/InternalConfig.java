@@ -37,5 +37,6 @@ public class InternalConfig {
     public String diffMode;
     public XSSFSheet replaySheet;
     public boolean replay;
+	public boolean nameResolver;
 }
 

@@ -150,6 +150,9 @@ public class Main {
         Option readOnlyOpt = new Option("R", "ro", false, "Export Read Only fields (Not Imported!)");
         readOnlyOpt.setRequired(false);
         impExpOpt.addOption(readOnlyOpt);
+		Option nameResolver = new Option("n", "names", false, "Debug Use Only!");
+        nameResolver.setRequired(false);
+        impExpOpt.addOption(nameResolver);
 
         try {
             impExpCl = p.parse(impExpOpt, args, true);
@@ -167,6 +170,10 @@ public class Main {
 
         if (impExpCl.hasOption("replay")) {
             config.replay = true;
+        }
+
+        if (impExpCl.hasOption("names")) {
+            config.nameResolver = true;
         }
 
         if (impExpCl.hasOption("debug")) {

@@ -2,8 +2,10 @@ package com.planview.lkutility.leankit;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -694,6 +696,29 @@ public class LeanKitAccess {
         reqHdrs.clear();
         reqParams.add(new BasicNameValuePair("returnFullRecord", "true"));
         return execute(Card.class);
+    }
+	/**
+	 * Must have a unique title string or returns null
+	 * @param title
+	 * @return single card or null
+	 */
+	public Card fetchCardByTitle(String title) {
+        reqType = "GET";
+        reqUrl = "/io/card";
+        reqParams.clear();
+        reqHdrs.clear();
+		String encoded = null;
+		try {
+			encoded = URLEncoder.encode(title, "UTF-8");
+			
+		} catch (UnsupportedEncodingException e) {
+			// Encoder needs a try/catch, so we just print and continue
+			e.printStackTrace();
+		}
+		reqParams.add(new BasicNameValuePair("search", encoded));
+        reqParams.add(new BasicNameValuePair("returnFullRecord", "true"));
+		ArrayList<Card> cards = read(Card.class);
+        return (cards.size() != 1)?null: cards.get(0);
     }
 
     public ArrayList<BoardUser> fetchUsers(String boardId) {

@@ -397,6 +397,11 @@ public class Utils {
         return types;
     }
 
+	public static Card findCardByTitle(InternalConfig iCfg, Configuration accessCfg, String title){
+		LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
+		return lka.fetchCardByTitle(title);
+	}
+
     public static CardType findCardTypeFromBoard(InternalConfig iCfg, Configuration accessCfg, String name,
             String boardId) {
         return findCardTypeFromList(readCardsTypesFromBoard(iCfg, accessCfg, boardId), name);
