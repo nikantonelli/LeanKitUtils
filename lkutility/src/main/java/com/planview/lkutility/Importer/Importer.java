@@ -355,7 +355,7 @@ public class Importer {
 										Utils.firstColumnFromSheet(iSht, "title")));
 								//Get the latest version of it regardless of the original
 								Card crd = Utils.findCardByTitle(cfg, cfg.destination, parentTitle);
-								if (crd.id != null) {
+								if ((crd != null) && (crd.id != null)) {
 									vals.put("value", crd.id);
 									fld.put(field, vals);
 								}

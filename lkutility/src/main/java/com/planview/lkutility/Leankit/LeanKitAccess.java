@@ -715,7 +715,7 @@ public class LeanKitAccess {
 		String encoded = null;
 		try {
 			//Quote the string so we don't get partial matches
-			encoded = URLEncoder.encode("\""+title+"\"", "UTF-8");
+			encoded = URLEncoder.encode("\""+title+"\"", "UTF-8").replaceAll("\\+","%20");
 
 		} catch (UnsupportedEncodingException e) {
 			// Encoder needs a try/catch, so we just print and continue
