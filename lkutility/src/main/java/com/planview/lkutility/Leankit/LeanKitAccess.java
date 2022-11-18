@@ -714,7 +714,8 @@ public class LeanKitAccess {
 		reqHdrs.clear();
 		String encoded = null;
 		try {
-			encoded = URLEncoder.encode(title, "UTF-8");
+			//Quote the string so we don't get partial matches
+			encoded = URLEncoder.encode("\""+title+"\"", "UTF-8");
 
 		} catch (UnsupportedEncodingException e) {
 			// Encoder needs a try/catch, so we just print and continue
