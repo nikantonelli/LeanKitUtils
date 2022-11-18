@@ -399,7 +399,7 @@ public class Utils {
 
 	public static Card findCardByTitle(InternalConfig iCfg, Configuration accessCfg, String title){
 		LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
-		return lka.fetchCardByTitle(title);
+		return lka.fetchCardByTitle(accessCfg.boardId, title);
 	}
 
     public static CardType findCardTypeFromBoard(InternalConfig iCfg, Configuration accessCfg, String name,
