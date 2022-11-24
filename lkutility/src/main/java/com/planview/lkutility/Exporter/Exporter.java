@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.planview.lkutility.Changes;
 import com.planview.lkutility.ColNames;
 import com.planview.lkutility.Debug;
@@ -31,6 +32,7 @@ import com.planview.lkutility.leankit.ItemType;
 import com.planview.lkutility.leankit.Lane;
 import com.planview.lkutility.leankit.ParentCard;
 import com.planview.lkutility.leankit.ParentChild;
+import com.planview.lkutility.leankit.PlanningIncrement;
 import com.planview.lkutility.leankit.Task;
 import com.planview.lkutility.leankit.User;
 
@@ -512,6 +514,16 @@ public class Exporter {
                                                 .setCellValue(((User) fv).emailAddress);
                                         break;
                                     }
+									case "PlanningIncrement[]":{
+										PlanningIncrement[] pia = (PlanningIncrement[]) fv;
+										ArrayList<String> ids = new ArrayList<>();
+										for (int p=0; p < pia.length; p++){
+											ids.add(pia[p].label);
+										}
+										iRow.createCell(fieldCounter, CellType.STRING)
+                                                .setCellValue(ids.toString());
+                                        break;
+									}
                                     default: {
                                         System.out.printf("Unknown class: %s\n", fv.getClass().getSimpleName());
                                         break;
