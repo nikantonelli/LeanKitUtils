@@ -2,9 +2,7 @@ package com.planview.lkutility;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.json.JSONArray;
@@ -30,6 +28,7 @@ public class LkUtils {
 	 * Next up is all the Leankit access routines
 	 * 
 	 */
+	static String LANE_DIVIDER_CHAR = "^";
 
 	public static Lane[] getLanesFromBoardName(InternalConfig iCfg, AccessConfig accessCfg, String brdName) {
 		Lane[] lanes = {};
@@ -76,7 +75,7 @@ public class LkUtils {
 		while (lane.parentLaneId != null) {
 			Lane parentLane = getLaneFromId(lanes, lane.parentLaneId);
 			if (parentLane != null) {
-				lanePath = parentLane.name + InternalConfig.LANE_SEPARATOR + lanePath;
+				lanePath = parentLane.name + LANE_DIVIDER_CHAR + lanePath;
 			}
 			lane = parentLane;
 		}
@@ -153,6 +152,7 @@ public class LkUtils {
 	public static Card getCard(InternalConfig iCfg, AccessConfig accessCfg, String id) {
 		Card card = null;
 		AccessCache cache = accessCfg.getCache();
+
 		if (cache != null) {
 			card = cache.getCard(id);
 		}
@@ -180,7 +180,7 @@ public class LkUtils {
 			LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
 			brd = lka.fetchBoardFromTitle(accessCfg.BoardName);
 			if (brd != null) {
-				brd = lka.fetchBoardFromId(brd.id);
+				brd = lka.fetchBoardFromId(brd.id); //Refetch to get full board
 				if ((cache != null) && (brd != null))
 					cache.setBoard(brd);
 			}
@@ -243,30 +243,57 @@ public class LkUtils {
 		if (cache != null) {
 			brd = cache.getBoardByTitle(boardName);
 			if (brd != null) {
-				types = lka.fetchCardTypes(brd.id);
+				types = cache.getCardTypes(brd.id);
+				if (types == null) {
+					types = lka.fetchCardTypes(brd.id);
+					if (types != null) {
+						cache.setCardTypes(brd.id, types);
+					}
+				}
 			}
 		}
 		if (brd == null) {
 			brd = lka.fetchBoardFromTitle(boardName);
 			if (brd != null) {
-				if (cache != null)
+				if (cache != null) {
+					brd = lka.fetchBoardFromId(brd.id); //Have to refetch the whole thing before we put it into cache
 					cache.setBoard(brd);
+				}
 				types = lka.fetchCardTypes(brd.id);
+				if ((types != null) && (cache != null)) {
+					cache.setCardTypes(brd.id, types);
+				}
 			}
 		}
 		return types;
 	}
 
-	public static Card getCardByTitle(InternalConfig iCfg, AccessConfig accessCfg, String title) {
-		LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
-		Board brd = lka.fetchBoardFromTitle(accessCfg.BoardName);
-		return (brd != null) ? lka.fetchCardByTitle(brd.id, title) : null;
-	}
-
 	public static Card getCardByTitle(InternalConfig iCfg, AccessConfig accessCfg, String boardName, String title) {
 		LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
-		Board brd = lka.fetchBoardFromTitle(boardName);
-		return (brd != null) ? lka.fetchCardByTitle(brd.id, title) : null;
+		AccessCache cache = accessCfg.getCache();
+		Board brd = null;
+		Card cd = null;
+		if (cache != null) {
+			cd = cache.getCardByTitle(title);
+			if (cd != null) {
+				return cd;
+			}
+			brd = cache.getBoardByTitle(boardName);
+		}
+		if (brd == null) { 
+			brd = lka.fetchBoardFromTitle(boardName);
+		}
+		if (brd != null) {
+			cd = lka.fetchCardByTitle(brd.id, title);
+			if (cache != null) {
+				cache.setCard(cd);
+			}
+		}
+		return cd;
+	}
+
+	public static Card getCardByTitle(InternalConfig iCfg, AccessConfig accessCfg, String title) {
+		return getCardByTitle(iCfg, accessCfg, accessCfg.BoardName, title);
 	}
 
 	public static CardType getCardTypeFromBoard(InternalConfig iCfg, AccessConfig accessCfg, String name,
@@ -336,6 +363,9 @@ public class LkUtils {
 
 		if ((card != null) && (brd != null)) {
 			card = lka.updateCardFromId(brd, card, updates);
+			if ((cache != null) && (card != null)){
+				cache.setCard(card);
+			}
 		}
 
 		return card;
@@ -354,12 +384,11 @@ public class LkUtils {
 		}
 		if (brd != null) {
 			lka.updateBoardById(brd.id, updates); // returns 204 No Content
-			brd = lka.fetchBoardFromTitle(brd.id); // so refetch
-		}
-		// Potentially different brd here...
-		if (brd != null) {
-			if (cache != null) {
-				cache.setBoard(brd);
+			brd = lka.fetchBoardFromId(brd.id); // so refetch
+			if (brd != null) {
+				if (cache != null) {
+					cache.setBoard(brd);
+				}
 			}
 		}
 		return brd;
@@ -486,7 +515,7 @@ public class LkUtils {
 
 	static Lane getLaneFromString(Board brd, String name) {
 		// Split lane in spreadhseet into bits
-		String[] lanes = name.split(InternalConfig.LANE_SEPARATOR);
+		String[] lanes = name.split("\\^");
 
 		// Get the list of lanes in the target board
 		ArrayList<Lane> searchLanes = new ArrayList<>(Arrays.asList(brd.lanes));
@@ -726,7 +755,7 @@ public class LkUtils {
 		LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
 		Card card = lka.addTaskToCard(cardId, item);
 		AccessCache cache = accessCfg.getCache();
-		if (cache != null) {
+		if ((cache != null) && (card != null)) {
 			cache.setCard(card);
 		}
 		return card;
@@ -759,9 +788,20 @@ public class LkUtils {
 
 	public static Boolean enableCustomIcons(InternalConfig cfg, AccessConfig accessCfg) {
 		LeanKitAccess lka = new LeanKitAccess(cfg.destination, cfg.debugLevel);
-		Board brd = lka.fetchBoardFromTitle(cfg.destination.BoardName);
-		Boolean state = lka.fetchCustomIcons(brd.id) != null;
+		AccessCache cache = accessCfg.getCache();
+		Board brd = null;
+		if (cache != null) {
+			brd = cache.getBoardByTitle(accessCfg.BoardName);
+		}
+		if (brd == null) {
+			brd = lka.fetchBoardFromTitle(cfg.destination.BoardName);
+			if ((brd != null) && (cache != null)) {
+				cache.setBoard(brd);
+			}
+		}
+		Boolean state = false;
 		if (brd != null) {
+			state = lka.fetchCustomIcons(brd.id) != null;
 			JSONObject details = new JSONObject();
 			details.put("enableCustomIcon", true);
 			updateBoard(cfg, accessCfg, brd.id, details);
@@ -784,7 +824,7 @@ public class LkUtils {
 			ci.remove("id");
 			ci.remove("iconPath");
 			if (cache != null) {
-				cache.unsetBoardById(brd.id);
+				cache.unsetBoardById(brd.id);	//Need to refetch classesOfService (icons) next time
 				cache.unSetCustomIcons(brd.id);
 			}
 			return lka.createCustomIcon(brd.id, ci);
@@ -864,13 +904,14 @@ public class LkUtils {
 		for (int i = 0; i < srcLanes.length; i++) {
 			String srcLanePath = getLanePathFromLanes(srcLanes, srcLanes[i].id);
 			Lane dLane = getLaneFromPath(newLayout.lanes, srcLanePath);
-			if (dLane != null){
-				if (srcLanes[i].sortBy != null){ 
+			if (dLane != null) {
+				if (srcLanes[i].sortBy != null) {
 					JSONObject updates = new JSONObject();
-					updates.put("sortBy",srcLanes[i].sortBy );
+					updates.put("sortBy", srcLanes[i].sortBy);
 					LeanKitAccess lka = new LeanKitAccess(destination, cfg.debugLevel);
 					Board brd = lka.fetchBoardFromTitle(destination.getBoardName());
-					if ( brd != null) lka.updateLane(brd.id, dLane.id, updates);
+					if (brd != null)
+						lka.updateLane(brd.id, dLane.id, updates);
 				}
 
 			}
@@ -880,10 +921,10 @@ public class LkUtils {
 	private static Lane getLaneFromPath(Lane[] laneTree, String srcLanePath) {
 		String thisBit = srcLanePath;
 		String leftOver = null;
-		int thisIdx = srcLanePath.indexOf(InternalConfig.LANE_SEPARATOR);
+		int thisIdx = srcLanePath.indexOf(LANE_DIVIDER_CHAR);
 		if (thisIdx > 0) {
 			thisBit = srcLanePath.substring(0, thisIdx);
-			leftOver = srcLanePath.substring(thisIdx+1);
+			leftOver = srcLanePath.substring(thisIdx + 1);
 		}
 		// Find thisBit
 		String testBit = thisBit;
@@ -891,11 +932,11 @@ public class LkUtils {
 				.orElse(null);
 		Lane lnC = null;
 		if (ln != null) {
-			if (leftOver != null){
+			if (leftOver != null) {
 				lnC = getLaneFromPath(ln.children, leftOver);
 			}
 		}
-		return (lnC == null)?ln:lnC;
+		return (lnC == null) ? ln : lnC;
 	}
 
 	static Lane[] flattenLanes(Lane[] laneTree) {

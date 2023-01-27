@@ -18,7 +18,6 @@ import com.planview.lkutility.InternalConfig;
 import com.planview.lkutility.LkUtils;
 import com.planview.lkutility.SupportedXlsxFields;
 import com.planview.lkutility.XlUtils;
-import com.planview.lkutility.leankit.AccessCache;
 import com.planview.lkutility.leankit.Board;
 import com.planview.lkutility.leankit.BoardUser;
 import com.planview.lkutility.leankit.Card;
@@ -353,7 +352,7 @@ public class Importer {
 							break;
 						}
 						case "lane": {
-							String[] bits = ((String) XlUtils.getCell(change, cc.value)).split(InternalConfig.WIP_LIMIT_SEPARATOR);
+							String[] bits = ((String) XlUtils.getCell(change, cc.value)).split(InternalConfig.REGEX_WIP_LIMIT_SEPARATOR);
 							Lane foundLane = LkUtils.getLaneFromBoardTitle(cfg, cfg.destination, cfg.destination.getBoardName(),
 									bits[0]);
 							if (foundLane != null) {

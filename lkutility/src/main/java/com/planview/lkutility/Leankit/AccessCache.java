@@ -18,6 +18,7 @@ public class AccessCache {
 	HashMap<String, User> usernameMap = new HashMap<>();
 	HashMap<String, CustomField[]> customFieldMap = new HashMap<>();
 	HashMap<String, CustomIcon[]> customIconMap = new HashMap<>();
+	HashMap<String, ArrayList<CardType>> cardTypeMap = new HashMap<>();
 	HashMap<String, ArrayList<Lane>> taskBoardMap = new HashMap<>();
 	HashMap<String, ArrayList<BoardUser>> boardUserMap = new HashMap<>();
 	HashMap<String, Task> taskMap = new HashMap<>();
@@ -41,6 +42,24 @@ public class AccessCache {
 		boardMap.put(brd.title, brd);
 	}
 
+	public Board getBoardByTitle(String title) {
+		Board brd = boardMap.get(title);
+		return brd;
+	}
+
+	public Board getBoardById(String id) {
+		Board brd = null;
+		Iterator<Map.Entry<String, Board>>  es = boardMap.entrySet().iterator();
+		while (es.hasNext()){
+			Entry<String, Board> ent = es.next();
+			if (ent.getValue().id.equals(id)){
+				brd = ent.getValue();
+			}
+		}
+
+		return brd;
+	}
+
 	public void unsetBoardByTitle(String title) {
 		boardMap.remove(title);
 	}	
@@ -58,39 +77,45 @@ public class AccessCache {
 		if (brd != null) boardMap.remove(brd.title);
 	}	
 
-	public void unsetCardByTitle(String title) {
-		cardMap.remove(title);
+	public void setCard(Card card) {
+		if (cardMap.get(card.id) != null) {
+			cardMap.remove(card.id);
+		}
+		cardMap.put(card.id, card);
 	}
 
-	public void unsetCardById(String id) {
+	public Card getCard(String cardId) {
+		Card card = cardMap.get(cardId);
+		return card;
+	}
+
+	public Card getCardByTitle(String title) {
 		Card crd = null;
 		Iterator<Map.Entry<String, Card>>  es = cardMap.entrySet().iterator();
 		while (es.hasNext()){
 			Entry<String, Card> ent = es.next();
-			if (ent.getValue().id.equals(id)){
+			if (ent.getValue().title.equals(title)){
+				crd = ent.getValue();
+			}
+		}
+		return crd;
+	}
+
+	public void unsetCardById(String id) {
+		cardMap.remove(id);
+	}
+
+	public void unsetCardByTitle(String title) {
+		Card crd = null;
+		Iterator<Map.Entry<String, Card>>  es = cardMap.entrySet().iterator();
+		while (es.hasNext()){
+			Entry<String, Card> ent = es.next();
+			if (ent.getValue().title.equals(title)){
 				crd = ent.getValue();
 			}
 		}
 
 		if (crd != null) cardMap.remove(crd.title);
-	}
-
-	public Board getBoardByTitle(String title) {
-		Board brd = boardMap.get(title);
-		return brd;
-	}
-
-	public Board getBoardById(String id) {
-		Board brd = null;
-		Iterator<Map.Entry<String, Board>>  es = boardMap.entrySet().iterator();
-		while (es.hasNext()){
-			Entry<String, Board> ent = es.next();
-			if (ent.getValue().id.equals(id)){
-				brd = ent.getValue();
-			}
-		}
-
-		return brd;
 	}
 
 	public User getUserById(String id) {
@@ -112,18 +137,6 @@ public class AccessCache {
 		}
 		userIdMap.put(user.id, user);
 		usernameMap.put(user.username, user);
-	}
-
-	public void setCard(Card card) {
-		if (cardMap.get(card.id) != null) {
-			cardMap.remove(card.id);
-		}
-		cardMap.put(card.title, card);
-	}
-
-	public Card getCard(String cardId) {
-		Card card = cardMap.get(cardId);
-		return card;
 	}
 
 	public void setTaskBoard(String cardId, ArrayList<Lane> lanes) {
@@ -166,4 +179,14 @@ public class AccessCache {
 		return cfm;
 	}
 
+	public ArrayList<CardType> getCardTypes(String id) {
+		return cardTypeMap.get(id);
+	}
+
+	public void setCardTypes(String id, ArrayList<CardType> types) {
+		if (cardTypeMap.get(id) != null) {
+			cardTypeMap.remove(id);
+		}
+		cardTypeMap.put(id, types);
+	}
 }

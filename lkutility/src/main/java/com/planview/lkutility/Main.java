@@ -37,7 +37,7 @@ public class Main {
 	 * This defaults to true so we behave as an exporter if it is not otherwise
 	 * specified. If the command line contains a -i flag, this is set to false.
 	 */
-	static Boolean setToExport = true;
+	static Boolean setToExport = false;
 	static Boolean setToImport = false;
 	static Boolean setToDiff = false;
 
@@ -113,7 +113,6 @@ public class Main {
 		Options impExpOpt = new Options();
 		Option impO = new Option("i", "import", false, "run importer");
 		Option expO = new Option("e", "export", false, "run exporter");
-		Option tnsO = new Option("t", "transfer", false, "run transfer");
 		Option diffO = new Option("d", "diff", false,
 				"compare dst URL to a previous transfer");
 		diffO.setRequired(false);
@@ -122,10 +121,8 @@ public class Main {
 		repO.setRequired(false);
 		impO.setRequired(false);
 		expO.setRequired(false);
-		tnsO.setRequired(false);
 		impExpOpt.addOption(impO);
 		impExpOpt.addOption(expO);
-		impExpOpt.addOption(tnsO);
 		impExpOpt.addOption(diffO);
 		impExpOpt.addOption(repO);
 
@@ -217,7 +214,7 @@ public class Main {
 			}
 		} else {
 			if (impExpCl.hasOption("replay")) {
-				if (impExpCl.hasOption("transfer") || impExpCl.hasOption("export") || impExpCl.hasOption("import")) {
+				if (impExpCl.hasOption("export") || impExpCl.hasOption("import")) {
 					d.p(Debug.INFO, "Invalid options specified (-r with another). Defaulting to Replay mode.\n");
 				} else {
 					d.p(Debug.INFO, "Setting to Replay mode.\n");
@@ -227,24 +224,10 @@ public class Main {
 			/**
 			 * Import takes precedence if option present, then export, then transfer
 			 */
-			else if (impExpCl.hasOption("import")) {
-				if (impExpCl.hasOption("transfer") || impExpCl.hasOption("export")) {
-					d.p(Debug.INFO, "Invalid options specified (-i with another). Defaulting to Import mode.\n");
-				} else {
-					d.p(Debug.INFO, "Setting to Import mode.\n");
-				}
-				setToExport = false;
-				setToImport = true;
-			} else {
-				if (impExpCl.hasOption("export")) {
-					if (impExpCl.hasOption("transfer")) {
-						d.p(Debug.INFO, "Invalid options specified (-e and -t) Defaulting to Export mode\n");
-					}
-				} else if (impExpCl.hasOption("transfer")) {
-					d.p(Debug.INFO, "Setting to Dual mode\n");
-					setToImport = true;
-				}
-			}
+			else { 
+				if (impExpCl.hasOption("import")) setToImport = true;
+				if (impExpCl.hasOption("export")) setToExport = true;
+			} 
 		}
 
 		config.xlsxfn = impExpCl.getOptionValue("filename");
@@ -300,125 +283,6 @@ public class Main {
 			d.p(Debug.ERROR, "%s", "Did not detect required sheet in the spreadsheet: \"Config\"");
 			System.exit(8);
 		}
-	}
-
-	private static Boolean parseRow(Row drRow, AccessConfig cfg, Field[] p, HashMap<String, Object> fieldMap,
-			ArrayList<String> cols) {
-		String cv = drRow.getCell((int) (fieldMap.get(cols.get(0)))).getStringCellValue();
-		if (cv != null) {
-
-			for (int i = 0; i < cols.size(); i++) {
-				String idx = cols.get(i);
-				Object obj = fieldMap.get(idx);
-				String val = obj.toString();
-				try {
-					Cell cell = drRow.getCell(Integer.parseInt(val));
-
-					if (cell != null) {
-						switch (cell.getCellType()) {
-							case STRING:
-								// When you copy'n'paste on WIndows, it sometimes picks up the whitespace too -
-								// so remove it.
-								p[i].set(cfg,
-										(cell != null ? drRow.getCell(Integer.parseInt(val)).getStringCellValue().trim()
-												: ""));
-								break;
-							case NUMERIC:
-								p[i].set(cfg, (cell != null ? drRow.getCell(Integer.parseInt(val)).getNumericCellValue()
-										: ""));
-								break;
-							default:
-								break;
-						}
-					} else {
-						p[i].set(cfg, (p[i].getType().equals(String.class)) ? "" : 0.0);
-					}
-
-				} catch (IllegalArgumentException | IllegalAccessException e) {
-					d.p(Debug.ERROR, "Conversion error on \"%s\": Verify cell type in Excel\n %s\n", idx,
-							e.getMessage());
-					System.exit(12);
-				}
-
-			}
-			return true;
-		}
-		return false;
-	}
-
-	private static void getConfigFromFile() {
-		// Make the contents of the file lower case before comparing with these.
-		Field[] p = (new Configuration()).getClass().getDeclaredFields();
-
-		ArrayList<String> cols = new ArrayList<String>();
-		for (int i = 0; i < p.length; i++) {
-			p[i].setAccessible(true); // Set this up for later
-			cols.add(p[i].getName().toLowerCase());
-		}
-		HashMap<String, Object> fieldMap = new HashMap<>();
-
-		// Assume that the titles are the first row
-		Iterator<Row> ri = configSht.iterator();
-		if (!ri.hasNext()) {
-			d.p(Debug.ERROR, "%s", "Did not detect any header info on Config sheet (first row!)");
-			System.exit(9);
-		}
-		Row hdr = ri.next();
-		Iterator<Cell> cptr = hdr.cellIterator();
-
-		while (cptr.hasNext()) {
-			Cell cell = cptr.next();
-			Integer idx = cell.getColumnIndex();
-			String cellName = cell.getStringCellValue().trim().toLowerCase();
-			if (cols.contains(cellName)) {
-				fieldMap.put(cellName, idx); // Store the column index of the field
-			}
-		}
-
-		if (fieldMap.size() != cols.size()) {
-			d.p(Debug.ERROR, "%s", "Did not detect correct columns on Config sheet: " + cols.toString());
-			System.exit(10);
-		}
-
-		if (!ri.hasNext()) {
-			d.p(Debug.ERROR, "%s",
-					"Did not detect any field info on Config sheet (first cell must be non-blank, e.g. url to a real host)");
-			System.exit(11);
-		}
-
-		while (ri.hasNext() && ((config.source.getUrl() == null) || (config.destination.getUrl() == null))) {
-			Row rtc = ri.next();
-			if (rtc.getCell(0).getStringCellValue().equals("src")) {
-				if (config.source.getUrl() == null) {
-					parseRow(rtc, config.source, p, fieldMap, cols);
-				}
-			}
-			if (rtc.getCell(0).getStringCellValue().equals("dst")) {
-				if (config.destination.getUrl() == null) {
-					parseRow(rtc, config.destination, p, fieldMap, cols);
-				}
-			}
-		}
-
-		// Creds are now found and set. If not, you're buggered.
-
-		/**
-		 * We can opt to use username/password or apikey.
-		 **/
-		if ((config.source.getUrl() != null) && setToExport) {
-			if ((config.source.getApiKey() == null) || (config.source.getBoardName() == null)) {
-				d.p(Debug.ERROR, "%s", "Did not detect enough source info: apikey required");
-				System.exit(13);
-			}
-		}
-		if ((config.destination.getUrl() != null) && setToImport) {
-			if ((config.destination.getApiKey() == null) || (config.destination.getBoardName() == null)) {
-				d.p(Debug.ERROR, "%s", "Did not detect enough destination info: apikey required");
-				System.exit(13);
-			}
-		}
-
-		return;
 	}
 
 	public static InternalConfig setConfig(InternalConfig config, Row row, HashMap<String, Integer> fieldMap) {

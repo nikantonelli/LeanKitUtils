@@ -16,7 +16,9 @@ public class InternalConfig {
 	public final static String DESTINATION_APIKEY_COLUMN = "dstApiKey";
 	public final static String DESTINATION_TID_COLUMN = "Target Id";
 	public final static String WIP_LIMIT_SEPARATOR = "\\";
-	public final static String LANE_SEPARATOR = "\\^";
+	public final static String LANE_SEPARATOR = "^";
+	public final static String REGEX_WIP_LIMIT_SEPARATOR = "\\\\";
+	public final static String REGEX_LANE_SEPARATOR = "\\^";
 
     public String xlsxfn = "";
 

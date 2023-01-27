@@ -11,15 +11,20 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.FormulaEvaluator;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.util.CellReference;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+
 import com.planview.lkutility.Changes;
 import com.planview.lkutility.ColNames;
 import com.planview.lkutility.Debug;
 import com.planview.lkutility.InternalConfig;
+import com.planview.lkutility.LkUtils;
 import com.planview.lkutility.SupportedXlsxFields;
 import com.planview.lkutility.XlUtils;
-import com.planview.lkutility.LkUtils;
-import com.planview.lkutility.leankit.AccessCache;
 import com.planview.lkutility.leankit.Attachment;
 import com.planview.lkutility.leankit.BlockedStatus;
 import com.planview.lkutility.leankit.Card;
@@ -36,13 +41,6 @@ import com.planview.lkutility.leankit.ParentChild;
 import com.planview.lkutility.leankit.PlanningIncrement;
 import com.planview.lkutility.leankit.Task;
 import com.planview.lkutility.leankit.User;
-
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellType;
-import org.apache.poi.ss.usermodel.FormulaEvaluator;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.util.CellReference;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
 
 /**
  * We need to get a unique board ID from the user or allow for a selection
@@ -552,8 +550,9 @@ public class Exporter {
                                 if (foundField.value != null) {
                                     switch (foundField.type) {
                                         case "number": {
-                                            iRow.createCell(fieldCounter, CellType.NUMERIC)
-                                                    .setCellValue(Integer.parseInt((String) foundField.value));
+                                            Double number = Double.parseDouble((String) foundField.value);
+											iRow.createCell(fieldCounter, CellType.NUMERIC)
+													.setCellValue(number);
                                             break;
                                         }
                                         default: {

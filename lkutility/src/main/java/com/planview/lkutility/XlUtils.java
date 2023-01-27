@@ -557,7 +557,7 @@ public class XlUtils {
 							flds.put("laneType", laneType);
 						}
 					} else {
-						String[] bits = laneType.split(InternalConfig.WIP_LIMIT_SEPARATOR);	//This is NOT the LANE split, just the Excel spreadsheet one for wipLimit
+						String[] bits = laneType.split(InternalConfig.REGEX_WIP_LIMIT_SEPARATOR);	//This is NOT the LANE split, just the Excel spreadsheet one for wipLimit
 						if (fieldLst.has("boardId")) {
 							lane = LkUtils.getLaneFromBoardId(cfg, accessCfg,
 									item.getCell(fieldLst.getInt("boardId")).getStringCellValue(), bits[0]);
