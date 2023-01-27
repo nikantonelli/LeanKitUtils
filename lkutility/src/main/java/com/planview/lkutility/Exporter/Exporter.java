@@ -17,7 +17,8 @@ import com.planview.lkutility.ColNames;
 import com.planview.lkutility.Debug;
 import com.planview.lkutility.InternalConfig;
 import com.planview.lkutility.SupportedXlsxFields;
-import com.planview.lkutility.Utils;
+import com.planview.lkutility.XlUtils;
+import com.planview.lkutility.LkUtils;
 import com.planview.lkutility.leankit.AccessCache;
 import com.planview.lkutility.leankit.Attachment;
 import com.planview.lkutility.leankit.BlockedStatus;
@@ -40,6 +41,7 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 
 /**
@@ -74,7 +76,6 @@ public class Exporter {
     public Exporter(InternalConfig config) {
         cfg = config;
         d.setLevel(cfg.debugLevel);
-        Utils.d.setLevel(cfg.debugLevel);
     }
 
     public void go() {
@@ -83,38 +84,37 @@ public class Exporter {
         doExport(setUpNewSheets(cleanSheets()));
     }
 
-    public String getSheetName(){
-        return  InternalConfig.CHANGES_SHEET_NAME + cfg.source.boardId;
-    }
+    public String getSheetName() {
+		return XlUtils.validateSheetName(InternalConfig.CHANGES_SHEET_NAME + cfg.source.getBoardName());
+	}
 
-    public String cleanSheets(){
-        Integer chShtIdx = null;
-        String cShtName = getSheetName();
-        
-        chShtIdx = cfg.wb.getSheetIndex(cShtName);
-        if (chShtIdx >= 0) {
-            cfg.wb.removeSheetAt(chShtIdx);
-        }
-        
-        // Now make sure we don't have any left over item information
-        chShtIdx = cfg.wb.getSheetIndex(cfg.source.boardId);
-        if (chShtIdx >= 0) {
-            cfg.wb.removeSheetAt(chShtIdx);
-        }
-        return cShtName;
-        
-    }
+	public String cleanSheets() {
+		Integer shtIdx = null;
+		String cShtName = getSheetName();
+
+		shtIdx = cfg.wb.getSheetIndex(cShtName);
+		if (shtIdx >= 0) {
+			cfg.wb.removeSheetAt(shtIdx);
+		}
+
+		// Now make sure we don't have any left over item information
+		shtIdx = cfg.wb.getSheetIndex(XlUtils.validateSheetName(cfg.source.getBoardName()));
+		if (shtIdx >= 0) {
+			cfg.wb.removeSheetAt(shtIdx);
+		}
+		return cShtName;
+
+	}
 
     public String[] setUpNewSheets(String cShtName){
-        cfg.changesSheet = Utils.newChgSheet(cfg,cShtName);
+        cfg.changesSheet = XlUtils.newChgSheet(cfg,cShtName);
         chgRowIdx = 1;    //Start after header row
         return newItmSheet();
     }
 
 
     public String[] newItmSheet(){
-        cfg.itemSheet = cfg.wb.createSheet(cfg.source.boardId); 
-        cfg.cache = new AccessCache(cfg, cfg.source);
+        cfg.itemSheet = cfg.wb.createSheet(XlUtils.validateSheetName(cfg.source.getBoardName()));
         d.setLevel(cfg.debugLevel); //Do this again here because we can bypass it above in go()
         /**
          * Now create the Item Sheet layout
@@ -144,7 +144,7 @@ public class Exporter {
         Field[] pseudoFields = (allFields.new Pseudo()).getClass().getFields(); // Inlcudes pseudo fields that
                                                                                         // will
                                                                                         // cause alternative actions
-        CustomField[] customFields = Utils.fetchCustomFields(cfg, cfg.source);
+        CustomField[] customFields = LkUtils.getCustomFields(cfg, cfg.source);
 
         Integer checkFieldsLength = rwFields.length + customFields.length + pseudoFields.length;
         Integer outFieldsLength   = rwFields.length + customFields.length;
@@ -182,9 +182,9 @@ public class Exporter {
             itmHdrRow.createCell(itmCellIdx++, CellType.STRING).setCellValue(outFields[i]);
         }
 
-        Integer col = Utils.firstColumnFromSheet(cfg.itemSheet, ColNames.ID);
+        Integer col = XlUtils.firstColumnFromSheet(cfg.itemSheet, ColNames.ID);
         cfg.itemSheet.setColumnWidth(col, 18*256);    //First two columns are usually ID and srcID
-        col = Utils.firstColumnFromSheet(cfg.itemSheet, ColNames.SOURCE_ID);
+        col = XlUtils.firstColumnFromSheet(cfg.itemSheet, ColNames.SOURCE_ID);
         cfg.itemSheet.setColumnWidth(col, 18*256);
 
         return checkFields;
@@ -194,7 +194,7 @@ public class Exporter {
         /**
          * Read all the normal cards on the board - up to a limit?
          */
-        ArrayList<Card> cards = Utils.readCardIdsFromBoard(cfg, cfg.source);
+        ArrayList<Card> cards = LkUtils.getCardIdsFromBoard(cfg, cfg.source);
         Collections.sort(cards);
         /**
          * Write all the cards out to the cfg.itemSheet
@@ -206,7 +206,7 @@ public class Exporter {
             /**
              * We have to re-fetch the cards to get the relevant parent information.
              */
-            c = Utils.getCard(cfg, c.id);
+            c = LkUtils.getCard(cfg, cfg.source, c.id);
 
             /* Write a 'Create' line to the changes sheet */
             // We can only write out cards here. Tasks are handled differently
@@ -231,18 +231,21 @@ public class Exporter {
         Iterator<ParentChild> pci = parentChild.iterator();
         while (pci.hasNext()) {
             ParentChild pc = pci.next();
-            Integer parentShtIdx = cfg.wb.getSheetIndex(pc.boardId);
+            Integer parentShtIdx = cfg.wb.getSheetIndex(XlUtils.validateSheetName(pc.boardName));
             if (parentShtIdx >= 0) {
                 XSSFSheet pSht = cfg.wb.getSheetAt(parentShtIdx);
-                Integer parentRow = Utils.firstRowIdxByStringValue(pSht, ColNames.SOURCE_ID, pc.parentId);
-                Integer childRow = Utils.firstRowIdxByStringValue(cfg.itemSheet, ColNames.SOURCE_ID, pc.childId);
+                Integer parentRow = XlUtils.firstRowIdxByStringValue(pSht, ColNames.SOURCE_ID, pc.parentId);
+                Integer childRow = XlUtils.firstRowIdxByStringValue(cfg.itemSheet, ColNames.SOURCE_ID, pc.childId);
 
                 if ((parentRow == null) || (childRow == null)) {
                     d.p(Debug.WARN, "Ignoring parent/child relationship for: %s/%s. Is parent archived?\n",
                             pc.parentId, pc.childId);
                 } else {
-                    createChangeRow(chgRowIdx, childRow, "Modify", "Parent",
-                            "=IF(ISBLANK('" + pc.boardId + "'!A" + (parentRow + 1) + "),'" + pc.boardId + "'!B" + (parentRow + 1) + ",'"  + pc.boardId + "'!A" + (parentRow + 1) + ")");
+                    Integer col = XlUtils.findColumnFromSheet(cfg.itemSheet, ColNames.TITLE);
+						String letter = CellReference.convertNumToColString(col);
+						d.p(Debug.INFO, "Creating parent/child relationship for: %s/%s\n",
+								pc.parentId, pc.childId);createChangeRow(chgRowIdx++, childRow, "Modify", "Parent",
+								"='" + XlUtils.validateSheetName(pc.boardName) + "'!" + letter + (parentRow + 1));
                     chgRowIdx++;
                 }
             }
@@ -251,7 +254,7 @@ public class Exporter {
         /**
          * Open the output stream and send the file back out.
          */
-        Utils.writeFile(cfg, cfg.xlsxfn, cfg.wb);
+        XlUtils.writeFile(cfg, cfg.xlsxfn, cfg.wb);
     }
 
     /**
@@ -284,7 +287,7 @@ public class Exporter {
                                 /**
                                  * I have to fetch the realuser because the assignedUser != boardUser != user
                                  */
-                                User realUser = Utils.fetchUser(cfg, cfg.source, au[j].id);
+                                User realUser = LkUtils.getUser(cfg, cfg.source, au[j].id);
                                 if (realUser != null) {
                                     outStr += ((outStr.length() > 0) ? "," : "") + realUser.username;
                                 }
@@ -312,7 +315,7 @@ public class Exporter {
                             for (int j = 0; j < atts.length; j++) {
                                 File af = new File("attachments/" + c.id + "/" + atts[j].name);
                                 FileOutputStream fw = new FileOutputStream(af);
-                                byte[] data = (byte[]) Utils.getAttachment(cfg, cfg.source, c.id, atts[j].id);
+                                byte[] data = (byte[]) LkUtils.getAttachment(cfg, cfg.source, c.id, atts[j].id);
                                 d.p(Debug.INFO, "Saving attachment %s\n", af.getPath());
                                 fw.write(data, 0, data.length);
                                 fw.flush();
@@ -383,24 +386,24 @@ public class Exporter {
                     case "lane": {
                         Object fv = c.getClass().getField(pbFields[i]).get(c);
                         if (fv != null) { // Might be a task
-                            CardType ct = Utils.findCardTypeFromBoard(cfg, cfg.source, c.type.title,
-                                    cfg.source.boardId);
-                            if (ct.isTaskType) {
+                            CardType ct = LkUtils.getCardTypeFromBoard(cfg, cfg.source, c.type.title,
+                                    cfg.source.getBoardName());
+                            if (ct.getIsTaskType()) {
                                 Lane taskLane = (Lane) fv;
                                 if (taskLane.laneType.equals("untyped")) {
-                                    String lane = Utils.getLanePathFromId(cfg, cfg.source, ((Lane) fv).id);
+                                    String lane = LkUtils.getLanePathFromId(cfg, cfg.source, ((Lane) fv).id);
                                     d.p(Debug.ERROR,
                                             "Invalid card type - check \"Task\" setting on \"%s\". Opting to use lane \"%s\"\n",
                                             c.type.title, lane);
                                     iRow.createCell(fieldCounter, CellType.STRING)
-                                            .setCellValue(Utils.getLanePathFromId(cfg, cfg.source, ((Lane) fv).id));
+                                            .setCellValue(LkUtils.getLanePathFromId(cfg, cfg.source, ((Lane) fv).id));
 
                                 } else {
                                     iRow.createCell(fieldCounter, CellType.STRING).setCellValue(taskLane.laneType);
                                 }
                             } else {
                                 iRow.createCell(fieldCounter, CellType.STRING)
-                                        .setCellValue(Utils.getLanePathFromId(cfg, cfg.source, ((Lane) fv).id));
+                                        .setCellValue(LkUtils.getLanePathFromId(cfg, cfg.source, ((Lane) fv).id));
                             }
                         }
                         fieldCounter++;
@@ -426,7 +429,7 @@ public class Exporter {
                         if (cfg.addComment) {
                             chgRow++;
                             createChangeRow(chgRow, item, "Modify", "comments",
-                                    Utils.getUrl(cfg, cfg.source) + "/card/" + c.id);
+                                    LkUtils.getUrl(cfg, cfg.source) + "/card/" + c.id);
                         }
                         fieldCounter++;
                         break;
@@ -447,14 +450,14 @@ public class Exporter {
                         // resolve the lanes for the tasks,
                         // Add the tasks to the items and put some Modify statements in.
                         if (cfg.exportTasks && (c.taskBoardStats != null)) {
-                            ArrayList<Task> tasks = Utils.readTaskIdsFromCard(cfg, cfg.source, c.id);
+                            ArrayList<Task> tasks = LkUtils.getTaskIdsFromCard(cfg, cfg.source, c.id);
                             for (int j = 0; j < tasks.size(); j++) {
                                 chgRow++;
-                                Card task = Utils.getCard(cfg, tasks.get(j).id);
+                                Card task = LkUtils.getCard(cfg, cfg.source, tasks.get(j).id);
                                 // Increment the row index ready for the item row create
                                 itmRow++;
                                 createChangeRow(chgRow, item, "Modify", "Task",
-                                        "='" + cfg.source.boardId + "'!A" + (itmRow + 1));
+                                        "='" + cfg.source.getBoardName() + "'!A" + (itmRow + 1));
 
                                 // Now create the item row itself
                                 // Changes changesMade = new Changes(0,0); //Testing!
@@ -577,21 +580,25 @@ public class Exporter {
     }
 
     private void createChangeRow(Integer CRIdx, Integer IRIdx, String action, String field, String value) {
-        Integer localCellIdx = 0;
-        Row chgRow = cfg.changesSheet.createRow(CRIdx);
-        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(cfg.group);
-        chgRow.createCell(localCellIdx++, CellType.FORMULA)
-                .setCellFormula("'" + cfg.source.boardId + "'!B" + (IRIdx + 1));
-        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(action);
-        chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(field);
+		Integer localCellIdx = 0;
+		String cellFormula = "'" + XlUtils.validateSheetName(cfg.source.getBoardName()) + "'!"
+				+ XlUtils.findColumnLetterFromSheet(cfg.itemSheet, "title")
+				+ (IRIdx + 1);
+		Row chgRow = cfg.changesSheet.createRow(CRIdx);
+		chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(cfg.group);
+		chgRow.createCell(localCellIdx++, CellType.FORMULA)
+				// .setCellFormula("'" + cfg.source.BoardName + "'!B" + (IRIdx + 1));
+				.setCellFormula(cellFormula);
+		chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(action);
+		chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(field);
 
-        if (value.startsWith("=")) {
-            FormulaEvaluator evaluator = cfg.wb.getCreationHelper().createFormulaEvaluator();
-            Cell cell = chgRow.createCell(localCellIdx++);
-            cell.setCellFormula(value.substring(1));
-            evaluator.evaluateFormulaCell(cell);
-        } else {
-            chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(value);
-        }
-    }
+		if (value.startsWith("=")) {
+			FormulaEvaluator evaluator = cfg.wb.getCreationHelper().createFormulaEvaluator();
+			Cell cell = chgRow.createCell(localCellIdx++);
+			cell.setCellFormula(value.substring(1));
+			evaluator.evaluateFormulaCell(cell);
+		} else {
+			chgRow.createCell(localCellIdx++, CellType.STRING).setCellValue(value);
+		}
+	}
 }

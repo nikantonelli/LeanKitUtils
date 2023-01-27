@@ -11,7 +11,8 @@ import java.util.LinkedHashMap;
 import com.planview.lkutility.ColNames;
 import com.planview.lkutility.Debug;
 import com.planview.lkutility.InternalConfig;
-import com.planview.lkutility.Utils;
+import com.planview.lkutility.LkUtils;
+import com.planview.lkutility.XlUtils;
 import com.planview.lkutility.exporter.Exporter;
 import com.planview.lkutility.importer.Importer;
 
@@ -30,7 +31,6 @@ public class Diff {
     public Diff(InternalConfig config) {
         cfg = config;
         d.setLevel(cfg.debugLevel);
-        Utils.d.setLevel(cfg.debugLevel);
     }
 
     public void go() {
@@ -55,8 +55,8 @@ public class Diff {
          */
         d.p(Debug.ALWAYS, "Starting diff at: %s\n", new Date());
         
-        Integer firstShtIdx = cfg.wb.getSheetIndex(cfg.source.boardId); // First item sheets go in here
-        Integer firstChgIdx = cfg.wb.getSheetIndex(InternalConfig.CHANGES_SHEET_NAME + cfg.source.boardId);
+        Integer firstShtIdx = cfg.wb.getSheetIndex(cfg.source.getBoardName()); // First item sheets go in here
+        Integer firstChgIdx = cfg.wb.getSheetIndex(InternalConfig.CHANGES_SHEET_NAME + cfg.source.getBoardName());
         Integer secondShtIdx = null; // second item sheets go in here
         Integer secondChgIdx = null;
 
@@ -69,7 +69,7 @@ public class Diff {
             found = true;
         }
         if (!found) {
-            d.p(Debug.ERROR, "diff: incorrect sheets found for src board: %s\n", cfg.source.boardId);
+            d.p(Debug.ERROR, "diff: incorrect sheets found for src board: %s\n", cfg.source.getBoardName());
         }
 
         if ((firstChgIdx == null) || (firstShtIdx == null)) {
@@ -82,17 +82,17 @@ public class Diff {
         // present
         Integer saveShtIdx = -1;
         Integer saveCfgIdx = -1;
-        if ((saveShtIdx = cfg.wb.getSheetIndex(cfg.destination.boardId)) > -1) {
-            cfg.wb.setSheetName(saveShtIdx, cfg.destination.boardId + "_save");
+        if ((saveShtIdx = cfg.wb.getSheetIndex(cfg.destination.getBoardName())) > -1) {
+            cfg.wb.setSheetName(saveShtIdx, cfg.destination.getBoardName() + "_save");
             if ((saveCfgIdx = cfg.wb.getSheetIndex(
-                    InternalConfig.CHANGES_SHEET_NAME + cfg.destination.boardId)) > -1) {
+                    InternalConfig.CHANGES_SHEET_NAME + cfg.destination.getBoardName())) > -1) {
                 cfg.wb.setSheetName(saveCfgIdx,
-                        InternalConfig.CHANGES_SHEET_NAME + cfg.destination.boardId + "_save");
+                        InternalConfig.CHANGES_SHEET_NAME + cfg.destination.getBoardName() + "_save");
                 found = true;
             }
         }
         if (found) {
-            d.p(Debug.INFO, "Saved sheets found for dst board: %s (to fetch new data)\n", cfg.destination.boardId);
+            d.p(Debug.INFO, "Saved sheets found for dst board: %s (to fetch new data)\n", cfg.destination.getBoardName());
         }
 
         /**
@@ -103,11 +103,11 @@ public class Diff {
          * to the lane specified by the -m option
          */
         Integer replaySht = -1;
-        if ((replaySht = cfg.wb.getSheetIndex("replay_" + cfg.destination.boardId)) > -1) {
+        if ((replaySht = cfg.wb.getSheetIndex("replay_" + cfg.destination.getBoardName())) > -1) {
             cfg.wb.removeSheetAt(replaySht);
         }
 
-        cfg.replaySheet = Utils.newChgSheet(cfg, "replay_" + cfg.destination.boardId);
+        cfg.replaySheet = XlUtils.newChgSheet(cfg, "replay_" + cfg.destination.getBoardName());
 
         // Now create a config to pass to the exporter so that we get a new destination
         // board data set. This is to maintain the standard exporter that only uses
@@ -128,24 +128,24 @@ public class Diff {
          * We should now have two set of sheets to compare: first item, second item
          */
         found = false;
-        if ((secondShtIdx = cfg.wb.getSheetIndex(cfg.destination.boardId)) > -1) {
-            cfg.wb.setSheetName(secondShtIdx, cfg.destination.boardId + "_" + dateNow);
+        if ((secondShtIdx = cfg.wb.getSheetIndex(cfg.destination.getBoardName())) > -1) {
+            cfg.wb.setSheetName(secondShtIdx, cfg.destination.getBoardName() + "_" + dateNow);
             if ((secondChgIdx = cfg.wb.getSheetIndex(
-                    InternalConfig.CHANGES_SHEET_NAME + cfg.destination.boardId)) > -1) {
+                    InternalConfig.CHANGES_SHEET_NAME + cfg.destination.getBoardName())) > -1) {
                 cfg.wb.setSheetName(secondChgIdx,
-                        InternalConfig.CHANGES_SHEET_NAME + cfg.destination.boardId + "_" + dateNow);
+                        InternalConfig.CHANGES_SHEET_NAME + cfg.destination.getBoardName() + "_" + dateNow);
                 found = true;
             }
         }
         if (!found) {
-            d.p(Debug.ERROR, "Oops! fetch of new data for board: %s failed\n", cfg.destination.boardId);
+            d.p(Debug.ERROR, "Oops! fetch of new data for board: %s failed\n", cfg.destination.getBoardName());
             // Don't need to undo anything as we haven't written the file out yet.
             System.exit(0);
         } else {
             if (saveShtIdx >= 0)
-                cfg.wb.setSheetName(saveShtIdx, cfg.destination.boardId);
+                cfg.wb.setSheetName(saveShtIdx, cfg.destination.getBoardName());
             if (saveCfgIdx >= 0)
-                cfg.wb.setSheetName(saveCfgIdx, InternalConfig.CHANGES_SHEET_NAME + cfg.destination.boardId);
+                cfg.wb.setSheetName(saveCfgIdx, InternalConfig.CHANGES_SHEET_NAME + cfg.destination.getBoardName());
         }
 
         /**
@@ -237,10 +237,10 @@ public class Diff {
             dr.createCell(localCellIdx++, CellType.STRING).setCellValue("lane");
             dr.createCell(localCellIdx++, CellType.STRING).setCellValue(lane);
 
-            Cell a = secondSht.getRow(idx).getCell(Utils.firstColumnFromSheet(secondSht, ColNames.SOURCE_ID));
-            Cell b = secondSht.getRow(idx).getCell(Utils.firstColumnFromSheet(secondSht, ColNames.ID));
+            Cell a = secondSht.getRow(idx).getCell(XlUtils.firstColumnFromSheet(secondSht, ColNames.SOURCE_ID));
+            Cell b = secondSht.getRow(idx).getCell(XlUtils.firstColumnFromSheet(secondSht, ColNames.ID));
             if (b == null) {
-                b = secondSht.getRow(idx).createCell(Utils.firstColumnFromSheet(secondSht, ColNames.ID));
+                b = secondSht.getRow(idx).createCell(XlUtils.firstColumnFromSheet(secondSht, ColNames.ID));
             }
             switch (a.getCellType()) {
                 case NUMERIC: {
@@ -290,7 +290,7 @@ public class Diff {
              */
             // First extract from this row the value of the one that is going to be
             // replicated
-            int col = Utils.firstColumnFromSheet(cfg.replaySheet, ColNames.ITEM_ROW);
+            int col = XlUtils.firstColumnFromSheet(cfg.replaySheet, ColNames.ITEM_ROW);
 
             String original = null;
             if (sr.getCell(col).getCellType().equals(CellType.STRING)) {
@@ -304,35 +304,35 @@ public class Diff {
             }
 
             // Then by using the mapped new ID....
-            sr = Utils.firstRowByStringValue(firstSht, ColNames.SOURCE_ID, original);
-            Integer lcol = Utils.firstColumnFromSheet(firstSht, ColNames.ID);
+            sr = XlUtils.firstRowByStringValue(firstSht, ColNames.SOURCE_ID, original);
+            Integer lcol = XlUtils.firstColumnFromSheet(firstSht, ColNames.ID);
             Cell lcl = sr.getCell(lcol);
             if (lcl == null) {
-                lcol = Utils.firstColumnFromSheet(firstSht, ColNames.SOURCE_ID);
+                lcol = XlUtils.firstColumnFromSheet(firstSht, ColNames.SOURCE_ID);
                 lcl = sr.getCell(lcol);
             }
             String newOne = lcl.getStringCellValue();
 
             // .... find all those rows that have "Modify" for that item.
-            createRows.addAll(Utils.getRowsByStringValue(icfg, icfg.wb.getSheetAt(firstChgIdx), ColNames.ITEM_ROW,
+            createRows.addAll(XlUtils.getRowsByStringValue(icfg, icfg.wb.getSheetAt(firstChgIdx), ColNames.ITEM_ROW,
                     newOne));
 
-            modifyRows.addAll(Utils.getRowsByStringValue(icfg, icfg.wb.getSheetAt(firstChgIdx), ColNames.VALUE,
+            modifyRows.addAll(XlUtils.getRowsByStringValue(icfg, icfg.wb.getSheetAt(firstChgIdx), ColNames.VALUE,
                     newOne));
         });
         //Need to put all 'Create' rows before 'Modify' rows because of parentage.
         createRows.forEach((row) -> {
-            if (row.getCell(Utils.firstColumnFromSheet(icfg.wb.getSheetAt(firstChgIdx), ColNames.ACTION))
+            if (row.getCell(XlUtils.firstColumnFromSheet(icfg.wb.getSheetAt(firstChgIdx), ColNames.ACTION))
                     .getStringCellValue().equals("Create")) {
                 Row ldr = cfg.replaySheet.createRow(cfg.replaySheet.getLastRowNum() + 1);
-                Utils.copyRow(row, ldr);
+                XlUtils.copyRow(row, ldr);
             }
         });
         modifyRows.forEach((row) -> {
-            if (row.getCell(Utils.firstColumnFromSheet(icfg.wb.getSheetAt(firstChgIdx), ColNames.ACTION))
+            if (row.getCell(XlUtils.firstColumnFromSheet(icfg.wb.getSheetAt(firstChgIdx), ColNames.ACTION))
                     .getStringCellValue().equals("Modify")) {
                 Row ldr = cfg.replaySheet.createRow(cfg.replaySheet.getLastRowNum() + 1);
-                Utils.copyRow(row, ldr);
+                XlUtils.copyRow(row, ldr);
             }
         });
 
@@ -342,15 +342,15 @@ public class Diff {
             /**
              * Need to compare the records
              */
-            Row lsrc = Utils.firstRowByStringValue(firstSht, ColNames.ID, itm);
+            Row lsrc = XlUtils.firstRowByStringValue(firstSht, ColNames.ID, itm);
             // On replay, we might be board to same board, so ID will not be set
             // by an importer
             if (lsrc == null) {
-                lsrc = Utils.firstRowByStringValue(firstSht, ColNames.SOURCE_ID, itm);
+                lsrc = XlUtils.firstRowByStringValue(firstSht, ColNames.SOURCE_ID, itm);
             }
             // src must be virtual 'final' in the lambda below
             Row src = lsrc;
-            Row dst = Utils.firstRowByStringValue(secondSht, ColNames.SOURCE_ID, itm);
+            Row dst = XlUtils.firstRowByStringValue(secondSht, ColNames.SOURCE_ID, itm);
 
             firstCols.forEach((item, indx) -> {
                 // src and ID are internal so we ignore
@@ -373,7 +373,7 @@ public class Diff {
                                 break;
                             }
                         }
-                        Cell dstCell = dst.getCell(Utils.firstColumnFromSheet(secondSht, item));
+                        Cell dstCell = dst.getCell(XlUtils.firstColumnFromSheet(secondSht, item));
                         String dstCellStr = null;
                         Double dstCellDbl = null;
                         boolean compTruth = false;
@@ -439,7 +439,7 @@ public class Diff {
         });
 
         /**
-         * Now we have a sheet called replay_<boardID> which we can get an Importer to
+         * Now we have a sheet called replay_<getBoardName()> which we can get an Importer to
          * execute if the
          * replay flag is set on the commandline
          */
@@ -451,6 +451,6 @@ public class Diff {
         /**
          * Open the output stream and send the file back out.
          */
-        Utils.writeFile(cfg, cfg.xlsxfn, cfg.wb);
+        XlUtils.writeFile(cfg, cfg.xlsxfn, cfg.wb);
     }
 }

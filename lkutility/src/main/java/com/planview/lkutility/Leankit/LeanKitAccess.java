@@ -10,16 +10,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.planview.lkutility.Configuration;
-import com.planview.lkutility.Debug;
-
+import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -29,6 +23,7 @@ import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.HttpMultipartMode;
@@ -44,9 +39,16 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.planview.lkutility.Access;
+import com.planview.lkutility.ColNames;
+import com.planview.lkutility.Debug;
+
 public class LeanKitAccess {
 
-	Configuration config = null;
+	Access config = null;
 	String reqType = null;
 	String reqUrl = null;
 	HttpEntity reqEnt = null;
@@ -56,26 +58,26 @@ public class LeanKitAccess {
 	PoolingHttpClientConnectionManager cm = null;
 	Debug d = new Debug();
 
-	public LeanKitAccess(Configuration configp, Integer debugLevel) {
+	public LeanKitAccess(Access configp, Integer debugLevel) {
 		config = configp;
 		d.setLevel(debugLevel);
 
 		// Check URL has a trailing '/' and remove
-		if (config.url.endsWith("/")) {
-			config.url = config.url.substring(0, config.url.length() - 1);
+		if (config.getUrl().endsWith("/")) {
+			config.setUrl(config.getUrl().substring(0, config.getUrl().length() - 1));
 		}
 		// We need to set to https later on
-		if (!config.url.startsWith("http")) {
-			config.url = "https://" + config.url;
-		} else if (config.url.startsWith("http://")) {
+		if (!config.getUrl().startsWith("http")) {
+			config.setUrl("https://" + config.getUrl());
+		} else if (config.getUrl().startsWith("http://")) {
 			d.p(Debug.WARN, "http access to leankit not supported. Switching to https");
-			config.url = "https://" + config.url.substring(7);
+			config.setUrl("https://" + config.getUrl().substring(7));
 		}
 
 	}
 
 	public String getCurrentUrl() {
-		return config.url;
+		return config.getUrl();
 	}
 
 	public <T> ArrayList<T> read(Class<T> expectedResponseType) {
@@ -92,55 +94,112 @@ public class LeanKitAccess {
 		}
 		JSONObject jresp = new JSONObject(bd);
 		// Convert to a type to return to caller.
-		if (bd != null) {
-			if (jresp.has("error") || jresp.has("statusCode")) {
-				d.p(Debug.ERROR, "\"%s\" gave response: \"%s\"\n", reqUrl, jresp.toString());
-				System.exit(1);
-			} else if (jresp.has("pageMeta")) {
-				JSONObject pageMeta = new JSONObject(jresp.get("pageMeta").toString());
 
-				int totalRecords = pageMeta.getInt("totalRecords");
+		if (jresp.has("error") || jresp.has("statusCode")) {
+			d.p(Debug.ERROR, "\"%s\" gave response: \"%s\"\n", reqUrl, jresp.toString());
+			System.exit(1);
+		} else if (jresp.has("pageMeta")) {
+			JSONObject pageMeta = new JSONObject(jresp.get("pageMeta").toString());
 
-				// Unfortunately, we need to know what sort of item to get out of the json
-				// object. Doh!
-				String fieldName = null;
-				ArrayList<T> items = new ArrayList<T>();
-				String[] typename = expectedResponseType.getName().split("\\.");
-				switch (typename[typename.length - 1]) {
-					case "Board":
-						fieldName = "boards";
-						break;
-					case "BoardUser":
-						fieldName = "boardUsers";
-						break;
-					case "User":
-						fieldName = "users";
-						break;
-					case "Card":
-					case "Task":
-						fieldName = "cards";
-						break;
-					case "Lane":
-						fieldName = "lanes";
-						break;
-					case "Comment":
-						fieldName = "comments";
-						break;
-					default:
-						d.p(Debug.ERROR, "Unsupported item type returned from server API: %s\n", bd);
-						return null;
+			int totalRecords = pageMeta.getInt("totalRecords");
 
+			// Unfortunately, we need to know what sort of item to get out of the json
+			// object. Doh!
+			String fieldName = null;
+			ArrayList<T> items = new ArrayList<T>();
+			String[] typename = expectedResponseType.getName().split("\\.");
+			switch (typename[typename.length - 1]) {
+				case "Board":
+					fieldName = "boards";
+					break;
+				case "BoardLevel":
+					fieldName = "boardLevels";
+					break;
+				case "BoardUser":
+					fieldName = "boardUsers";
+					break;
+				case "User":
+					fieldName = "users";
+					break;
+				case "Card":
+				case "Task":
+					fieldName = "cards";
+					break;
+				case "Lane":
+					fieldName = "lanes";
+					break;
+				case "Comment":
+					fieldName = "comments";
+					break;
+				default:
+					d.p(Debug.ERROR, "Unsupported item type requested from server API: %s\n", bd);
+					return null;
+			}
+			// Got something to return
+			ObjectMapper om = new ObjectMapper();
+			om.configure(DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY, true);
+			om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+			JSONArray p = (JSONArray) jresp.get(fieldName);
+			Integer accumulatedCount = pageMeta.getInt("endRow");
+
+			// if (accumulatedCount >= totalRecords) {
+			// Add the returned items to the array
+			for (int i = 0; i < p.length(); i++) {
+				try {
+					items.add(om.readValue(p.get(i).toString(), expectedResponseType));
+				} catch (JsonProcessingException | JSONException e) {
+					e.printStackTrace();
 				}
-				if (fieldName != null) {
-					// Got something to return
-					ObjectMapper om = new ObjectMapper();
-					om.configure(DeserializationFeature.USE_JAVA_ARRAY_FOR_JSON_ARRAY, true);
-					om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-					JSONArray p = (JSONArray) jresp.get(fieldName);
-					Integer accumulatedCount = pageMeta.getInt("endRow");
+			}
+			// } else {
+			/**
+			 * We start off assuming that we begin at zero. If we find that there are less
+			 * than there are available, we have to redo the processRequest with new offset
+			 * and limit params
+			 */
+			// Length here may be limited to 200 by the API paging.
+			d.p(Debug.VERBOSE, "Received %d %s (out of %d)\n", accumulatedCount,
+					fieldName.substring(0,
+							((accumulatedCount > 1) ? fieldName.length() : fieldName.length() - 1)),
+					totalRecords);
+			if (totalRecords > accumulatedCount) {
 
-					// if (accumulatedCount >= totalRecords) {
-					// Add the returned items to the array
+				Iterator<NameValuePair> it = reqParams.iterator();
+				int acc = 0, offsetIdx = -1;
+				while (it.hasNext()) {
+					NameValuePair vp = it.next();
+					if (vp.getName() == "offset") {
+						offsetIdx = acc;
+						break;
+					}
+					acc++;
+				}
+
+				if (offsetIdx >= 0) {
+					reqParams.remove(offsetIdx);
+					reqParams.add(new BasicNameValuePair("offset", accumulatedCount.toString()));
+					/**
+					 * This is slightly dangerous as it is a recursive call to get more stuff.
+					 */
+					ArrayList<T> childItems = readRaw(expectedResponseType);
+					if (childItems != null) {
+						items.addAll(childItems);
+					}
+					accumulatedCount = items.size();
+				}
+			}
+			return items;
+		} else {
+			ArrayList<T> items = new ArrayList<T>();
+			ObjectMapper om = new ObjectMapper();
+			om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+			switch (expectedResponseType.getSimpleName()) {
+				case "CardType":
+				case "Lane": {
+					// Getting CardTypes comes here, for example.
+					Iterator<String> sItor = jresp.keys();
+					String iStr = sItor.next();
+					JSONArray p = (JSONArray) jresp.get(iStr);
 					for (int i = 0; i < p.length(); i++) {
 						try {
 							items.add(om.readValue(p.get(i).toString(), expectedResponseType));
@@ -148,91 +207,44 @@ public class LeanKitAccess {
 							e.printStackTrace();
 						}
 					}
-					// } else {
-					/**
-					 * We start off assuming that we begin at zero. If we find that there are less
-					 * than there are available, we have to redo the processRequest with new offset
-					 * and limit params
-					 */
-					// Length here may be limited to 200 by the API paging.
-					d.p(Debug.VERBOSE, "Received %d %s (out of %d)\n", accumulatedCount,
-							fieldName.substring(0,
-									((accumulatedCount > 1) ? fieldName.length() : fieldName.length() - 1)),
-							totalRecords);
-					if (totalRecords > accumulatedCount) {
-
-						Iterator<NameValuePair> it = reqParams.iterator();
-						int acc = 0, offsetIdx = -1;
-						while (it.hasNext()) {
-							NameValuePair vp = it.next();
-							if (vp.getName() == "offset") {
-								offsetIdx = acc;
-								break;
-							}
-							acc++;
-						}
-
-						if (offsetIdx >= 0) {
-							reqParams.remove(offsetIdx);
-							reqParams.add(new BasicNameValuePair("offset", accumulatedCount.toString()));
-							/**
-							 * This is slightly dangerous as it is a recursive call to get more stuff.
-							 */
-							ArrayList<T> childItems = readRaw(expectedResponseType);
-							if (childItems != null) {
-								items.addAll(childItems);
-							}
-							accumulatedCount = items.size();
-						}
-					}
-					// }
-					return items;
+					break;
 				}
-
-			} else {
-				ArrayList<T> items = new ArrayList<T>();
-				ObjectMapper om = new ObjectMapper();
-				om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-				switch (expectedResponseType.getSimpleName()) {
-					case "CardType":
-					case "Lane": {
-						// Getting CardTypes comes here, for example.
-						Iterator<String> sItor = jresp.keys();
-						String iStr = sItor.next();
-						JSONArray p = (JSONArray) jresp.get(iStr);
-						for (int i = 0; i < p.length(); i++) {
-							try {
-								items.add(om.readValue(p.get(i).toString(), expectedResponseType));
-							} catch (JsonProcessingException | JSONException e) {
-								e.printStackTrace();
-							}
+				// Returning a single item from a search for example
+				case "Board": {
+					try {
+						JSONObject bdj = new JSONObject(bd);
+						// Cannot process one of these if we don't know what's going to be in there!!!!
+						if (bdj.has("userSettings")) {
+							bdj.remove("userSettings");
 						}
-						break;
+						if (bdj.has("integrations")) {
+							bdj.remove("integrations");
+						}
+						items.add(om.readValue(bdj.toString(), expectedResponseType));
+					} catch (JsonProcessingException e) {
+						e.printStackTrace();
 					}
-					// Returning a single item from a search for example
-					case "Board": {
+					break;
+				}
+				case "BoardLevel": {
+					JSONObject bdj = new JSONObject(bd);
+					JSONArray bdlvls = (JSONArray) bdj.get("boardLevels");
+					for (int i = 0; i < bdlvls.length(); i++) {
 						try {
-							JSONObject bdj = new JSONObject(bd);
-							// Cannot process one of these if we don't know what's going to be in there!!!!
-							if (bdj.has("userSettings")) {
-								bdj.remove("userSettings");
-							}
-							if (bdj.has("integrations")) {
-								bdj.remove("integrations");
-							}
-							items.add(om.readValue(bdj.toString(), expectedResponseType));
-						} catch (JsonProcessingException e) {
+							items.add(om.readValue(bdlvls.get(i).toString(), expectedResponseType));
+						} catch (JsonProcessingException | JSONException e) {
 							e.printStackTrace();
 						}
-						break;
 					}
-					default: {
-						d.p(Debug.ERROR, "oops! don't recognise requested item type\n");
-						System.exit(2);
-					}
+					break;
 				}
-				return items;
+				default: {
+					d.p(Debug.ERROR, "oops! don't recognise requested item type \"%s\"\n",
+							expectedResponseType.getSimpleName());
+					System.exit(2);
+				}
 			}
+			return items;
 		}
 		return null;
 	}
@@ -255,6 +267,7 @@ public class LeanKitAccess {
 		if (result != null) {
 			ObjectMapper om = new ObjectMapper();
 			om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+			om.configure(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT, true);
 			try {
 				return om.readValue(result, expectedResponseType);
 			} catch (JsonProcessingException e) {
@@ -290,18 +303,21 @@ public class LeanKitAccess {
 		HttpEntity result = null;
 		try {
 			// Add the user credentials to the request
-			if (config.apiKey != null) {
-				reqHdrs.add(new BasicNameValuePair("Authorization", "Bearer " + config.apiKey));
+			if (config.getApiKey() != null) {
+				reqHdrs.add(new BasicNameValuePair("Authorization", "Bearer " + config.getApiKey()));
 			} else {
-				String creds = config.username + ":" + config.password;
-				reqHdrs.add(new BasicNameValuePair("Authorization",
-						"Basic " + Base64.getEncoder().encode(creds.getBytes())));
+				d.p(Debug.ERROR, "No valid apiKey provided to LKA\n");
 			}
 			HttpRequestBase request = null;
 			switch (reqType) {
 				case "POST": {
 					request = new HttpPost(reqUrl);
 					((HttpPost) request).setEntity(reqEnt);
+					break;
+				}
+				case "PUT": {
+					request = new HttpPut(reqUrl);
+					((HttpPut) request).setEntity(reqEnt);
 					break;
 				}
 				case "DELETE": {
@@ -330,8 +346,11 @@ public class LeanKitAccess {
 			if (bldr.length() > 0) {
 				bldr = "?" + bldr.substring(1);
 			}
-			request.setURI(new URI(config.url + reqUrl + bldr));
+			request.setURI(new URI(config.getUrl() + reqUrl + bldr));
 			d.p(Debug.VERBOSE, "%s\n", request.toString());
+			if (reqEnt != null) { 
+				d.p(Debug.VERBOSE, "Content: %s\n",IOUtils.toString(reqEnt.getContent(), "UTF-8")); 
+			}
 			httpResponse = client.execute(request);
 			d.p(Debug.VERBOSE, "%s\n", httpResponse.getStatusLine());
 
@@ -361,9 +380,9 @@ public class LeanKitAccess {
 					break;
 				}
 				case 429: { // Flow control
-					LocalDateTime retryAfter = LocalDateTime.parse(httpResponse.getHeaders("retry-after")[0].getValue(),
+					LocalDateTime retryAfter = LocalDateTime.parse(httpResponse.getFirstHeader("retry-after").getValue(),
 							DateTimeFormatter.RFC_1123_DATE_TIME);
-					LocalDateTime serverTime = LocalDateTime.parse(httpResponse.getHeaders("date")[0].getValue(),
+					LocalDateTime serverTime = LocalDateTime.parse(httpResponse.getFirstHeader("date").getValue(),
 							DateTimeFormatter.RFC_1123_DATE_TIME);
 					Long timeDiff = ChronoUnit.MILLIS.between(serverTime, retryAfter);
 					d.p(Debug.INFO, "Received 429 status. waiting %.2f seconds\n", ((1.0 * timeDiff) / 1000.0));
@@ -383,6 +402,11 @@ public class LeanKitAccess {
 				}
 				case 404: { // Item not found
 					d.p(Debug.WARN, "Item not found: %s\n", httpResponse.toString());
+					break;
+				}
+				case 409: { // Conflict
+					d.p(Debug.WARN, "Conflict Error in request: %s \n%s\n", request.toString(),
+							EntityUtils.toString(httpResponse.getEntity()));
 					break;
 				}
 				case 408: // Request timeout - try your luck with another one....
@@ -421,11 +445,22 @@ public class LeanKitAccess {
 		return result;
 	}
 
+	public ArrayList<BoardLevel> fetchBoardLevels() {
+		reqType = "GET";
+		reqUrl = "/io/boardLevel";
+		reqParams.clear();
+		reqHdrs.clear();
+		reqEnt = null;
+		ArrayList<BoardLevel> levels = read(BoardLevel.class);
+		return levels;
+	}
+
 	public ArrayList<CardType> fetchCardTypes(String boardId) {
 		reqType = "GET";
 		reqUrl = "/io/board/" + boardId + "/cardType";
 		reqParams.clear();
 		reqHdrs.clear();
+		reqEnt = null;
 		reqParams.add(new BasicNameValuePair("limit", "200"));
 		reqParams.add(new BasicNameValuePair("offset", "0"));
 		ArrayList<CardType> brd = read(CardType.class);
@@ -442,6 +477,7 @@ public class LeanKitAccess {
 		reqUrl = "/io/board/" + boardId + "/";
 		reqParams.clear();
 		reqHdrs.clear();
+		reqEnt = null;
 		ArrayList<Board> brd = read(Board.class);
 		if (brd != null) {
 			if (brd.size() > 0) {
@@ -456,6 +492,7 @@ public class LeanKitAccess {
 		reqUrl = "/io/card/" + cardId + "/taskboard";
 		reqParams.clear();
 		reqHdrs.clear();
+		reqEnt = null;
 		ArrayList<Lane> lanes = read(Lane.class);
 		return lanes;
 	}
@@ -465,6 +502,7 @@ public class LeanKitAccess {
 		reqUrl = "io/card/" + cardId + "/tasks";
 		reqParams.clear();
 		reqHdrs.clear();
+		reqEnt = null;
 		reqParams.add(new BasicNameValuePair("limit", "200"));
 		reqParams.add(new BasicNameValuePair("offset", "0"));
 		ArrayList<Task> tasks = read(Task.class);
@@ -477,6 +515,7 @@ public class LeanKitAccess {
 		reqParams.clear();
 		reqParams.add(new BasicNameValuePair("only", "id"));
 		reqHdrs.clear();
+		reqEnt = null;
 		reqParams.add(new BasicNameValuePair("limit", "200"));
 		reqParams.add(new BasicNameValuePair("offset", "0"));
 		ArrayList<Task> tasks = read(Task.class);
@@ -488,6 +527,7 @@ public class LeanKitAccess {
 		reqHdrs.clear();
 		reqType = "GET";
 		reqUrl = "/io/board";
+		reqEnt = null;
 		reqParams.add(new BasicNameValuePair("search", name));
 
 		// Once you get the boards, you could cache them. There may be loads, but
@@ -496,16 +536,40 @@ public class LeanKitAccess {
 		return read(Board.class);
 	}
 
-	public void deleteCards(ArrayList<Card> cards) {
-		for (int i = 0; i < cards.size(); i++) {
-			d.p(Debug.INFO, "Deleting card %s\n", cards.get(i).id);
+	public Board updateBoardById(String id, JSONObject updates) {
+		reqHdrs.clear();
+		reqType = "PATCH";
+		reqUrl = "/io/board/" + id;
+		reqEnt = new StringEntity(updates.toString(), "UTF-8");
+		reqParams.clear();
+		return execute(Board.class);
+	}
 
-			reqType = "DELETE";
-			reqHdrs.clear();
-			reqParams.clear();
-			reqUrl = "/io/card/" + cards.get(i).id;
-			processRequest();
-		}
+	public String archiveBoard(String id) {
+		reqType = "POST";
+		reqUrl = "/io/board/" + id + "/archive";
+		reqParams.clear();
+		reqHdrs.clear();
+		reqEnt = null;
+		return processRequest();
+	}
+
+	public String deleteCard(String id) {
+		reqType = "DELETE";
+		reqHdrs.clear();
+		reqParams.clear();
+		reqUrl = "/io/card/" + id;
+		reqEnt = null;
+		return processRequest();
+	}
+
+	public String deleteBoard(String id) {
+		reqType = "DELETE";
+		reqHdrs.clear();
+		reqParams.clear();
+		reqUrl = "/io/board/" + id;
+		reqEnt = null;
+		return processRequest();
 	}
 
 	public ArrayList<Comment> fetchCommentsForCard(Card cd) {
@@ -515,6 +579,7 @@ public class LeanKitAccess {
 		reqParams.add(new BasicNameValuePair("offset", "0"));
 		reqType = "GET";
 		reqUrl = "/io/card/" + cd.id + "/comment";
+		reqEnt = null;
 		return read(Comment.class);
 	}
 
@@ -534,6 +599,7 @@ public class LeanKitAccess {
 		reqHdrs.clear();
 		reqType = "GET";
 		reqUrl = "/io/card";
+		reqEnt = null;
 		if (includeArchived) {
 			reqParams.add(new BasicNameValuePair("lane_class_types", "backlog,active,archive"));
 			reqParams.add(new BasicNameValuePair("deleted", "0"));
@@ -544,15 +610,36 @@ public class LeanKitAccess {
 		return read(Card.class);
 	}
 
+	public Board fetchBoardFromTitle(String BoardName) {
+		reqType = "GET";
+		reqParams.clear();
+		reqHdrs.clear();
+		reqEnt = null;
+		try {
+			reqUrl = "/io/board?search=" + URLEncoder.encode(BoardName, "UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			d.p(Debug.ERROR, "Cannot encode board name %s\n", BoardName);
+			return null;
+		}
+		ArrayList<Board> boards = read(Board.class);
+		for (int i = 0; i < boards.size(); i++) {
+			if (boards.get(i).title.equals(BoardName)) {
+				return boards.get(i);
+			}
+		}
+		return null;
+	}
+
 	public Board fetchBoardFromId(String id) {
 		reqType = "GET";
 		reqParams.clear();
 		reqHdrs.clear();
 		reqUrl = "/io/board/" + id;
+		reqEnt = null;
 		reqParams.add(new BasicNameValuePair("returnFullRecord", "true"));
 
 		ArrayList<Board> results = read(Board.class);
-		if (results != null) {
+		if ((results != null) && (results.size() > 0)) {
 			return results.get(0);
 		}
 		return null;
@@ -562,6 +649,7 @@ public class LeanKitAccess {
 		reqType = "GET";
 		reqParams.clear();
 		reqHdrs.clear();
+		reqEnt = null;
 		reqUrl = "/io/card/" + cardId + "/attachment/" + attId + "/content";
 
 		HttpEntity he = processRawRequest();
@@ -652,9 +740,7 @@ public class LeanKitAccess {
 		MultipartEntityBuilder mpeb = MultipartEntityBuilder.create().setMode(HttpMultipartMode.BROWSER_COMPATIBLE)
 				.addTextBody("Description", "Auto-generated from Script").addPart("file", fb);
 		reqEnt = mpeb.build();
-
-		String status = processRequest();
-		return status;
+		return processRequest();
 	}
 
 	private Card prioritiseCard(Card card, int idx) {
@@ -703,7 +789,7 @@ public class LeanKitAccess {
 	 * Must have a unique title string or returns null
 	 * 
 	 * @param boardId
-	 *  Restrict search to this board or null, if global
+	 *                Restrict search to this board or null, if global
 	 * @param title
 	 * @return single card or null
 	 */
@@ -714,20 +800,22 @@ public class LeanKitAccess {
 		reqHdrs.clear();
 		String encoded = null;
 		try {
-			//Quote the string so we don't get partial matches
-			encoded = URLEncoder.encode("\""+title+"\"", "UTF-8").replaceAll("\\+","%20");
+			// Quote the string so we don't get partial matches
+			encoded = URLEncoder.encode("\"" + title + "\"", "UTF-8");
 
 		} catch (UnsupportedEncodingException e) {
 			// Encoder needs a try/catch, so we just print and continue
 			e.printStackTrace();
 		}
-		if (boardId != null){
-			reqParams.add(new BasicNameValuePair("board", boardId));
-		}
 		reqParams.add(new BasicNameValuePair("search", encoded));
-		reqParams.add(new BasicNameValuePair("returnFullRecord", "true"));
+		reqParams.add(new BasicNameValuePair("board", boardId));
 		ArrayList<Card> cards = read(Card.class);
-		return (cards.size() != 1) ? null : cards.get(0);
+		for (int i = 0; i < cards.size(); i++) {
+			if (cards.get(i).title.equals(title)) {
+				return cards.get(i);
+			}
+		}
+		return null;
 	}
 
 	public ArrayList<BoardUser> fetchUsers(String boardId) {
@@ -762,7 +850,7 @@ public class LeanKitAccess {
 			String key = keys.next();
 			JSONObject values = (JSONObject) updates.get(key);
 			switch (key) {
-				case "blockReason": {
+				case ColNames.BLOCKED_REASON: {
 					if (values.get("value").toString().length() <= 1) {
 
 						JSONObject upd = new JSONObject();
@@ -834,7 +922,7 @@ public class LeanKitAccess {
 					}
 					break;
 				}
-				case "tags": {
+				case ColNames.TAGS: {
 					// Need to add or remove based on what we already have?
 					// Or does add/remove ignore duplicate calls. Trying this first.....
 					if (values.get("value").toString().toString().startsWith("-")) {
@@ -855,7 +943,7 @@ public class LeanKitAccess {
 					}
 					break;
 				}
-				case "assignedUsers": {
+				case ColNames.ASSIGNED_USERS: {
 					// Need to add or remove based on what we already have?
 					// Or does add/remove ignore duplicate calls. Trying this first.....
 					if (values.get("value").toString().startsWith("-")) {
@@ -873,7 +961,7 @@ public class LeanKitAccess {
 					}
 					break;
 				}
-				case "externalLink": {
+				case ColNames.EXTERNAL_LINK: {
 					JSONObject link = new JSONObject();
 					JSONObject upd = new JSONObject();
 					String[] bits = values.get("value").toString().split(",");
@@ -890,7 +978,7 @@ public class LeanKitAccess {
 					jsa.put(upd);
 					break;
 				}
-				case "customIcon": {
+				case ColNames.CUSTOM_ICON: {
 					if (brd.classOfServiceEnabled) {
 						if (brd.classesOfService != null) {
 							for (int i = 0; i < brd.classesOfService.length; i++) {
@@ -916,7 +1004,7 @@ public class LeanKitAccess {
 					postComment(card.id, values.get("value").toString());
 					break;
 				}
-				case "index": {
+				case ColNames.INDEX: {
 					prioritiseCard(card, values.getInt("value"));
 				}
 				case "Task": {
@@ -943,7 +1031,7 @@ public class LeanKitAccess {
 					break;
 				}
 				// Mismatch between UI and database in LK.
-				case "priority": {
+				case ColNames.PRIORITY: {
 					JSONObject upd = new JSONObject();
 					upd.put("op", "replace");
 					upd.put("path", "/" + key);
@@ -971,9 +1059,6 @@ public class LeanKitAccess {
 
 	public Card createCard(JSONObject jItem) {
 
-		/**
-		 * We have to 'translate' some fields as we do for updateCard
-		 */
 		reqType = "POST";
 		reqUrl = "/io/card/";
 		reqParams.clear();
@@ -982,14 +1067,14 @@ public class LeanKitAccess {
 		return execute(Card.class);
 	}
 
-	public Id createCardID() {
-		JSONObject jItem = new JSONObject();
+	public Board createBoard(JSONObject jItem) {
+
 		reqType = "POST";
+		reqUrl = "/io/board/";
 		reqParams.clear();
 		reqParams.add(new BasicNameValuePair("returnFullRecord", "true"));
-		reqUrl = "/io/card/";
 		reqEnt = new StringEntity(jItem.toString(), "UTF-8");
-		return execute(Id.class);
+		return execute(Board.class);
 	}
 
 	public Card addTaskToCard(String cardId, JSONObject item) {
@@ -1030,5 +1115,77 @@ public class LeanKitAccess {
 			e.printStackTrace();
 		}
 		return null;
+	}
+
+	public LevelIds updateBoardLevels(JSONObject levels) {
+		reqType = "PUT";
+		reqUrl = "/io/boardLevel/";
+		reqParams.clear();
+		reqHdrs.clear();
+		reqEnt = new StringEntity(levels.toString(), "UTF-8");
+		return execute(LevelIds.class);
+	}
+
+	public CustomIcon createCustomIcon(String bId, JSONObject ci) {
+		reqType = "POST";
+		reqUrl = "/io/board/" + bId + "/customIcon";
+		reqParams.clear();
+		reqHdrs.clear();
+		reqEnt = new StringEntity(ci.toString(), "UTF-8");
+		return execute(CustomIcon.class);
+	}
+
+	public Layout updateBoardLayout(String bId, JSONObject lyt) {
+		reqType = "PUT";
+		reqUrl = "/io/board/" + bId + "/layout";
+		reqParams.clear();
+		reqHdrs.clear();
+		reqEnt = new StringEntity(lyt.toString(), "UTF-8");
+		return execute(Layout.class);
+	}
+
+	public String deleteCardType(String brdId, String id) {
+		reqType = "DELETE";
+		reqHdrs.clear();
+		reqParams.clear();
+		reqUrl = "/io/board/" + brdId + "/cardType/" + id;
+		reqEnt = null;
+		return processRequest();
+	}
+	
+	public CardType updateCardType(String brdId, String id, JSONObject updates) {
+		reqHdrs.clear();
+		reqType = "PATCH";
+		reqUrl = "/io/board/" + brdId + "/cardType/" + id;
+		reqEnt = new StringEntity(updates.toString(), "UTF-8");
+		reqParams.clear();
+		return execute(CardType.class);
+	}
+
+	public CardType addCardType(String bId, JSONObject card) {
+		reqType = "POST";
+		reqUrl = "/io/board/" + bId + "/cardType";
+		reqParams.clear();
+		reqHdrs.clear();
+		reqEnt = new StringEntity(card.toString(), "UTF-8");
+		return execute(CardType.class);
+	}
+
+	public CustomField updateCustomField(String brdId, JSONArray op) {
+		reqHdrs.clear();
+		reqType = "PATCH";
+		reqUrl = "/io/board/" + brdId + "/customField";
+		reqEnt = new StringEntity(op.toString(), "UTF-8");
+		reqParams.clear();
+		return execute(CustomField.class);
+	}
+
+	public Lane updateLane(String brdId, String id, JSONObject updates) {
+		reqHdrs.clear();
+		reqType = "PATCH";
+		reqUrl = "/io/board/" + brdId + "/lane/" + id;
+		reqEnt = new StringEntity(updates.toString(), "UTF-8");
+		reqParams.clear();
+		return execute(Lane.class);
 	}
 }

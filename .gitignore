@@ -6,5 +6,6 @@ lkutility/target/*
 .classpath
 .project
 attachments
-a.xlsx
-logfile.txt
+!Example export.xlsx
+*.xlsx
+*.txt

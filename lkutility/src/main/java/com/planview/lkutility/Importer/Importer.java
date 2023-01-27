@@ -15,9 +15,11 @@ import com.planview.lkutility.ChangesColumns;
 import com.planview.lkutility.ColNames;
 import com.planview.lkutility.Debug;
 import com.planview.lkutility.InternalConfig;
+import com.planview.lkutility.LkUtils;
 import com.planview.lkutility.SupportedXlsxFields;
-import com.planview.lkutility.Utils;
+import com.planview.lkutility.XlUtils;
 import com.planview.lkutility.leankit.AccessCache;
+import com.planview.lkutility.leankit.Board;
 import com.planview.lkutility.leankit.BoardUser;
 import com.planview.lkutility.leankit.Card;
 import com.planview.lkutility.leankit.CustomField;
@@ -33,12 +35,10 @@ public class Importer {
 	public Importer(InternalConfig config) {
 		cfg = config;
 		d.setLevel(cfg.debugLevel);
-		Utils.d.setLevel(cfg.debugLevel);
+		XlUtils.d.setLevel(cfg.debugLevel);
 	}
 
 	public void go() {
-
-		cfg.cache = new AccessCache(cfg, cfg.destination);
 
 		d.p(Debug.ALWAYS, "Starting Import at: %s\n", new Date());
 		/**
@@ -47,14 +47,14 @@ public class Importer {
 		 */
 
 		if (cfg.changesSheet == null) {
-			cfg.changesSheet = cfg.wb.getSheet(InternalConfig.CHANGES_SHEET_NAME + cfg.source.boardId);
+			cfg.changesSheet = cfg.wb.getSheet(XlUtils.validateSheetName(InternalConfig.CHANGES_SHEET_NAME + cfg.source.getBoardName()));
 		}
 
 		if (null == cfg.changesSheet) {
 			d.p(Debug.ERROR, "Cannot find required Changes sheet in file: %s\n", cfg.xlsxfn);
 			System.exit(1);
 		}
-		ChangesColumns cc = Utils.checkChangeSheetColumns(cfg.changesSheet);
+		ChangesColumns cc = XlUtils.checkChangeSheetColumns(cfg.changesSheet);
 		if (cc == null) {
 			System.exit(1);
 		}
@@ -102,9 +102,9 @@ public class Importer {
 			XSSFSheet iSht = cfg.wb.getSheet(ca.getSheetName());
 			item = iSht.getRow(ca.getRow());
 
-			Integer idCol = Utils.firstColumnFromSheet(iSht, ColNames.ID);
-			Integer titleCol = Utils.firstColumnFromSheet(iSht, "title");
-			Integer typeCol = Utils.firstColumnFromSheet(iSht, "type");
+			Integer idCol = XlUtils.firstColumnFromSheet(iSht, ColNames.ID);
+			Integer titleCol = XlUtils.firstColumnFromSheet(iSht, "title");
+			Integer typeCol = XlUtils.firstColumnFromSheet(iSht, "type");
 
 			if ((idCol == null) || (titleCol == null)) {
 				d.p(Debug.WARN, "Cannot locate \"ID\" and \"title\" columns needed in sheet \"%s\" - skipping\n",
@@ -183,14 +183,14 @@ public class Importer {
 				d.p(Debug.ERROR, "%s",
 						"Got null back from doAction(). Most likely card deleted, but ID still in spreadsheet!\n");
 			} else {
-				Utils.writeFile(cfg, cfg.xlsxfn, cfg.wb);
+				XlUtils.writeFile(cfg, cfg.xlsxfn, cfg.wb);
 			}
 		}
 	}
 
 	private String doAction(Row change, Row item) {
 
-		ChangesColumns cc = Utils.checkChangeSheetColumns(cfg.changesSheet);
+		ChangesColumns cc = XlUtils.checkChangeSheetColumns(cfg.changesSheet);
 		String cf = change.getCell(cc.row).getCellFormula();
 		CellReference ca = new CellReference(cf);
 		XSSFSheet iSht = cfg.wb.getSheet(ca.getSheetName());
@@ -234,16 +234,17 @@ public class Importer {
 		if (change.getCell(cc.action).getStringCellValue().equalsIgnoreCase("Create")) {
 			// Now 'translate' the spreadsheet name:col pairs to fieldName:value pairs
 
-			JSONObject flds = Utils.jsonCardFromRow(cfg, cfg.destination, fieldLst, item, null);
+			JSONObject flds = XlUtils.jsonCardFromRow(cfg, cfg.destination, fieldLst, item, null);
 
 			// We need to find the ID of the board that this is targetting for a card
 			// creation
-			if (!fieldLst.has("boardId")) {
-				flds.put("boardId", cfg.destination.boardId);
+			Board dst = LkUtils.getBoardByTitle(cfg, cfg.destination);
+			if (!fieldLst.has("boardId") &&(dst != null)) {
+				flds.put("boardId", dst.id);
 			} else {
-				flds.put("boardId", Utils.fetchCell(item, fieldLst.getInt("boardId")));
+				flds.put("boardId", XlUtils.getCell(item, fieldLst.getInt("boardId")));
 			}
-			Card card = Utils.createCard(cfg, cfg.destination, flds); // Change from human readable to API fields on
+			Card card = LkUtils.createCard(cfg, cfg.destination, flds); // Change from human readable to API fields on
 			// the way
 			if (card == null) {
 				d.p(Debug.ERROR, "Could not create card on board \"%s\" with details: \"%s\"\n", flds.get("boardId"),
@@ -254,7 +255,7 @@ public class Importer {
 
 		} else if (change.getCell(cc.action).getStringCellValue().equalsIgnoreCase("Modify")) {
 			// Fetch the ID from the item and then fetch that card
-			Card card = Utils.getCard(cfg, item.getCell(idCol).getStringCellValue());
+			Card card = LkUtils.getCard(cfg, cfg.destination, item.getCell(idCol).getStringCellValue());
 			Card newCard = null;
 
 			if (card == null) {
@@ -283,12 +284,12 @@ public class Importer {
 							XSSFSheet cSheet = cfg.wb.getSheet(tca.getSheetName());
 							Row task = cSheet.getRow(tca.getRow());
 
-							JSONObject jsonTask = Utils.jsonCardFromRow(cfg, cfg.destination, fieldLst, task, card.id);
+							JSONObject jsonTask = XlUtils.jsonCardFromRow(cfg, cfg.destination, fieldLst, task, card.id);
 							if (task.getCell(idCol) == null) {
 
 								task.createCell(idCol);
 							}
-							task.getCell(idCol).setCellValue(Utils.addTask(cfg, cfg.destination, card.id, jsonTask).id);
+							task.getCell(idCol).setCellValue(LkUtils.addTask(cfg, cfg.destination, card.id, jsonTask).id);
 							break;
 						}
 						case "assignedUsers": {
@@ -298,7 +299,7 @@ public class Importer {
 							 */
 							String usersList = change.getCell(cc.value).getStringCellValue();
 							if (usersList != null) {
-								ArrayList<BoardUser> boardUsers = Utils.fetchUsers(cfg, cfg.destination); // Fetch the
+								ArrayList<BoardUser> boardUsers = LkUtils.getUsers(cfg, cfg.destination); // Fetch the
 																											// board
 																											// users
 								if (boardUsers != null) {
@@ -307,7 +308,7 @@ public class Importer {
 										String[] users = usersList.split(",");
 										ArrayList<String> usersToPut = new ArrayList<>();
 										for (int i = 0; i < users.length; i++) {
-											User realUser = Utils.fetchUser(cfg, cfg.destination, users[i]);
+											User realUser = LkUtils.getUser(cfg, cfg.destination, users[i]);
 
 											// Check if they are a board user so we don't error.
 											for (int j = 0; j < boardUsers.size(); j++) {
@@ -325,14 +326,35 @@ public class Importer {
 						case "customIcon": {
 							// Incoming customIcon value is a name. We need to translate to
 							// an id
-							CustomIcon ci = Utils.findCustomIcon(cfg, cfg.destination, field);
-							vals.put("value", ci.id);
-							fld.put("customIconId", vals);
+							Cell cstmcell = change.getCell(cc.value);
+							String cstmval = null;
+							switch (cstmcell.getCellType()) {
+								case FORMULA: {
+									String ccf = cstmcell.getCellFormula();
+									CellReference cca = new CellReference(ccf);
+									XSSFSheet cSheet = cfg.wb.getSheet(cca.getSheetName());
+									Row target = cSheet.getRow(cca.getRow());
+									cstmval = target.getCell(cca.getCol()).getStringCellValue();
+									break;
+								}
+								case STRING: {
+									cstmval = cstmcell.getStringCellValue();
+									break;
+								}
+								default: {
+									break;
+								}
+							}
+							CustomIcon ci = LkUtils.getCustomIcon(cfg, cfg.destination, cstmval);
+							if (ci != null) {
+								vals.put("value", ci.id);
+								fld.put("customIconId", vals);
+							}
 							break;
 						}
 						case "lane": {
-							String[] bits = ((String) Utils.fetchCell(change, cc.value)).split(",");
-							Lane foundLane = Utils.findLaneFromBoard(cfg, cfg.destination, cfg.destination.boardId,
+							String[] bits = ((String) XlUtils.getCell(change, cc.value)).split(InternalConfig.WIP_LIMIT_SEPARATOR);
+							Lane foundLane = LkUtils.getLaneFromBoardTitle(cfg, cfg.destination, cfg.destination.getBoardName(),
 									bits[0]);
 							if (foundLane != null) {
 								vals.put("value", foundLane.id);
@@ -349,12 +371,12 @@ public class Importer {
 								// Get the parentID originally associated with this card
 								String parentId = change.getCell(cc.value).getStringCellValue();
 								// Find the row with that ID in it
-								Row parentRow = Utils.firstRowByStringValue(iSht, "srcID", parentId);
+								Row parentRow = XlUtils.firstRowByStringValue(iSht, "srcID", parentId);
 								//Get the title for that parent
-								String parentTitle = ((String) Utils.fetchCell(parentRow,
-										Utils.firstColumnFromSheet(iSht, "title")));
+								String parentTitle = ((String) XlUtils.getCell(parentRow,
+									XlUtils.firstColumnFromSheet(iSht, "title")));
 								//Get the latest version of it regardless of the original
-								Card crd = Utils.findCardByTitle(cfg, cfg.destination, parentTitle);
+								Card crd = LkUtils.getCardByTitle(cfg, cfg.destination, parentTitle);
 								if ((crd != null) && (crd.id != null)) {
 									vals.put("value", crd.id);
 									fld.put(field, vals);
@@ -367,13 +389,13 @@ public class Importer {
 						default: {
 							// Check if this is a standard/custom field and redo the 'put'
 
-							CustomField ctmf = Utils.findCustomField(cfg, cfg.destination, field);
+							CustomField ctmf = LkUtils.getCustomField(cfg, cfg.destination, field);
 							if (ctmf != null) {
 								vals.put("value", field);
-								vals.put("value2", Utils.fetchCell(change, cc.value));
+								vals.put("value2", XlUtils.getCell(change, cc.value));
 								fld.put("CustomField", vals);
 							} else {
-								vals.put("value", Utils.fetchCell(change, cc.value));
+								vals.put("value", XlUtils.getCell(change, cc.value));
 								fld.put(field, vals);
 							}
 
@@ -382,10 +404,10 @@ public class Importer {
 					}
 				}
 
-				newCard = Utils.updateCard(cfg, cfg.destination, card.id, fld);
+				newCard = LkUtils.updateCard(cfg, cfg.destination, card.id, fld);
 				if (newCard == null) {
 					d.p(Debug.ERROR, "Could not modify card \"%s\" on board %s with details: %s", card.id,
-							cfg.destination.boardId, fld.toString());
+							cfg.destination.getBoardName(), fld.toString());
 					System.exit(17);
 				}
 				return card.id;
