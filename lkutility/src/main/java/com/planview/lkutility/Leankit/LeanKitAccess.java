@@ -1,4 +1,4 @@
-package com.planview.lkutility.leankit;
+package com.planview.lkutility.Leankit;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,7 +19,6 @@ import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.ParseException;
 import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
@@ -42,9 +41,9 @@ import org.json.JSONObject;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.planview.lkutility.Access;
-import com.planview.lkutility.ColNames;
-import com.planview.lkutility.Debug;
+import com.planview.lkutility.System.Access;
+import com.planview.lkutility.System.ColNames;
+import com.planview.lkutility.System.Debug;
 
 public class LeanKitAccess {
 
@@ -259,7 +258,6 @@ public class LeanKitAccess {
 	 */
 
 	public <T> T execute(Class<T> expectedResponseType) {
-		reqHdrs.clear();
 		reqHdrs.add(new BasicNameValuePair("Accept", "application/json"));
 		reqHdrs.add(new BasicNameValuePair("Content-type", "application/json"));
 
@@ -302,12 +300,7 @@ public class LeanKitAccess {
 		HttpResponse httpResponse = null;
 		HttpEntity result = null;
 		try {
-			// Add the user credentials to the request
-			if (config.getApiKey() != null) {
-				reqHdrs.add(new BasicNameValuePair("Authorization", "Bearer " + config.getApiKey()));
-			} else {
-				d.p(Debug.ERROR, "No valid apiKey provided to LKA\n");
-			}
+			
 			HttpRequestBase request = null;
 			switch (reqType) {
 				case "POST": {
@@ -321,7 +314,12 @@ public class LeanKitAccess {
 					break;
 				}
 				case "DELETE": {
-					request = new HttpDelete(reqUrl);
+					
+					request = new HttpPost();
+					if (reqEnt != null) {
+						((HttpPost) request).setEntity(reqEnt);
+					}
+					request.addHeader("X-HTTP-Method-Override", "DELETE");
 					break;
 				}
 				case "PATCH": {
@@ -337,7 +335,17 @@ public class LeanKitAccess {
 
 			for (int i = 0; i < reqHdrs.size(); i++) {
 				request.addHeader(reqHdrs.get(i).getName(), reqHdrs.get(i).getValue());
+				d.p(Debug.VERBOSE, "Adding Header \"%s\" as \"%s\"\n", reqHdrs.get(i).getName(), reqHdrs.get(i).getValue());
 			}
+
+			// Add the user credentials to the request
+			if (config.getApiKey() != null) {
+				request.addHeader("Authorization", "Bearer " + config.getApiKey());
+				d.p(Debug.VERBOSE, "Adding Bearer starting with \"%s...\"\n", config.getApiKey().substring(0, 5));
+			} else {
+				d.p(Debug.ERROR, "No valid apiKey provided to LKA\n");
+			}
+
 			String bldr = "";
 			Iterator<NameValuePair> rpi = reqParams.iterator();
 			while (rpi.hasNext()) {
@@ -499,7 +507,7 @@ public class LeanKitAccess {
 
 	public ArrayList<Task> fetchTasks(String cardId) {
 		reqType = "GET";
-		reqUrl = "io/card/" + cardId + "/tasks";
+		reqUrl = "/io/card/" + cardId + "/tasks";
 		reqParams.clear();
 		reqHdrs.clear();
 		reqEnt = null;
@@ -561,6 +569,17 @@ public class LeanKitAccess {
 		reqUrl = "/io/card/" + id;
 		reqEnt = null;
 		return processRequest();
+	}
+	
+	public String deleteCards(String[] ids) {
+		reqType = "DELETE";
+		reqHdrs.clear();
+		reqParams.clear();
+		reqUrl = "/io/card";
+		JSONObject jso = new JSONObject();
+		jso.put("cardIds",ids);
+		reqEnt = new StringEntity(jso.toString(), "UTF-8");
+		return execute(String.class);
 	}
 
 	public String deleteBoard(String id) {
@@ -1006,6 +1025,7 @@ public class LeanKitAccess {
 				}
 				case ColNames.INDEX: {
 					prioritiseCard(card, values.getInt("value"));
+					break;
 				}
 				case "Task": {
 					break;
@@ -1188,4 +1208,5 @@ public class LeanKitAccess {
 		reqParams.clear();
 		return execute(Lane.class);
 	}
+
 }
