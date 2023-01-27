@@ -42,7 +42,7 @@ public class CardDeleter {
 							// Delete from JIRA
 							// https://planview1.atlassian.net/browse/AA-1701
 							jiraDeletes = (String[]) ArrayUtils.add(jiraDeletes, urlBits[urlBits.length - 1]);
-						} else if (url.contains("visualstudio.com")) {
+						} else if (url.contains("visualstudio.com") || url.contains("dev.azure.com")) {
 							// Delete from ADO
 							// https://leankitdemo.visualstudio.com/Team%20Echo%20Development/_workitems/edit/2605
 							adoDeletes = (String[]) ArrayUtils.add(adoDeletes, urlBits[urlBits.length - 1]);
@@ -52,7 +52,7 @@ public class CardDeleter {
 			}
 		}
 
-		if (cfg.tasktop) {
+		if (cfg.integration) {
 			//Execute the deletes for Jira and ADO
 		}
 

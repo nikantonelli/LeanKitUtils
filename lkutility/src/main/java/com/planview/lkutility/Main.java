@@ -5,23 +5,10 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
-
-import com.planview.lkutility.Leankit.AccessCache;
-import com.planview.lkutility.System.Access;
-import com.planview.lkutility.System.AccessConfig;
-import com.planview.lkutility.System.ColNames;
-import com.planview.lkutility.System.Debug;
-import com.planview.lkutility.System.InternalConfig;
-import com.planview.lkutility.Utils.Diff;
-import com.planview.lkutility.Utils.Exporter;
-import com.planview.lkutility.Utils.Importer;
-import com.planview.lkutility.Utils.XlUtils;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -32,9 +19,23 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import com.planview.lkutility.Leankit.AccessCache;
+import com.planview.lkutility.System.Access;
+import com.planview.lkutility.System.AccessConfig;
+import com.planview.lkutility.System.ColNames;
+import com.planview.lkutility.System.Debug;
+import com.planview.lkutility.System.InternalConfig;
+import com.planview.lkutility.Utils.BoardArchiver;
+import com.planview.lkutility.Utils.BoardCreator;
+import com.planview.lkutility.Utils.BoardDeleter;
+import com.planview.lkutility.Utils.CardDeleter;
+import com.planview.lkutility.Utils.Diff;
+import com.planview.lkutility.Utils.Exporter;
+import com.planview.lkutility.Utils.Importer;
+import com.planview.lkutility.Utils.XlUtils;
 
 public class Main {
 	static Debug d = null;
@@ -43,8 +44,7 @@ public class Main {
 	 * This defaults to true so we behave as an exporter if it is not otherwise
 	 * specified. If the command line contains a -i flag, this is set to false.
 	 */
-	static Boolean setToExport = false;
-	static Boolean setToImport = false;
+	
 	static Boolean setToDiff = false;
 
 	/**
@@ -84,17 +84,41 @@ public class Main {
 					} else {
 						d.p(Debug.ERROR, " Replay sheet not found. Run with -d before (or with) -r\n");
 					}
-				} else {
-					if (setToExport == true) {
-						Exporter expt = new Exporter(config);
-						expt.go();
+				} else if (!setToDiff) {
+					Boolean ok = true;
+					if (config.exporter ) {
+						// 2 & 3 (Exporter does check for board)
+						Exporter exp = new Exporter(config);
+						exp.go();
 					}
-
-					if (setToImport == true) {
-						Importer impt = new Importer(config);
-						impt.go();
+	
+					// Now we need to check/reset the destination board if needed
+	
+					if (config.deleteCards  && !config.remakeBoard) {
+						CardDeleter cd = new CardDeleter(config);
+						cd.go();
 					}
-
+	
+					if (config.remakeBoard && !config.eraseBoard) {
+						BoardArchiver ba = new BoardArchiver(config);
+						ba.go();
+					}
+	
+					if (config.eraseBoard) {
+						BoardDeleter bd = new BoardDeleter(config);
+						bd.go();
+					}
+	
+					if ((config.remakeBoard) || (config.updateLayout)){
+						BoardCreator bd = new BoardCreator(config);
+						ok = bd.go();
+					}
+	
+					if (ok && config.importer ){
+						Importer imp = new Importer(config);
+						imp.go();
+					}
+				}else {
 					if (setToDiff == true) {
 						Diff diff = new Diff(config);
 						diff.go();
@@ -116,10 +140,10 @@ public class Main {
 		HelpFormatter hf = new HelpFormatter();
 		CommandLine impExpCl = null;
 
-		Options impExpOpt = new Options();
+		Options cmdOpts = new Options();
 		Option impO = new Option("i", "import", false, "run importer");
 		Option expO = new Option("e", "export", false, "run exporter");
-		Option diffO = new Option("d", "diff", false,
+		Option diffO = new Option("c", "compare", false,
 				"compare dst URL to a previous transfer");
 		diffO.setRequired(false);
 		Option repO = new Option("r", "replay", false,
@@ -127,55 +151,75 @@ public class Main {
 		repO.setRequired(false);
 		impO.setRequired(false);
 		expO.setRequired(false);
-		impExpOpt.addOption(impO);
-		impExpOpt.addOption(expO);
-		impExpOpt.addOption(diffO);
-		impExpOpt.addOption(repO);
+		cmdOpts.addOption(impO);
+		cmdOpts.addOption(expO);
+		cmdOpts.addOption(diffO);
+		cmdOpts.addOption(repO);
 
-		impExpOpt.addRequiredOption("f", "filename", true, "XLSX Spreadsheet (must contain API config!)");
+		cmdOpts.addRequiredOption("f", "filename", true, "XLSX Spreadsheet (must contain API config!)");
+
+		Option remakeOpt = new Option("r", "remake", false, "Remake target boards by archiving old and adding new");
+		remakeOpt.setRequired(false);
+		cmdOpts.addOption(remakeOpt);
+
+		Option removeOpt = new Option("R", "remove", false, "Remove target boards");
+		removeOpt.setRequired(false);
+		cmdOpts.addOption(removeOpt);
+
+		Option eraseOpt = new Option("d", "delete", false, "Delete cards on target boards");
+		eraseOpt.setRequired(false);
+		cmdOpts.addOption(eraseOpt);
+
+		Option askOpt = new Option("F", "fresh", false, "Fresh Start of all steps and changes needed");
+		askOpt.setRequired(false);
+		cmdOpts.addOption(askOpt);
+
+		Option tasktopOpt = new Option("t", "tasktop", false, "Follow External Links to delete remote artifacts");
+		tasktopOpt.setRequired(false);
+		cmdOpts.addOption(tasktopOpt);
 
 		Option groupOpt = new Option("g", "group", true, "Identifier of group to process (if present)");
 		groupOpt.setRequired(false);
-		impExpOpt.addOption(groupOpt);
+		cmdOpts.addOption(groupOpt);
 
-		Option moveOpt = new Option("m", "move", true, "Lane to modify unwanted cards with (for diff only)");
+		Option moveOpt = new Option("m", "move", true, "Lane to modify unwanted cards with (for compare only)");
 		moveOpt.setRequired(false);
-		impExpOpt.addOption(moveOpt);
+		cmdOpts.addOption(moveOpt);
 
 		Option dbp = new Option("x", "debug", true,
 				"Print out loads of helpful stuff: 0 - Error, 1 - And Warnings, 2 - And Info, 3 - And Debugging, 4 - And Network");
 		dbp.setRequired(false);
-		impExpOpt.addOption(dbp);
+		cmdOpts.addOption(dbp);
 		Option archiveOpt = new Option("O", "archived", false, "Include older Archived cards in export (if present)");
 		archiveOpt.setRequired(false);
-		impExpOpt.addOption(archiveOpt);
+		cmdOpts.addOption(archiveOpt);
 		Option tasksOpt = new Option("T", "tasks", false, "Include Task cards in export (if present)");
 		tasksOpt.setRequired(false);
-		impExpOpt.addOption(tasksOpt);
+		cmdOpts.addOption(tasksOpt);
 		Option attsOpt = new Option("A", "attachments", false,
 				"Export card attachments in local filesystem (if present)");
 		attsOpt.setRequired(false);
-		impExpOpt.addOption(attsOpt);
+		cmdOpts.addOption(attsOpt);
 		Option comsOpt = new Option("C", "comments", false, "Export card comments in local filesystem (if present)");
 		comsOpt.setRequired(false);
-		impExpOpt.addOption(comsOpt);
+		cmdOpts.addOption(comsOpt);
 		Option originOpt = new Option("S", "origin", false, "Add comment for source artifact recording");
 		originOpt.setRequired(false);
-		impExpOpt.addOption(originOpt);
+		cmdOpts.addOption(originOpt);
 		Option readOnlyOpt = new Option("R", "ro", false, "Export Read Only fields (Not Imported!)");
 		readOnlyOpt.setRequired(false);
-		impExpOpt.addOption(readOnlyOpt);
+		cmdOpts.addOption(readOnlyOpt);
 		Option nameResolver = new Option("n", "names", false, "Debug Use Only!");
 		nameResolver.setRequired(false);
-		impExpOpt.addOption(nameResolver);
+		cmdOpts.addOption(nameResolver);
 
 		try {
-			impExpCl = p.parse(impExpOpt, args, true);
+			impExpCl = p.parse(cmdOpts, args, true);
 
 		} catch (ParseException e) {
 			// Not expecting to ever come here, but compiler needs something....
 			d.p(Debug.ERROR, "(13): %s\n", e.getMessage());
-			hf.printHelp(" ", impExpOpt);
+			hf.printHelp(" ", cmdOpts);
 			System.exit(5);
 		}
 
@@ -202,19 +246,19 @@ public class Main {
 		}
 
 		/**
-		 * If we are doing a diff, we don't want to think about import/export via the
+		 * If we are doing a compare, we don't want to think about import/export via the
 		 * normal route. We need to export the board again into a temporary sheet and
 		 * then
 		 * scan it for differences between it and the original.
-		 * We then can use the diff to create a 'reset' changes sheet. Any cards in
+		 * We then can use the compare to create a 'reset' changes sheet. Any cards in
 		 * excess of
 		 * those in the original can be moved to the archive lane
 		 */
-		if (impExpCl.hasOption("diff")) {
-			d.p(Debug.INFO, "Setting to diff mode.\n");
-			config.diffMode = impExpCl.getOptionValue("diff");
+		if (impExpCl.hasOption("compare")) {
+			d.p(Debug.INFO, "Setting to compare mode.\n");
+			config.diffMode = impExpCl.getOptionValue("compare");
 			setToDiff = true;
-			setToExport = false;
+			config.exporter = false;
 			if (impExpCl.hasOption("move")) {
 				config.archive = impExpCl.getOptionValue("move");
 			}
@@ -231,9 +275,13 @@ public class Main {
 			 * Import takes precedence if option present, then export, then transfer
 			 */
 			else { 
-				if (impExpCl.hasOption("import")) setToImport = true;
-				if (impExpCl.hasOption("export")) setToExport = true;
-			} 
+				if (impExpCl.hasOption("import")) config.importer = true;
+				if (impExpCl.hasOption("export")) config.exporter = true;
+				if (impExpCl.hasOption("delete")) config.deleteCards = true;
+				if (impExpCl.hasOption("remake")) config.remakeBoard = true;
+				if (impExpCl.hasOption("layout")) config.updateLayout = true;
+				if (impExpCl.hasOption("remove")) config.eraseBoard = true;
+			}
 		}
 
 		config.xlsxfn = impExpCl.getOptionValue("filename");
@@ -292,25 +340,6 @@ public class Main {
 	}
 
 	public static InternalConfig setConfig(InternalConfig config, Row row, HashMap<String, Integer> fieldMap) {
-
-		if (config.nameExtension) {
-			NumberFormat nf = DecimalFormat.getInstance();
-			nf.setMaximumFractionDigits(0);
-			switch (row.getCell(fieldMap.get(InternalConfig.DESTINATION_TID_COLUMN)).getCellType()) {
-				case NUMERIC: {
-					config.oldExtension = nf.format(
-							row.getCell(fieldMap.get(InternalConfig.DESTINATION_TID_COLUMN)).getNumericCellValue());
-					break;
-				}
-				default: {
-					config.oldExtension = row.getCell(fieldMap.get(InternalConfig.DESTINATION_TID_COLUMN))
-							.getStringCellValue();
-				}
-			}
-
-			row.getCell(fieldMap.get(InternalConfig.DESTINATION_TID_COLUMN)).setCellValue(config.extension);
-			XSSFFormulaEvaluator.evaluateAllFormulaCells(config.wb);
-		}
 
 		config.source = new AccessConfig(
 				row.getCell(fieldMap.get(InternalConfig.SOURCE_URL_COLUMN)).getStringCellValue(),

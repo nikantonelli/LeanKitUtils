@@ -8,7 +8,12 @@ It will copy current cards (with option to include archived) with tasks, comment
 
 If you wish, you can create your own spreadsheet and import a particular set of cards - handy if you want to have 'template' sets you want to tailor to some specific use-case, e.g a repeatable set of actions for a scrum team.
 
-Version 1.1 added a way to maintain relationships between cards on different boards (with some caveats!)
+## Changes
+
+- Version 1.2 refactored the whole thing and added a few utilities. It also has two breaking changes: 
+ 1. in the layout of the spreadsheet config page.
+ 2. Command line options are changed. BEWARE! unless this is the first time you are using this app.
+- Version 1.1 added a way to maintain relationships between cards on different boards (with some caveats!)
 
 ## Setup
 
@@ -31,7 +36,6 @@ Option | Argument | Description
 -x | \<level\> | (Integer) Output levels of debug statements: 0 = Errors, 1 = +Warnings, 2 = +Info, 3 = +Debug, 4 = +Verbose
 -i |  | Run importer only
 -e |  | Run exporter only 
--t |  | Run importer and exporter sequentially
 -g | \<group\> | (Integer)  Mark exported items with this groupId ready for selection on import. Select only items marked with this group for import
 -O |  | Include _Older_ archived items during export
 -A |  | Include _Attachments_ in export/import - these get placed in your current working directory 
@@ -60,7 +64,7 @@ and: DO NOT PUT ANY LANE WIP LIMITS IN PLACE ON THE DESTINATION BOARD UNLESS YOU
 * All items that cannot be put into a correct lane will end up in the default drop lane - this can get messy. To recover, you can delete all the items in the default drop lane that aren't supposed to be there and set the value in the Group column in the Changes sheet to something memorable (e.g. 99) for those items you want to recreate and modify. Then rerun the importer with the -g option with that group number.
 * To run both the importer and exporter sequentially, for example, you can use the following command line:
  
-java -jar lkutility\target\lkutility-1.1-jar-with-dependencies.jar -f "file.xlsx" -t  -A -T -S -C
+java -jar lkutility\target\lkutility-1.2-jar-with-dependencies.jar -f "file.xlsx" -e -i  -A -T -S -C
  
 * To get an example spreadsheet of what the importer requires, you can run the export (only, using -e) on a board that has parent/child, attachment, comment, etc., data already set up.
 * To get an idea of the progress that the exporter/importer is making, use the option "-x 3".

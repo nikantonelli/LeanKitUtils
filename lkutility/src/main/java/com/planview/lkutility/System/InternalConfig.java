@@ -49,16 +49,12 @@ public class InternalConfig {
 	public Integer group = 0;
 	public boolean exporter = false;
 	public boolean importer = false;
-	public boolean obliterate = false;
 	public boolean remakeBoard = false;
 	public boolean updateLayout = false;
 	public boolean deleteCards = false;
 	public boolean eraseBoard = false;
 	public boolean ignoreCards = false;
 	public String[] ignTypes = null;
-	public boolean  nameExtension = false;
-	public String   extension = null;
-	public String oldExtension = null;
-	public boolean tasktop;
+	public boolean integration;
 }
 
