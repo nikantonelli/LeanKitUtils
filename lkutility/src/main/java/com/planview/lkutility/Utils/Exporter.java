@@ -76,7 +76,7 @@ public class Exporter {
 
     public void go() {
 
-        d.p(Debug.ALWAYS, "Starting Export at: %s\n", new Date());
+        d.p(Debug.ALWAYS, "Starting Export of \"%s\" at: %s\n", cfg.source.getBoardName(), new Date());
         doExport(setUpNewSheets(cleanSheets()));
     }
 

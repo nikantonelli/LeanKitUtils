@@ -10,6 +10,7 @@ import org.json.JSONObject;
 
 import com.planview.lkutility.Leankit.AccessCache;
 import com.planview.lkutility.Leankit.Board;
+import com.planview.lkutility.Leankit.BoardBulkAccessId;
 import com.planview.lkutility.Leankit.BoardLevel;
 import com.planview.lkutility.Leankit.BoardUser;
 import com.planview.lkutility.Leankit.Card;
@@ -30,9 +31,9 @@ public class LkUtils {
 	 * Next up is all the Leankit access routines
 	 * 
 	 */
-	static String LANE_DIVIDER_CHAR = "^";
 
-	public static Lane[] getLanesFromBoardName(InternalConfig iCfg, AccessConfig accessCfg, String brdName) {
+
+	public static Lane[] getLanesFromBoardTitle(InternalConfig iCfg, AccessConfig accessCfg, String brdName) {
 		Lane[] lanes = {};
 		Board brd = null;
 		AccessCache cache = accessCfg.getCache();
@@ -60,7 +61,7 @@ public class LkUtils {
 
 		Lane[] lanes = null;
 
-		lanes = getLanesFromBoardName(iCfg, accessCfg, accessCfg.getBoardName());
+		lanes = getLanesFromBoardTitle(iCfg, accessCfg, accessCfg.getBoardName());
 		return getLanePathFromLanes(lanes, laneId);
 	}
 
@@ -77,7 +78,7 @@ public class LkUtils {
 		while (lane.parentLaneId != null) {
 			Lane parentLane = getLaneFromId(lanes, lane.parentLaneId);
 			if (parentLane != null) {
-				lanePath = parentLane.name + LANE_DIVIDER_CHAR + lanePath;
+				lanePath = parentLane.name + InternalConfig.LANE_DIVIDER_CHAR + lanePath;
 			}
 			lane = parentLane;
 		}
@@ -316,7 +317,7 @@ public class LkUtils {
 		return null;
 	}
 
-	public static boolean removeCardTypeFromBoard(InternalConfig iCfg, AccessConfig accessCfg, CardType cardType) {
+	public static Boolean removeCardTypeFromBoard(InternalConfig iCfg, AccessConfig accessCfg, CardType cardType) {
 		Board brd = getBoardByTitle(iCfg, accessCfg);
 		if (brd != null) {
 			LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
@@ -337,6 +338,8 @@ public class LkUtils {
 		if (newCard != null) {
 			if (cache != null) {
 				cache.setCard(newCard);
+				//Card create might have changed size/count, so refetch Board lane info for WIP control
+				cache.unsetBoardById((String)fieldLst.get("boardId"));
 			}
 		}
 		return newCard;
@@ -358,7 +361,7 @@ public class LkUtils {
 				cache.setCard(card);
 		}
 		if (brd == null) {
-			brd = lka.fetchBoardFromId(accessCfg.getBoardName());
+			brd = lka.fetchBoardFromTitle(accessCfg.getBoardName());
 			if ((brd != null) && (cache != null))
 				cache.setBoard(brd);
 		}
@@ -367,6 +370,8 @@ public class LkUtils {
 			card = lka.updateCardFromId(brd, card, updates);
 			if ((cache != null) && (card != null)){
 				cache.setCard(card);
+				//Card update might have changed size/count, so refetch Board lane info for WIP control
+				cache.unsetBoardById(brd.id);
 			}
 		}
 
@@ -406,7 +411,7 @@ public class LkUtils {
 		lka.archiveBoard(boardId);
 	}
 
-	public static boolean deleteBoard(InternalConfig iCfg, AccessConfig accessCfg) {
+	public static Boolean deleteBoard(InternalConfig iCfg, AccessConfig accessCfg) {
 		Board brd = getBoardByTitle(iCfg, accessCfg);
 		if (brd != null) {
 			deleteBoardById(iCfg, accessCfg, brd.id);
@@ -517,7 +522,7 @@ public class LkUtils {
 
 	static Lane getLaneFromString(Board brd, String name) {
 		// Split lane in spreadhseet into bits
-		String[] lanes = name.split("\\^");
+		String[] lanes = name.split(InternalConfig.SPLIT_LANE_REGEX_CHAR);
 
 		// Get the list of lanes in the target board
 		ArrayList<Lane> searchLanes = new ArrayList<>(Arrays.asList(brd.lanes));
@@ -853,7 +858,11 @@ public class LkUtils {
 			brd = lka.fetchBoardFromTitle(accessCfg.getBoardName());
 		}
 		if (brd != null) {
-			return lka.updateCardType(brd.id, cardTypeId, new JSONObject(updates));
+			CardType ct = lka.updateCardType(brd.id, cardTypeId, new JSONObject(updates));
+			if (cache != null) {
+				cache.unSetCardTypes(brd.id);
+			}
+			return ct;
 		}
 		return null;
 	}
@@ -872,7 +881,11 @@ public class LkUtils {
 			if (cache != null) {
 				cache.unsetBoardById(brd.id);
 			}
-			return lka.addCardType(brd.id, new JSONObject(card));
+			CardType ct = lka.addCardType(brd.id, new JSONObject(card));
+			if (cache != null) {
+				cache.unSetCardTypes(brd.id);
+			}
+			return ct;
 		}
 		return null;
 	}
@@ -923,7 +936,7 @@ public class LkUtils {
 	private static Lane getLaneFromPath(Lane[] laneTree, String srcLanePath) {
 		String thisBit = srcLanePath;
 		String leftOver = null;
-		int thisIdx = srcLanePath.indexOf(LANE_DIVIDER_CHAR);
+		int thisIdx = srcLanePath.indexOf(InternalConfig.LANE_DIVIDER_CHAR);
 		if (thisIdx > 0) {
 			thisBit = srcLanePath.substring(0, thisIdx);
 			leftOver = srcLanePath.substring(thisIdx + 1);
@@ -950,6 +963,12 @@ public class LkUtils {
 			}
 		}
 		return tree;
+	}
+
+	public static void updateBoardUsers(InternalConfig cfg, AccessConfig accessCfg, BoardBulkAccessId bba) {
+		LeanKitAccess lka = new LeanKitAccess(accessCfg, cfg.debugLevel);
+		JSONObject js = new JSONObject(bba);
+		lka.updateBoardUsers( js);
 	}
 
 }

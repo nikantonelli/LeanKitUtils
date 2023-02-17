@@ -179,6 +179,10 @@ public class AccessCache {
 		return cfm;
 	}
 
+	public void unSetCardTypes(String boardId) {
+		cardTypeMap.remove(boardId);
+	}
+	
 	public ArrayList<CardType> getCardTypes(String id) {
 		return cardTypeMap.get(id);
 	}

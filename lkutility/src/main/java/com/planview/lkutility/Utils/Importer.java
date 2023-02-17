@@ -37,7 +37,7 @@ public class Importer {
 
 	public void go() {
 
-		d.p(Debug.ALWAYS, "Starting Import at: %s\n", new Date());
+		d.p(Debug.ALWAYS, "Starting Import to \"%s\" at: %s\n", cfg.destination.getBoardName(), new Date());
 		/**
 		 * cfg might contain the sheet info for the importer if it came from the
 		 * exporter directly
@@ -49,11 +49,11 @@ public class Importer {
 
 		if (null == cfg.changesSheet) {
 			d.p(Debug.ERROR, "Cannot find required Changes sheet in file: %s\n", cfg.xlsxfn);
-			System.exit(1);
+			System.exit(-23);
 		}
 		ChangesColumns cc = XlUtils.checkChangeSheetColumns(cfg.changesSheet);
 		if (cc == null) {
-			System.exit(1);
+			System.exit(-24);
 		}
 
 		// Find all the change records for today
@@ -177,7 +177,7 @@ public class Importer {
 
 			if (id == null) {
 
-				d.p(Debug.ERROR, "%s",
+				d.p(Debug.WARN, "%s",
 						"Got null back from doAction(). Most likely card deleted, but ID still in spreadsheet!\n");
 			} else {
 				XlUtils.writeFile(cfg, cfg.xlsxfn, cfg.wb);
@@ -246,7 +246,7 @@ public class Importer {
 			if (card == null) {
 				d.p(Debug.ERROR, "Could not create card on board \"%s\" with details: \"%s\"\n", flds.get("boardId"),
 						flds.toString());
-				System.exit(16);
+				System.exit(-25);
 			}
 			return card.id;
 
@@ -256,7 +256,7 @@ public class Importer {
 			Card newCard = null;
 
 			if (card == null) {
-				d.p(Debug.ERROR, "Could not locate card \"%s\"\n", item.getCell(idCol).getStringCellValue());
+				d.p(Debug.WARN, "Could not locate card \"%s\"\n", item.getCell(idCol).getStringCellValue());
 			} else {
 				// Don't need this when modifying an existing item.
 				if (fieldLst.has("boardId")) {
@@ -350,7 +350,7 @@ public class Importer {
 							break;
 						}
 						case "lane": {
-							String[] bits = ((String) XlUtils.getCell(change, cc.value)).split(InternalConfig.REGEX_WIP_LIMIT_SEPARATOR);
+							String[] bits = ((String) XlUtils.getCell(change, cc.value)).split(InternalConfig.SPLIT_WIP_REGEX_CHAR);
 							Lane foundLane = LkUtils.getLaneFromBoardTitle(cfg, cfg.destination, cfg.destination.getBoardName(),
 									bits[0]);
 							if (foundLane != null) {
@@ -405,7 +405,7 @@ public class Importer {
 				if (newCard == null) {
 					d.p(Debug.ERROR, "Could not modify card \"%s\" on board %s with details: %s", card.id,
 							cfg.destination.getBoardName(), fld.toString());
-					System.exit(17);
+					System.exit(-26);
 				}
 				return card.id;
 			}

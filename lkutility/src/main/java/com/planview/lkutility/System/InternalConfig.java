@@ -15,12 +15,19 @@ public class InternalConfig {
 	public final static String DESTINATION_BOARDNAME_COLUMN = "dstBoardName";
 	public final static String DESTINATION_APIKEY_COLUMN = "dstApiKey";
 	public final static String DESTINATION_TID_COLUMN = "Target Id";
-	public final static String WIP_LIMIT_SEPARATOR = "\\";
-	public final static String LANE_SEPARATOR = "^";
-	public final static String REGEX_WIP_LIMIT_SEPARATOR = "\\\\";
-	public final static String REGEX_LANE_SEPARATOR = "\\^";
+	public final static String DESTINATION_ADO_USER = "ADO User";
+	public final static String DESTINATION_ADO_TOKEN = "ADO Token";
+	public final static String DESTINATION_JIRA_USER = "JIRA User";
+	public final static String DESTINATION_JIRA_KEY = "JIRA Key";
+	public final static String IGNORE_LIST = "Import Ignore";
 
     public String xlsxfn = "";
+
+
+	public static String LANE_DIVIDER_CHAR = "^";
+	public static String WIP_DIVIDER_CHAR = "`";
+	public static String SPLIT_LANE_REGEX_CHAR = "\\" + LANE_DIVIDER_CHAR;
+	public static String SPLIT_WIP_REGEX_CHAR = "\\" + WIP_DIVIDER_CHAR;
 
     /**
      * Contains the local stream of info for the program. The importer will need
@@ -31,30 +38,41 @@ public class InternalConfig {
     
 	public AccessConfig source = new AccessConfig();
 	public AccessConfig destination = new AccessConfig();
-    public Integer debugLevel = -1;
-    public boolean exportArchived = false;
-    public boolean exportTasks = false;
-    public boolean exportAttachments = false;
-    public boolean exportComments = false;
-    public boolean addComment = false;
-    public Boolean dualFlow = false;
+
+	public AccessConfig jira = new AccessConfig();
+	public AccessConfig ado = new AccessConfig();
+
+    public Integer   debugLevel = -1;
+    public Boolean   exportArchived = false;
+    public Boolean   exportTasks = false;
+    public Boolean   exportAttachments = false;
+    public Boolean   exportComments = false;
+    public Boolean   addComment = false;
+    public Boolean   dualFlow = false;
     public XSSFSheet changesSheet = null;
     public XSSFSheet itemSheet = null;
-    public String archive = null;
-	public String diffMode = null;
-    public XSSFSheet replaySheet = null;
-    public boolean replay = false;
+    public String    archive = null;
+    public XSSFSheet replaySheet;
+
+	public Integer  group = 0;
+	public Boolean  exporter = false;
+	public Boolean  importer = false;
+	public Boolean  obliterate = false;
+	public Boolean  remakeBoard = false;
+	public Boolean  updateLayout = false;
+	public Boolean  deleteCards = false;
+	public Boolean  eraseBoard = false;
+	public Boolean  ignoreCards = false;
+	public String[] ignTypes;
+	public Boolean  nameExtension = false;
+	public String   extension;
+	public String oldExtension;
+	public Boolean tasktop = false;
+	public Boolean updateLevels = false;
+	public Boolean replay = false;
 	public Boolean roFieldExport = false;
 	public Boolean nameResolver = false;
-	public Integer group = 0;
-	public boolean exporter = false;
-	public boolean importer = false;
-	public boolean remakeBoard = false;
-	public boolean updateLayout = false;
-	public boolean deleteCards = false;
-	public boolean eraseBoard = false;
-	public boolean ignoreCards = false;
-	public String[] ignTypes = null;
-	public boolean integration;
+	public String diffMode;
+
 }
 

@@ -4,11 +4,11 @@ import java.util.ArrayList;
 
 import org.apache.commons.lang.ArrayUtils;
 
-import com.planview.lkutility.System.Debug;
-import com.planview.lkutility.System.InternalConfig;
 import com.planview.lkutility.Leankit.Card;
 import com.planview.lkutility.Leankit.ExternalLink;
 import com.planview.lkutility.Leankit.LeanKitAccess;
+import com.planview.lkutility.System.Debug;
+import com.planview.lkutility.System.InternalConfig;
 
 public class CardDeleter {
 	private static final int MAX_ID_ARRAY_SIZE = 200;
@@ -27,6 +27,8 @@ public class CardDeleter {
 		String[] jiraDeletes = {};
 		String[] apDeletes = {};
 
+		if (cards == null) return;
+		
 		for (int i = 0; i < cards.size(); i++) {
 			apDeletes = (String[]) ArrayUtils.add(apDeletes, cards.get(i).id);
 			ExternalLink[] extUrls = cards.get(i).externalLinks;
@@ -34,26 +36,33 @@ public class CardDeleter {
 				String url = extUrls[j].url;
 				if (url != null) {
 					if (url.startsWith("https://")) {
-						url = url.substring(8);
-						String[] urlBits = url.split("/");
-						// String[] pathBits = urlBits[0].split("\\.");
-
 						if (url.contains("atlassian.net")) {
 							// Delete from JIRA
 							// https://planview1.atlassian.net/browse/AA-1701
-							jiraDeletes = (String[]) ArrayUtils.add(jiraDeletes, urlBits[urlBits.length - 1]);
+							jiraDeletes = (String[]) ArrayUtils.add(jiraDeletes, url);
 						} else if (url.contains("visualstudio.com") || url.contains("dev.azure.com")) {
 							// Delete from ADO
 							// https://leankitdemo.visualstudio.com/Team%20Echo%20Development/_workitems/edit/2605
-							adoDeletes = (String[]) ArrayUtils.add(adoDeletes, urlBits[urlBits.length - 1]);
+							adoDeletes = (String[]) ArrayUtils.add(adoDeletes, url);
 						}
+					}
+					else {
+						d.p(Debug.INFO, "Ignoring non-https externalLink \"%s\"\n", url);
 					}
 				}
 			}
 		}
 
-		if (cfg.integration) {
+		if (cfg.tasktop) {
 			//Execute the deletes for Jira and ADO
+			if (jiraDeletes.length > 0) {
+				JiraDeleter jira = new JiraDeleter();
+				jira.go(cfg, jiraDeletes);
+			}
+			if (adoDeletes.length >0) {
+				AzureDeleter ado = new AzureDeleter();
+				ado.go(cfg, adoDeletes);
+			}
 		}
 
 		LeanKitAccess lka = new LeanKitAccess(cfg.destination, cfg.debugLevel);

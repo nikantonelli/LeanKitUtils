@@ -66,11 +66,12 @@ public class Diff {
         }
         if (!found) {
             d.p(Debug.ERROR, "diff: incorrect sheets found for src board: %s\n", cfg.source.getBoardName());
+			System.exit(-20);
         }
 
         if ((firstChgIdx == null) || (firstShtIdx == null)) {
             d.p(Debug.ERROR, " Cannot locate required data to compare\n");
-            System.exit(0);
+            System.exit(-21);
         }
 
         found = false;
@@ -136,7 +137,7 @@ public class Diff {
         if (!found) {
             d.p(Debug.ERROR, "Oops! fetch of new data for board: %s failed\n", cfg.destination.getBoardName());
             // Don't need to undo anything as we haven't written the file out yet.
-            System.exit(0);
+            System.exit(-22);
         } else {
             if (saveShtIdx >= 0)
                 cfg.wb.setSheetName(saveShtIdx, cfg.destination.getBoardName());

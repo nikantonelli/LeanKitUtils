@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.CellValue;
@@ -22,6 +23,8 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import com.planview.lkutility.Leankit.Board;
+import com.planview.lkutility.Leankit.BoardBulkAccessId;
 import com.planview.lkutility.Leankit.BoardUser;
 import com.planview.lkutility.Leankit.Card;
 import com.planview.lkutility.Leankit.CardType;
@@ -102,12 +105,12 @@ public class XlUtils {
 
 		// Check for daft stuff.
 		if (sht == null) {
-			d.p(Debug.ERROR, "getRowsByStringValue() passed null sheet\n");
+			d.p(Debug.WARN, "getRowsByStringValue() passed null sheet\n");
 			return new ArrayList<>();
 		}
 		Integer cellIdx = findColumnFromSheet(sht, name);
 		if (cellIdx < 0) {
-			d.p(Debug.ERROR, "getRowsByStringValue() passed incorrect field name\n");
+			d.p(Debug.WARN, "getRowsByStringValue() passed incorrect field name\n");
 			return new ArrayList<>();
 		}
 
@@ -274,7 +277,7 @@ public class XlUtils {
 				} catch (IllegalArgumentException | IllegalAccessException e) {
 					d.p(Debug.ERROR, "Conversion error on \"%s\": Verify cell type in Excel\n %s\n", idx,
 							e.getMessage());
-					System.exit(12);
+					System.exit(-27);
 				}
 
 			}
@@ -376,14 +379,14 @@ public class XlUtils {
 						oStr = null;
 						loopCnt = 0;
 					} catch (IOException e) {
-						d.p(Debug.ERROR, "%s while closing file %s\n", e, xlsxfn);
+						d.p(Debug.WARN, "%s while closing file %s\n", e, xlsxfn);
 					}
 				} catch (IOException e) {
-					d.p(Debug.ERROR, "%s while writing file %s\n", e, xlsxfn);
+					d.p(Debug.WARN, "%s while writing file %s\n", e, xlsxfn);
 					oStr.close(); // If this fails, just give up!
 				}
 			} catch (IOException e) {
-				d.p(Debug.ERROR, "%s while opening/closing file %s\n", e, xlsxfn);
+				d.p(Debug.WARN, "%s while opening/closing file %s\n", e, xlsxfn);
 			}
 			if (loopCnt == 0) {
 				break;
@@ -471,7 +474,8 @@ public class XlUtils {
 
 							if (usersList != null) {
 								String[] users = usersList.split(",");
-								ArrayList<String> usersToPut = new ArrayList<>();
+								ArrayList<String> usersToPut = new ArrayList<String>();
+								String usernames = "";
 								for (int i = 0; i < users.length; i++) {
 									User realUser = LkUtils.getUserByName(cfg, accessCfg, users[i]);
 									if (realUser != null) {
@@ -479,13 +483,24 @@ public class XlUtils {
 										for (int j = 0; j < boardUsers.size(); j++) {
 											if (realUser.id.equals(boardUsers.get(j).userId)) {
 												usersToPut.add(realUser.id);
+												usernames += (i != 0)?",":"" + users[i] ;
 											}
 										}
 									} else {
-										d.p(Debug.WARN, "Cannot locate assignedUser: %s on system \"%s\"\n", users[i], accessCfg.getUrl());
+										d.p(Debug.WARN, "Cannot locate assignedUser: %s on system \"%s\"\n", users[i],
+												accessCfg.getUrl());
 									}
 								}
 								if (usersToPut.size() > 0) {
+									Board brd = LkUtils.getBoardByTitle(cfg, accessCfg);
+									BoardBulkAccessId bba = new BoardBulkAccessId();
+									String[] bids = {};
+									bba.boardIds = (String[]) ArrayUtils.add(bids, brd.id);
+									bba.userIds = usersToPut.toArray(new String[0]);
+									bba.boardRole = "boardUser";
+								
+									d.p(Debug.INFO, "Adding users \"%s\" to board \"%s\"\n", usernames, brd.title);
+									LkUtils.updateBoardUsers(cfg, accessCfg, bba);
 									flds.put("assignedUserIds", usersToPut.toArray());
 								}
 							}
@@ -563,7 +578,7 @@ public class XlUtils {
 							flds.put("laneType", laneType);
 						}
 					} else {
-						String[] bits = laneType.split(InternalConfig.REGEX_WIP_LIMIT_SEPARATOR);	//This is NOT the LANE split, just the Excel spreadsheet one for wipLimit
+						String[] bits = laneType.split(InternalConfig.SPLIT_WIP_REGEX_CHAR);	//This is NOT the LANE split, just the Excel spreadsheet one for wipLimit
 						if (fieldLst.has("boardId")) {
 							lane = LkUtils.getLaneFromBoardId(cfg, accessCfg,
 									item.getCell(fieldLst.getInt("boardId")).getStringCellValue(), bits[0]);

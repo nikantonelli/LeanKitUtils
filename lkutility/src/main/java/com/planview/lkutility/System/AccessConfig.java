@@ -4,11 +4,20 @@ import com.planview.lkutility.Leankit.AccessCache;
 
 public class AccessConfig extends Access {
 	AccessCache cache = null;
+	String user = null;
 	
 	public AccessConfig() {
 
 	}
 	
+	public String getUser() {
+		return user;
+	}
+
+	public void setUser(String user) {
+		this.user = user;
+	}
+
 	public AccessCache getCache() {
 		return cache;
 	}
@@ -17,9 +26,9 @@ public class AccessConfig extends Access {
 		this.cache = cache;
 	}
 
-	public AccessConfig( String url, String boardname, String apikey) {
+	public AccessConfig( String url, String name, String apikey) {
 		Url = url;
-		BoardName = boardname;
+		BoardName = name;
 		ApiKey = apikey;
 	}
 }

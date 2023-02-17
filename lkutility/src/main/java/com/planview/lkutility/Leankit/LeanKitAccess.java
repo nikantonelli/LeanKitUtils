@@ -3,35 +3,16 @@ package com.planview.lkutility.Leankit;
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URLEncoder;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
-import org.apache.http.ParseException;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPatch;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.FileBody;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
@@ -41,23 +22,14 @@ import org.json.JSONObject;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.planview.lkutility.System.Access;
+import com.planview.lkutility.Network.NetworkAccess;
+import com.planview.lkutility.System.AccessConfig;
 import com.planview.lkutility.System.ColNames;
 import com.planview.lkutility.System.Debug;
 
-public class LeanKitAccess {
+public class LeanKitAccess extends NetworkAccess {
 
-	Access config = null;
-	String reqType = null;
-	String reqUrl = null;
-	HttpEntity reqEnt = null;
-	ArrayList<BasicNameValuePair> reqHdrs = new ArrayList<>();
-	ArrayList<NameValuePair> reqParams = new ArrayList<>();
-	Board[] boards = null;
-	PoolingHttpClientConnectionManager cm = null;
-	Debug d = new Debug();
-
-	public LeanKitAccess(Access configp, Integer debugLevel) {
+	public LeanKitAccess(AccessConfig configp, Integer debugLevel) {
 		config = configp;
 		d.setLevel(debugLevel);
 
@@ -93,10 +65,11 @@ public class LeanKitAccess {
 		}
 		JSONObject jresp = new JSONObject(bd);
 		// Convert to a type to return to caller.
-
+		ArrayList<T> items = new ArrayList<T>();
 		if (jresp.has("error") || jresp.has("statusCode")) {
 			d.p(Debug.ERROR, "\"%s\" gave response: \"%s\"\n", reqUrl, jresp.toString());
-			System.exit(1);
+			System.exit(-9);
+			return null;
 		} else if (jresp.has("pageMeta")) {
 			JSONObject pageMeta = new JSONObject(jresp.get("pageMeta").toString());
 
@@ -105,7 +78,6 @@ public class LeanKitAccess {
 			// Unfortunately, we need to know what sort of item to get out of the json
 			// object. Doh!
 			String fieldName = null;
-			ArrayList<T> items = new ArrayList<T>();
 			String[] typename = expectedResponseType.getName().split("\\.");
 			switch (typename[typename.length - 1]) {
 				case "Board":
@@ -132,7 +104,7 @@ public class LeanKitAccess {
 					break;
 				default:
 					d.p(Debug.ERROR, "Unsupported item type requested from server API: %s\n", bd);
-					return null;
+					System.exit(-10);
 			}
 			// Got something to return
 			ObjectMapper om = new ObjectMapper();
@@ -187,9 +159,9 @@ public class LeanKitAccess {
 					accumulatedCount = items.size();
 				}
 			}
-			return items;
+
 		} else {
-			ArrayList<T> items = new ArrayList<T>();
+
 			ObjectMapper om = new ObjectMapper();
 			om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 			switch (expectedResponseType.getSimpleName()) {
@@ -240,12 +212,11 @@ public class LeanKitAccess {
 				default: {
 					d.p(Debug.ERROR, "oops! don't recognise requested item type \"%s\"\n",
 							expectedResponseType.getSimpleName());
-					System.exit(2);
+					System.exit(-11);
 				}
 			}
-			return items;
 		}
-		return null;
+		return items;
 	}
 
 	/**
@@ -273,184 +244,6 @@ public class LeanKitAccess {
 			}
 		}
 		return null;
-	}
-
-	private String processRequest() {
-		try {
-			HttpEntity hpe = processRawRequest();
-			if (hpe != null) {
-				return EntityUtils.toString(hpe);
-			}
-		} catch (ParseException | IOException e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-
-	private HttpEntity processRawRequest() {
-
-		// Deal with delays, retries and timeouts
-		HttpClientBuilder cbldr = HttpClients.custom().setConnectionManager(cm);
-		RequestConfig.Builder configBuilder = RequestConfig.custom();
-		configBuilder.setSocketTimeout(40000); // Set all timeouts to 40sec.
-		configBuilder.setConnectTimeout(40000);
-		configBuilder.setConnectionRequestTimeout(40000);
-		cbldr.setDefaultRequestConfig(configBuilder.build());
-		CloseableHttpClient client = cbldr.build();
-		HttpResponse httpResponse = null;
-		HttpEntity result = null;
-		try {
-			
-			HttpRequestBase request = null;
-			switch (reqType) {
-				case "POST": {
-					request = new HttpPost(reqUrl);
-					((HttpPost) request).setEntity(reqEnt);
-					break;
-				}
-				case "PUT": {
-					request = new HttpPut(reqUrl);
-					((HttpPut) request).setEntity(reqEnt);
-					break;
-				}
-				case "DELETE": {
-					
-					request = new HttpPost();
-					if (reqEnt != null) {
-						((HttpPost) request).setEntity(reqEnt);
-					}
-					request.addHeader("X-HTTP-Method-Override", "DELETE");
-					break;
-				}
-				case "PATCH": {
-					request = new HttpPatch(reqUrl);
-					((HttpPatch) request).setEntity(reqEnt);
-					break;
-				}
-				default: {
-					request = new HttpGet(reqUrl);
-					break;
-				}
-			}
-
-			for (int i = 0; i < reqHdrs.size(); i++) {
-				request.addHeader(reqHdrs.get(i).getName(), reqHdrs.get(i).getValue());
-				d.p(Debug.VERBOSE, "Adding Header \"%s\" as \"%s\"\n", reqHdrs.get(i).getName(), reqHdrs.get(i).getValue());
-			}
-
-			// Add the user credentials to the request
-			if (config.getApiKey() != null) {
-				request.addHeader("Authorization", "Bearer " + config.getApiKey());
-				d.p(Debug.VERBOSE, "Adding Bearer starting with \"%s...\"\n", config.getApiKey().substring(0, 5));
-			} else {
-				d.p(Debug.ERROR, "No valid apiKey provided to LKA\n");
-			}
-
-			String bldr = "";
-			Iterator<NameValuePair> rpi = reqParams.iterator();
-			while (rpi.hasNext()) {
-				bldr = bldr + "&" + rpi.next().toString();
-			}
-			if (bldr.length() > 0) {
-				bldr = "?" + bldr.substring(1);
-			}
-			request.setURI(new URI(config.getUrl() + reqUrl + bldr));
-			d.p(Debug.VERBOSE, "%s\n", request.toString());
-			if (reqEnt != null) { 
-				d.p(Debug.VERBOSE, "Content: %s\n",IOUtils.toString(reqEnt.getContent(), "UTF-8")); 
-			}
-			httpResponse = client.execute(request);
-			d.p(Debug.VERBOSE, "%s\n", httpResponse.getStatusLine());
-
-			Boolean entityTaken = false;
-			switch (httpResponse.getStatusLine().getStatusCode()) {
-				case 200: // Card updated
-				case 201: // Card created
-				{
-					result = httpResponse.getEntity();
-					entityTaken = true;
-					break;
-				}
-				case 204: // No response expected
-				{
-					break;
-				}
-				case 400: {
-					d.p(Debug.ERROR, "Bad request: %s\n", request.toString());
-					break;
-				}
-				case 401: {
-					d.p(Debug.ERROR, "Unauthorised. Check Credentials in spreadsheet: %s\n", request.toString());
-					break;
-				}
-				case 403: {
-					d.p(Debug.ERROR, "Forbidden by server: %s\n", request.toString());
-					break;
-				}
-				case 429: { // Flow control
-					LocalDateTime retryAfter = LocalDateTime.parse(httpResponse.getFirstHeader("retry-after").getValue(),
-							DateTimeFormatter.RFC_1123_DATE_TIME);
-					LocalDateTime serverTime = LocalDateTime.parse(httpResponse.getFirstHeader("date").getValue(),
-							DateTimeFormatter.RFC_1123_DATE_TIME);
-					Long timeDiff = ChronoUnit.MILLIS.between(serverTime, retryAfter);
-					d.p(Debug.INFO, "Received 429 status. waiting %.2f seconds\n", ((1.0 * timeDiff) / 1000.0));
-					EntityUtils.consumeQuietly(httpResponse.getEntity());
-					try {
-						TimeUnit.MILLISECONDS.sleep(timeDiff);
-					} catch (InterruptedException e) {
-						d.p(Debug.ERROR, "(L2) %s\n", e.getMessage());
-					}
-					result = processRawRequest();
-					break;
-				}
-				case 422: { // Unprocessable Parameter
-					d.p(Debug.WARN, "Parameter Error in request: %s \n%s\n", request.toString(),
-							EntityUtils.toString(httpResponse.getEntity()));
-					break;
-				}
-				case 404: { // Item not found
-					d.p(Debug.WARN, "Item not found: %s\n", httpResponse.toString());
-					break;
-				}
-				case 409: { // Conflict
-					d.p(Debug.WARN, "Conflict Error in request: %s \n%s\n", request.toString(),
-							EntityUtils.toString(httpResponse.getEntity()));
-					break;
-				}
-				case 408: // Request timeout - try your luck with another one....
-				case 500: // Server fault
-				case 502: // Bad Gateway
-				case 503: // Service unavailable
-				case 504: // Gateway timeout
-				{
-					d.p(Debug.ERROR, "Received %d status. retrying in 5 seconds\n",
-							httpResponse.getStatusLine().getStatusCode());
-					try {
-						EntityUtils.consumeQuietly(httpResponse.getEntity());
-						Thread.sleep(5000);
-					} catch (InterruptedException e) {
-						d.p(Debug.ERROR, "(L1) %s\n", e.getMessage());
-					}
-					result = processRawRequest();
-					break;
-				}
-				default: {
-					d.p(Debug.ERROR, "Network fault: %s\n", httpResponse.toString());
-					break;
-				}
-			}
-			if (!entityTaken) {
-				EntityUtils.consumeQuietly(httpResponse.getEntity()); // Tidy up because the java library has a
-																		// 'feature'
-			}
-		} catch (IOException e) {
-			d.p(Debug.ERROR, "(L3) %s\n", e.getMessage());
-			System.exit(3);
-		} catch (URISyntaxException e1) {
-			// Should never happen, but to keep the compiler happy.....
-			e1.printStackTrace();
-		}
-		return result;
 	}
 
 	public ArrayList<BoardLevel> fetchBoardLevels() {
@@ -530,20 +323,6 @@ public class LeanKitAccess {
 		return tasks;
 	}
 
-	private ArrayList<Board> fetchBoardsFromName(String name) {
-		reqParams.clear();
-		reqHdrs.clear();
-		reqType = "GET";
-		reqUrl = "/io/board";
-		reqEnt = null;
-		reqParams.add(new BasicNameValuePair("search", name));
-
-		// Once you get the boards, you could cache them. There may be loads, but
-		// shouldn't max
-		// out memory.
-		return read(Board.class);
-	}
-
 	public Board updateBoardById(String id, JSONObject updates) {
 		reqHdrs.clear();
 		reqType = "PATCH";
@@ -570,14 +349,14 @@ public class LeanKitAccess {
 		reqEnt = null;
 		return processRequest();
 	}
-	
+
 	public String deleteCards(String[] ids) {
 		reqType = "DELETE";
 		reqHdrs.clear();
 		reqParams.clear();
 		reqUrl = "/io/card";
 		JSONObject jso = new JSONObject();
-		jso.put("cardIds",ids);
+		jso.put("cardIds", ids);
 		reqEnt = new StringEntity(jso.toString(), "UTF-8");
 		return execute(String.class);
 	}
@@ -638,12 +417,14 @@ public class LeanKitAccess {
 			reqUrl = "/io/board?search=" + URLEncoder.encode(BoardName, "UTF-8");
 		} catch (UnsupportedEncodingException e) {
 			d.p(Debug.ERROR, "Cannot encode board name %s\n", BoardName);
-			return null;
+			System.exit(-12);
 		}
 		ArrayList<Board> boards = read(Board.class);
-		for (int i = 0; i < boards.size(); i++) {
-			if (boards.get(i).title.equals(BoardName)) {
-				return boards.get(i);
+		if (boards != null) {
+			for (int i = 0; i < boards.size(); i++) {
+				if (boards.get(i).title.equals(BoardName)) {
+					return boards.get(i);
+				}
 			}
 		}
 		return null;
@@ -683,29 +464,6 @@ public class LeanKitAccess {
 					e.printStackTrace();
 				}
 				break;
-			}
-		}
-		return null;
-	}
-
-	public Board fetchBoard(String name) {
-
-		ArrayList<Board> brd = fetchBoardsFromName(name);
-		Board bd = null;
-		if (brd != null) {
-			if (brd.size() > 0) {
-				// We found one or more with this name search. First try to find an exact match
-				Iterator<Board> bItor = brd.iterator();
-				while (bItor.hasNext()) {
-					Board b = bItor.next();
-					if (b.title.equals(name)) {
-						bd = b;
-					}
-				}
-				// Then take the first if that fails
-				if (bd == null)
-					bd = brd.get(0);
-				return fetchBoardFromId(bd.id);
 			}
 		}
 		return null;
@@ -908,7 +666,7 @@ public class LeanKitAccess {
 				case "Parent": {
 					if ((values.get("value") == null) || (values.get("value").toString() == "")
 							|| (values.get("value").toString() == "0")) {
-						d.p(Debug.ERROR, "Trying to set parent of %s to value \"%s\"\n", card.id,
+						d.p(Debug.WARN, "Trying to set parent of %s to value \"%s\"\n", card.id,
 								values.get("value").toString());
 					} else if (values.get("value").toString().startsWith("-")) {
 						JSONObject upd2 = new JSONObject();
@@ -1112,7 +870,6 @@ public class LeanKitAccess {
 		reqHdrs.clear();
 		String results = processRequest();
 		ObjectMapper om = new ObjectMapper();
-		om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 		try {
 			return om.readValue(results, CustomFieldResult.class);
 		} catch (JsonProcessingException e) {
@@ -1172,7 +929,7 @@ public class LeanKitAccess {
 		reqEnt = null;
 		return processRequest();
 	}
-	
+
 	public CardType updateCardType(String brdId, String id, JSONObject updates) {
 		reqHdrs.clear();
 		reqType = "PATCH";
@@ -1207,6 +964,15 @@ public class LeanKitAccess {
 		reqEnt = new StringEntity(updates.toString(), "UTF-8");
 		reqParams.clear();
 		return execute(Lane.class);
+	}
+
+	public String updateBoardUsers(JSONObject js) {
+		reqType = "POST";
+		reqUrl = "/io/board/access";
+		reqParams.clear();
+		reqHdrs.clear();
+		reqEnt = new StringEntity(js.toString(), "UTF-8");
+		return execute(String.class);
 	}
 
 }

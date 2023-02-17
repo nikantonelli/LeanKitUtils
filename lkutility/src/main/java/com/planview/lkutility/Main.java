@@ -82,7 +82,8 @@ public class Main {
 						Importer impt = new Importer(config);
 						impt.go();
 					} else {
-						d.p(Debug.ERROR, " Replay sheet not found. Run with -d before (or with) -r\n");
+						d.p(Debug.ERROR, " Replay sheet not found. Run with -c before (or with) -a\n");
+						System.exit(-1);
 					}
 				} else if (!setToDiff) {
 					Boolean ok = true;
@@ -110,7 +111,7 @@ public class Main {
 					}
 	
 					if ((config.remakeBoard) || (config.updateLayout)){
-						BoardCreator bd = new BoardCreator(config);
+						BoardCreator bd = new BoardCreator (config);
 						ok = bd.go();
 					}
 	
@@ -124,12 +125,13 @@ public class Main {
 						diff.go();
 					}
 				}
-				try {
-					config.wb.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				
 			}
+		}
+		try {
+			config.wb.close();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 		d.p(Debug.ALWAYS, "Finished at: %s\n", new Date());
 	}
@@ -146,7 +148,7 @@ public class Main {
 		Option diffO = new Option("c", "compare", false,
 				"compare dst URL to a previous transfer");
 		diffO.setRequired(false);
-		Option repO = new Option("r", "replay", false,
+		Option repO = new Option("a", "replay", false,
 				"auto-run the reset of the destination during diff");
 		repO.setRequired(false);
 		impO.setRequired(false);
@@ -169,10 +171,6 @@ public class Main {
 		Option eraseOpt = new Option("d", "delete", false, "Delete cards on target boards");
 		eraseOpt.setRequired(false);
 		cmdOpts.addOption(eraseOpt);
-
-		Option askOpt = new Option("F", "fresh", false, "Fresh Start of all steps and changes needed");
-		askOpt.setRequired(false);
-		cmdOpts.addOption(askOpt);
 
 		Option tasktopOpt = new Option("t", "tasktop", false, "Follow External Links to delete remote artifacts");
 		tasktopOpt.setRequired(false);
@@ -206,7 +204,7 @@ public class Main {
 		Option originOpt = new Option("S", "origin", false, "Add comment for source artifact recording");
 		originOpt.setRequired(false);
 		cmdOpts.addOption(originOpt);
-		Option readOnlyOpt = new Option("R", "ro", false, "Export Read Only fields (Not Imported!)");
+		Option readOnlyOpt = new Option("P", "ro", false, "Export Read Only fields (Not Imported!)");
 		readOnlyOpt.setRequired(false);
 		cmdOpts.addOption(readOnlyOpt);
 		Option nameResolver = new Option("n", "names", false, "Debug Use Only!");
@@ -218,9 +216,9 @@ public class Main {
 
 		} catch (ParseException e) {
 			// Not expecting to ever come here, but compiler needs something....
-			d.p(Debug.ERROR, "(13): %s\n", e.getMessage());
+			d.p(Debug.ERROR, "(-2): %s\n", e.getMessage());
 			hf.printHelp(" ", cmdOpts);
-			System.exit(5);
+			System.exit(-2);
 		}
 
 		if (impExpCl.hasOption("ro")) {
@@ -319,23 +317,23 @@ public class Main {
 		try {
 			xlsxfis = new FileInputStream(new File(config.xlsxfn));
 		} catch (FileNotFoundException e) {
-			d.p(Debug.ERROR, "(4) %s", e.getMessage());
+			d.p(Debug.ERROR, "(-3) %s", e.getMessage());
 
-			System.exit(6);
+			System.exit(-3);
 
 		}
 		try {
 			config.wb = new XSSFWorkbook(xlsxfis);
 			xlsxfis.close();
 		} catch (IOException e) {
-			d.p(Debug.ERROR, "(5) %s", e.getMessage());
-			System.exit(7);
+			d.p(Debug.ERROR, "(-4) %s", e.getMessage());
+			System.exit(-4);
 		}
 
 		configSht = config.wb.getSheet("Config");
 		if (configSht == null) {
 			d.p(Debug.ERROR, "%s", "Did not detect required sheet in the spreadsheet: \"Config\"");
-			System.exit(8);
+			System.exit(-5);
 		}
 	}
 
@@ -392,7 +390,7 @@ public class Main {
 		Iterator<Row> ri = configSht.iterator();
 		if (!ri.hasNext()) {
 			d.p(Debug.ERROR, "%s", "Did not detect any header info on Config sheet (first row!)");
-			System.exit(9);
+			System.exit(-6);
 		}
 		Row hdr = ri.next();
 		Iterator<Cell> cptr = hdr.cellIterator();
@@ -408,13 +406,13 @@ public class Main {
 
 		if (fieldMap.size() != cols.size()) {
 			d.p(Debug.ERROR, "%s", "Did not detect correct columns on Config sheet: " + cols.toString());
-			System.exit(10);
+			System.exit(-7);
 		}
 
 		if (!ri.hasNext()) {
 			d.p(Debug.ERROR, "%s",
 					"Did not detect any potential transfer info on Config sheet (first cell must be non-blank, e.g. url to a real host)");
-			System.exit(11);
+			System.exit(-8);
 		}
 
 		return fieldMap;

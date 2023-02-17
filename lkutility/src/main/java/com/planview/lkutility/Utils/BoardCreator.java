@@ -9,8 +9,6 @@ import org.json.JSONObject;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.planview.lkutility.System.Debug;
-import com.planview.lkutility.System.InternalConfig;
 import com.planview.lkutility.Leankit.Board;
 import com.planview.lkutility.Leankit.BoardLevel;
 import com.planview.lkutility.Leankit.CardType;
@@ -18,6 +16,8 @@ import com.planview.lkutility.Leankit.CustomField;
 import com.planview.lkutility.Leankit.CustomIcon;
 import com.planview.lkutility.Leankit.Lane;
 import com.planview.lkutility.Leankit.Layout;
+import com.planview.lkutility.System.Debug;
+import com.planview.lkutility.System.InternalConfig;
 
 public class BoardCreator {
 	Debug d = new Debug();
@@ -47,15 +47,15 @@ public class BoardCreator {
 
 		if (src.equals(dst)) {
 
-			if ((srcBrd != null) &&(dstBrd == null)) {
+			if ((srcBrd != null) && (dstBrd == null)) {
 				dstBrd = LkUtils.duplicateBoard(cfg);
 				if (dstBrd != null) {
 					d.p(Debug.INFO, "Duplication of board. id: %s, title: \"%s\"\n", dstBrd.id, dstBrd.title);
 				} else {
-					d.p(Debug.ERROR, "Cannot duplicate locally from \"%s\" to \"%s\" ... skipping\n",
+					d.p(Debug.ERROR, "Cannot duplicate locally from \"%s\" to \"%s\"\n",
 							cfg.source.getBoardName(),
 							cfg.destination.getBoardName());
-					return false;
+							System.exit(-17);
 				}
 			}
 		} else {
@@ -66,7 +66,7 @@ public class BoardCreator {
 				if (dstBrd == null) {
 					dstBrd = LkUtils.createBoard(cfg, cfg.destination);
 				}
-			} 
+			}
 		}
 
 		if (srcBrd == null) {
@@ -75,11 +75,11 @@ public class BoardCreator {
 		}
 
 		if (dstBrd == null) {
-			d.p(Debug.ERROR, "Could not create/locate destination board \"%s\" ... skipping\n",
+			d.p(Debug.ERROR, "Could not create/locate destination board \"%s\"\n",
 					cfg.destination.getBoardName());
-			return false;
+					System.exit(-18);
 		} else {
-			d.p(Debug.INFO, "Board Available for update. id: %s, title: \"%s\"\n", dstBrd.id,
+			d.p(Debug.INFO, "Board Available for update on \"%s\". id: %s, title: \"%s\"\n", cfg.destination.getUrl(), dstBrd.id,
 					cfg.destination.getBoardName());
 		}
 		details.put("allowUsersToDeleteCards", srcBrd.allowUsersToDeleteCards);
@@ -102,14 +102,17 @@ public class BoardCreator {
 			}
 		}
 		if (gotDstLevels != srcLevels.size()) {
-			d.p(Debug.WARN, "Mismatch between source and destination board levels - resetting destination\n");
-			BoardLevel[] bla = {};
-			for (int i = 0; i < srcLevels.size(); i++) {
-				BoardLevel current = srcLevels.get(i);
-				bla = (BoardLevel[]) ArrayUtils.add(bla,
-						new BoardLevel(current.depth, current.label, current.color));
+			d.p(Debug.WARN, "Mismatch between source and destination board levels\n");
+			if (cfg.updateLevels) {
+				d.p(Debug.WARN, "    - resetting destination\n");
+				BoardLevel[] bla = {};
+				for (int i = 0; i < srcLevels.size(); i++) {
+					BoardLevel current = srcLevels.get(i);
+					bla = (BoardLevel[]) ArrayUtils.add(bla,
+							new BoardLevel(current.depth, current.label, current.color));
+				}
+				LkUtils.setBoardLevels(cfg, cfg.destination, bla);
 			}
-			LkUtils.setBoardLevels(cfg, cfg.destination, bla);
 		} else {
 			d.p(Debug.INFO, "Board levels match between \"%s\" and \"%s\"\n", cfg.source.getUrl(),
 					cfg.destination.getUrl());
@@ -139,7 +142,7 @@ public class BoardCreator {
 			Integer matchedIcons = 0;
 			Integer[] unMatched = {};
 			for (int i = 0; i < srcIcons.length; i++) {
-				boolean matched = false;
+				Boolean matched = false;
 				// If we have them, check to see if it is the same name ('unique' identifier on
 				// LK)
 				if (dstIcons != null) {
@@ -155,7 +158,7 @@ public class BoardCreator {
 				}
 				if (!matched) {
 					LkUtils.createCustomIcon(cfg, cfg.destination, srcIcons[i]);
-					d.p(Debug.WARN, "Creating Icon %s on %s\n", srcIcons[i].name, cfg.destination.getBoardName());
+					d.p(Debug.INFO, "Creating Icon %s on %s\n", srcIcons[i].name, cfg.destination.getBoardName());
 				}
 			}
 		} else {
@@ -280,7 +283,8 @@ public class BoardCreator {
 		 * Push all the remaining updates
 		 * 
 		 */
-		details.put("level", srcBrd.level.depth);
+		if (srcBrd.level != null)
+			details.put("level", srcBrd.level.depth);
 		LkUtils.updateBoard(cfg, cfg.destination, dstBrd.id, details);
 
 		/**
@@ -291,7 +295,7 @@ public class BoardCreator {
 		 * 
 		 */
 
-		Lane[] srcLanes = LkUtils.getLanesFromBoardName(cfg, cfg.source, cfg.source.getBoardName());
+		Lane[] srcLanes = LkUtils.getLanesFromBoardTitle(cfg, cfg.source, cfg.source.getBoardName());
 		if (srcLanes != null) {
 			Layout newLayout = LkUtils.createLaneTree(srcLanes);
 			ObjectMapper om = new ObjectMapper();
@@ -299,7 +303,7 @@ public class BoardCreator {
 				d.p(Debug.VERBOSE, "Layout: %s\n", om.writeValueAsString(newLayout));
 			} catch (JsonProcessingException e) {
 				d.p(Debug.ERROR, "Layout conversion failed : %s\n", cfg.source.getBoardName());
-				return false;
+				System.exit(-19);
 			}
 			newLayout = LkUtils.updateBoardLayout(cfg, cfg.destination, newLayout);
 			LkUtils.setSortedLanes(cfg, cfg.destination, srcLanes, newLayout);
