@@ -2,9 +2,9 @@
 
 Currently this is limited to an exporter/importer app. The same app will do both directions independently. Future development may make it do both at once, i.e 'simultaneous transfer' but, for now, you need to provide both the -e and -i options to do a _transfer_
 
-With this tool, you can make a backup of the current state of cards on your board - recreate a copy of the cards on the same, or different, board - merge cards from boards together into a single destination board. 
+With this tool, you can make a backup of the current state of cards on your board (-e) - recreate a copy of the cards on the same, or different, board (-i) - merge cards from boards together into a single destination board. 
 
-It will copy current cards (with option to include archived) with tasks, comments and attachments (if indicated), as well as marking the source of the copy by adding an additional comment in the destination card. AssignedUsers are preserved if the same login name exists on the source and destination.
+It will copy current cards (with option to include older archived) with tasks, comments and attachments (if indicated), as well as marking the source of the copy by adding an additional comment in the destination card. AssignedUsers are preserved if the same login name exists on the source and destination.
 
 If you wish, you can create your own spreadsheet and import a particular set of cards - handy if you want to have 'template' sets you want to tailor to some specific use-case, e.g a repeatable set of actions for a scrum team.
 
