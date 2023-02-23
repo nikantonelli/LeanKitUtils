@@ -1,6 +1,6 @@
 ## Overview
 
-Currently this is limited to an exporter/importer app. The same app will do both directions independently. Future development may make it do both at once, i.e 'simultaneous transfer'
+Currently this is limited to an exporter/importer app. The same app will do both directions independently. Future development may make it do both at once, i.e 'simultaneous transfer' but, for now, you need to provide both the -e and -i options to do a _transfer_
 
 With this tool, you can make a backup of the current state of cards on your board - recreate a copy of the cards on the same, or different, board - merge cards from boards together into a single destination board. 
 
@@ -10,6 +10,10 @@ If you wish, you can create your own spreadsheet and import a particular set of 
 
 ## Changes
 
+- Version 2.0 Import of large sections of code updates from 'replicator' utility
+ 1. Reworked command line options
+ 2. New board archive/create/delete/update features
+ 3. Delete of all cards on a destination board (can be done in isolation if required)
 - Version 1.2 refactored the whole thing and added a few utilities. It also has two breaking changes: 
  1. in the layout of the spreadsheet config page.
  2. Command line options are changed. BEWARE! unless this is the first time you are using this app.
@@ -23,11 +27,9 @@ If you have the Excel file open when this app is trying to run, it may fail whil
 
 The app may also require you to have read/write access on the directory you are running it from. This is to store the attachment files if you have asked for them to be exported.
 
-The basic requirement to fire off the app is a file with a single sheet in it. The columns of the sheet must be: 'direction', 'url', 'username', 'password', 'apiKey' and 'boardId'. The first row found with 'src' as the entry under direction will be used by the exporter. The first row found with 'dst' will be used by the importer.
+The basic requirement to fire off the app is a file with a single sheet in it. The columns of the sheet are in the section below and there should be an example in this github repo.
 
-You need to provide either a username/password pair or apiKey that is valid for the url you wish to access. 
-
-To get the board id, log into the system at the url, navigate to the board of interest and take the digit string from the end of the URL in the browser address bar.
+You need to provide an apiKey that is valid for the url you wish to access. You can generate this by clicking on your Avatar in the top-right hand corner and selecting "API Tokens" from the menu.
 
 ## Command Line Options
 Option | Argument | Description 
@@ -55,14 +57,14 @@ Option | Argument | Description
  
 ## Features and Usage
  
-* The exporter will create sheets in the Xlsx file that correspond to the boardId that will be needed by the importer (if you progress to that stage). If you run with only the -e option, then there are two sheets created per board: "C_\<boardid\>" and "<boardid\>".
+* The exporter will create sheets in the Xlsx file that correspond to the boardId that will be needed by the importer (if you progress to that stage). If you run with only the -e option, then there are two sheets created per board: "C_\<boardName\>" and "<boardName\>".
 * The exporter does not export any history (i.e. dates of changes, createdBy, ActualFinish, etc., etc.) information and takes a snapshot of what is there right now. As this app is all about recreating new items afresh, all that data is irrelevant. To get those dates, please use the standard in-built exporter (to csv).
 * You can re-use the same spreadsheet to export multiple boards (with -e option only).
 * If you are running the export in order to run the importer some time later, you must update the src/dst boardIds in the correct sequence. There are a few scenarios:
   * If you want to just export, then the Config sheet only need contain one line containing the 'src' info
   * If you want to import, then just the 'dst' info is needed
   * If you want to copy multiple boards from one system to another and there are parent/child relationships between cards on different boards, then you need to ensure that you export in the correct order. This is so the program can find the items and make the equations up so that the parent links are recreated properly on import. An example of this is when you have a Portfolio board with Initiatives on that have Epics as children on an Agile Release Train board, that itself has Features as children on a Team board (that may or may not have stories). You must export in the order, Portfolio, ART, Team. 
-* If you want to merge boards together into one destination board, you can concatenate multiple changes sheet together, leaving the board item sheets as they are. E.g. copy sheets called "C_1598676317" and "C_1606150498" (created by the exporter) into one sheet called "Changes_Combined" and then set the src board name to "Combined" to run the importer. Remember! You will have issues with Lanes if the layouts of the boards are incompatible.  You can use the -l to overwrite the source layout onto the destination.
+* If you want to merge boards together into one destination board, you can concatenate multiple changes sheet together, leaving the board item sheets as they are. E.g. copy sheets called "C_My_Team_Board" and "C_Your_Team_Board" (created by the exporter) into one sheet called "C_Combined" and then set the src board name to "Combined" to run the importer. Remember! You will have issues with Lanes if the layouts of the boards are incompatible.  You can use the -l to overwrite the source layout onto the destination.
 
 WIP limits are overridden automatically with a default message. This is a fixed _feature_
 
@@ -154,11 +156,11 @@ Fields that are valid for an item in a board sheet (connected to a 'Create' in t
 
 * Parent
 
-This field can be only used as part of a "Modify" line in the Changes sheet and not in the board sheet. The value in the field needs to be an equation that points to the cell that will hold the Id of the parent (e.g. ='1587279792'!A6 )
+This field can be only used as part of a "Modify" line in the Changes sheet and not in the board sheet. The value in the field needs to be an equation that points to the cell that will hold the Id of the parent (e.g. ='My Team Board'!A6 )
 
 * Task
 
-This field can be only used as part of a "Modify" line in the Changes sheet and not in the board sheet. The value in the field needs to be an equation that points to the cell that will hold the Id of the child task (e.g. ='1587279792'!A8 )
+This field can be only used as part of a "Modify" line in the Changes sheet and not in the board sheet. The value in the field needs to be an equation that points to the cell that will hold the Id of the child task (e.g. ='My Team Board'!A8 )
 
 ## Custom Fields
 
