@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.planview</groupId>
   <artifactId>LeanKitUtils</artifactId>
-  <version>1.1</version>
+  <version>1.0</version>
   <name>LeanKitUtils</name>
   <url>http://www.planview.com</url>
   <packaging>pom</packaging>

@@ -16,13 +16,10 @@ If board d has children in board e,f or g, and board f has children in g, then t
 
 The problem should not occur that often with a SAFe style of arranging cards and boards. In the scenario above, the Portfolio is board a, the ART boards are b and c, the team boards are d,e,f and g. To get the info into the spreadsheet in the correct way, you would most likely need to export in this order: a,b,c,d,e,f,g However, if f has children in d, you would need to use this order: a,b,c,f,d,e,g. This sequencing is to make sure that the parent is already present on a sheet in the spreadsheet and can be found prior to the export of the child card.
 
-From version 1.1, when you are importing, you need to set the src.boardId to the data you want to take and import. The app uses the boardId to find the correct changes sheet.
-
 Steps to copy boards:
 
-* Set src.boardId to boardA and run export
-* Set src.boardId to boardB and run export
-* Create newBoardA
-* Create newBoardB
-* Set src.boardId to boardA, set dst.boardId to newBoardA and run import
-* Set src.boardId to boardB, set dst.boardId to newBoardB and run import
+* Set srcBoardName to boardA 
+* Set dstBoardName to boardB
+* Run with option -e -r -i
+
+For multiple boards (as per the theory above), just create multiple lines in the spreadsheet in the correct order

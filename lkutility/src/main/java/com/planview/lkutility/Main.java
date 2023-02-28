@@ -10,10 +10,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 
-import com.planview.lkutility.diff.Diff;
-import com.planview.lkutility.exporter.Exporter;
-import com.planview.lkutility.importer.Importer;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -26,388 +22,399 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import com.planview.lkutility.Leankit.AccessCache;
+import com.planview.lkutility.System.Access;
+import com.planview.lkutility.System.AccessConfig;
+import com.planview.lkutility.System.ColNames;
+import com.planview.lkutility.System.Debug;
+import com.planview.lkutility.System.InternalConfig;
+import com.planview.lkutility.Utils.BoardArchiver;
+import com.planview.lkutility.Utils.BoardCreator;
+import com.planview.lkutility.Utils.BoardDeleter;
+import com.planview.lkutility.Utils.CardDeleter;
+import com.planview.lkutility.Utils.Diff;
+import com.planview.lkutility.Utils.Exporter;
+import com.planview.lkutility.Utils.Importer;
+import com.planview.lkutility.Utils.XlUtils;
+
 public class Main {
-    static Debug d = null;
+	static Debug d = null;
 
-    /**
-     * This defaults to true so we behave as an exporter if it is not otherwise
-     * specified. If the command line contains a -i flag, this is set to false.
-     */
-    static Boolean setToExport = true;
-    static Boolean setToImport = false;
-    static Boolean setToDiff = false;
+	/**
+	 * This defaults to true so we behave as an exporter if it is not otherwise
+	 * specified. If the command line contains a -i flag, this is set to false.
+	 */
+	
+	static Boolean setToDiff = false;
 
-    /**
-     * One line sheet that contains the credentials to access the Leankit Server.
-     * Must contain columns "url", "username", "password" and "apiKey", but not
-     * necessarily have data in all of them - see getConfigFromFile()
-     */
-    static XSSFSheet configSht = null;
+	/**
+	 * One line sheet that contains the credentials to access the Leankit Server.
+	 * Must contain columns "url", "username", "password" and "apiKey", but not
+	 * necessarily have data in all of them - see getConfigFromFile()
+	 */
+	static XSSFSheet configSht = null;
 
-    /**
-     * The expectation is that there is a common config for the while execution.
-     * Therefore this is extracted once and passed to all sub tasks
-     */
-    static InternalConfig config = new InternalConfig();
+	/**
+	 * The expectation is that there is a common config for the while execution.
+	 * Therefore this is extracted once and passed to all sub tasks
+	 */
+	static InternalConfig config = new InternalConfig();
 
-    public static void main(String[] args) {
-        d = new Debug();
-        getCommandLine(args);
+	public static void main(String[] args) {
+		d = new Debug();
+		getCommandLine(args);
 
-        checkXlsx();
-        getConfigFromFile();
+		checkXlsx();
+		HashMap<String, Integer> fieldMap = chkConfigFromFile();
+		if (configSht != null) {
+			Iterator<Row> rowItr = configSht.iterator();
+			Row row = rowItr.next(); // Move past headers
+			while (rowItr.hasNext()) {
+				row = rowItr.next();
+				config = XlUtils.setConfig(config, row, fieldMap);
 
-        if (config.replay && !setToDiff) {
-            config.changesSheet = config.wb.getSheet("replay_" + config.destination.boardId);
-            if (config.changesSheet != null){
-                Importer impt = new Importer(config);
-                impt.go();
-            }
-            else {
-                d.p(Debug.ERROR," Replay sheet not found. Run with -d before (or with) -r\n");
-            }
-        } else {
+				config.source.setCache(new AccessCache());
+				config.destination.setCache(new AccessCache());
 
-            if (setToExport == true) {
-                Exporter expt = new Exporter(config);
-                expt.go();
-            }
+				if (config.replay && !setToDiff) {
+					config.changesSheet = config.wb.getSheet("replay_" + config.destination.getBoardName());
+					if (config.changesSheet != null) {
+						Importer impt = new Importer(config);
+						impt.go();
+					} else {
+						d.p(Debug.ERROR, " Replay sheet not found. Run with -c before (or with) -a\n");
+						System.exit(-1);
+					}
+				} else if (!setToDiff) {
+					Boolean ok = true;
+					if (config.exporter ) {
+						// 2 & 3 (Exporter does check for board)
+						Exporter exp = new Exporter(config);
+						exp.go();
+					}
+	
+					// Now we need to check/reset the destination board if needed
+	
+					if (config.deleteCards  && !config.remakeBoard) {
+						CardDeleter cd = new CardDeleter(config);
+						cd.go();
+					}
+	
+					if (config.remakeBoard && !config.eraseBoard) {
+						BoardArchiver ba = new BoardArchiver(config);
+						ba.go();
+					}
+	
+					if (config.eraseBoard) {
+						BoardDeleter bd = new BoardDeleter(config);
+						bd.go();
+					}
+	
+					if ((config.remakeBoard) || (config.updateLayout)){
+						BoardCreator bd = new BoardCreator (config);
+						ok = bd.go();
+					}
+	
+					if (ok && config.importer ){
+						Importer imp = new Importer(config);
+						imp.go();
+					}
+				}else {
+					if (setToDiff == true) {
+						Diff diff = new Diff(config);
+						diff.go();
+					}
+				}
+				
+			}
+		}
+		try {
+			config.wb.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		d.p(Debug.ALWAYS, "Finished at: %s\n", new Date());
+	}
 
-            if (setToImport == true) {
-                Importer impt = new Importer(config);
-                impt.go();
-            }
+	public static void getCommandLine(String[] args) {
 
-            if (setToDiff == true) {
-                Diff diff = new Diff(config);
-                diff.go();
-            }
-        }
-        try {
-            config.wb.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+		CommandLineParser p = new DefaultParser();
+		HelpFormatter hf = new HelpFormatter();
+		CommandLine impExpCl = null;
 
-        d.p(Debug.ALWAYS, "Finished at: %s\n", new Date());
-    }
+		Options cmdOpts = new Options();
+		Option impO = new Option("i", "import", false, "run importer");
+		Option expO = new Option("e", "export", false, "run exporter");
+		Option diffO = new Option("c", "compare", false,
+				"compare dst URL to a previous transfer");
+		diffO.setRequired(false);
+		Option repO = new Option("a", "replay", false,
+				"auto-run the reset of the destination during diff");
+		repO.setRequired(false);
+		impO.setRequired(false);
+		expO.setRequired(false);
+		cmdOpts.addOption(impO);
+		cmdOpts.addOption(expO);
+		cmdOpts.addOption(diffO);
+		cmdOpts.addOption(repO);
 
-    public static void getCommandLine(String[] args) {
+		cmdOpts.addRequiredOption("f", "filename", true, "XLSX Spreadsheet (must contain API config!)");
 
-        CommandLineParser p = new DefaultParser();
-        HelpFormatter hf = new HelpFormatter();
-        CommandLine impExpCl = null;
+		Option remakeOpt = new Option("r", "remake", false, "Remake target boards by archiving old and adding new");
+		remakeOpt.setRequired(false);
+		cmdOpts.addOption(remakeOpt);
 
-        Options impExpOpt = new Options();
-        Option impO = new Option("i", "import", false, "run importer");
-        Option expO = new Option("e", "export", false, "run exporter");
-        Option tnsO = new Option("t", "transfer", false, "run transfer");
-        Option diffO = new Option("d", "diff", false,
-                "compare dst URL to a previous transfer");
-        diffO.setRequired(false);
-        Option repO = new Option("r", "replay", false,
-                "auto-run the reset of the destination during diff");
-        repO.setRequired(false);
-        impO.setRequired(false);
-        expO.setRequired(false);
-        tnsO.setRequired(false);
-        impExpOpt.addOption(impO);
-        impExpOpt.addOption(expO);
-        impExpOpt.addOption(tnsO);
-        impExpOpt.addOption(diffO);
-        impExpOpt.addOption(repO);
+		Option removeOpt = new Option("R", "remove", false, "Remove target boards");
+		removeOpt.setRequired(false);
+		cmdOpts.addOption(removeOpt);
 
-        impExpOpt.addRequiredOption("f", "filename", true, "XLSX Spreadsheet (must contain API config!)");
+		Option eraseOpt = new Option("d", "delete", false, "Delete cards on target boards");
+		eraseOpt.setRequired(false);
+		cmdOpts.addOption(eraseOpt);
 
-        Option groupOpt = new Option("g", "group", true, "Identifier of group to process (if present)");
-        groupOpt.setRequired(false);
-        impExpOpt.addOption(groupOpt);
+		Option tasktopOpt = new Option("t", "tasktop", false, "Follow External Links to delete remote artifacts");
+		tasktopOpt.setRequired(false);
+		cmdOpts.addOption(tasktopOpt);
 
-        Option moveOpt = new Option("m", "move", true, "Lane to modify unwanted cards with (for diff only)");
-        moveOpt.setRequired(false);
-        impExpOpt.addOption(moveOpt);
+		Option groupOpt = new Option("g", "group", true, "Identifier of group to process (if present)");
+		groupOpt.setRequired(false);
+		cmdOpts.addOption(groupOpt);
 
-        Option dbp = new Option("x", "debug", true,
-                "Print out loads of helpful stuff: 0 - Error, 1 - And Warnings, 2 - And Info, 3 - And Debugging, 4 - And Network");
-        dbp.setRequired(false);
-        impExpOpt.addOption(dbp);
-        Option archiveOpt = new Option("O", "archived", false, "Include older Archived cards in export (if present)");
-        archiveOpt.setRequired(false);
-        impExpOpt.addOption(archiveOpt);
-        Option tasksOpt = new Option("T", "tasks", false, "Include Task cards in export (if present)");
-        tasksOpt.setRequired(false);
-        impExpOpt.addOption(tasksOpt);
-        Option attsOpt = new Option("A", "attachments", false,
-                "Export card attachments in local filesystem (if present)");
-        attsOpt.setRequired(false);
-        impExpOpt.addOption(attsOpt);
-        Option comsOpt = new Option("C", "comments", false, "Export card comments in local filesystem (if present)");
-        comsOpt.setRequired(false);
-        impExpOpt.addOption(comsOpt);
-        Option originOpt = new Option("S", "origin", false, "Add comment for source artifact recording");
-        originOpt.setRequired(false);
-        impExpOpt.addOption(originOpt);
-        Option readOnlyOpt = new Option("R", "ro", false, "Export Read Only fields (Not Imported!)");
-        readOnlyOpt.setRequired(false);
-        impExpOpt.addOption(readOnlyOpt);
+		Option moveOpt = new Option("m", "move", true, "Lane to modify unwanted cards with (for compare only)");
+		moveOpt.setRequired(false);
+		cmdOpts.addOption(moveOpt);
+
+		Option dbp = new Option("x", "debug", true,
+				"Print out loads of helpful stuff: 0 - Error, 1 - And Warnings, 2 - And Info, 3 - And Debugging, 4 - And Network");
+		dbp.setRequired(false);
+		cmdOpts.addOption(dbp);
+		Option archiveOpt = new Option("O", "archived", false, "Include older Archived cards in export (if present)");
+		archiveOpt.setRequired(false);
+		cmdOpts.addOption(archiveOpt);
+		Option tasksOpt = new Option("T", "tasks", false, "Include Task cards in export (if present)");
+		tasksOpt.setRequired(false);
+		cmdOpts.addOption(tasksOpt);
+		Option attsOpt = new Option("A", "attachments", false,
+				"Export card attachments in local filesystem (if present)");
+		attsOpt.setRequired(false);
+		cmdOpts.addOption(attsOpt);
+		Option comsOpt = new Option("C", "comments", false, "Export card comments in local filesystem (if present)");
+		comsOpt.setRequired(false);
+		cmdOpts.addOption(comsOpt);
+		Option originOpt = new Option("S", "origin", false, "Add comment for source artifact recording");
+		originOpt.setRequired(false);
+		cmdOpts.addOption(originOpt);
+		Option readOnlyOpt = new Option("P", "ro", false, "Export Read Only fields (Not Imported!)");
+		readOnlyOpt.setRequired(false);
+		cmdOpts.addOption(readOnlyOpt);
 		Option nameResolver = new Option("n", "names", false, "Debug Use Only!");
-        nameResolver.setRequired(false);
-        impExpOpt.addOption(nameResolver);
+		nameResolver.setRequired(false);
+		cmdOpts.addOption(nameResolver);
 
-        try {
-            impExpCl = p.parse(impExpOpt, args, true);
+		try {
+			impExpCl = p.parse(cmdOpts, args, true);
 
-        } catch (ParseException e) {
-            // Not expecting to ever come here, but compiler needs something....
-            d.p(Debug.ERROR, "(13): %s\n", e.getMessage());
-            hf.printHelp(" ", impExpOpt);
-            System.exit(5);
-        }
+		} catch (ParseException e) {
+			// Not expecting to ever come here, but compiler needs something....
+			d.p(Debug.ERROR, "(-2): %s\n", e.getMessage());
+			hf.printHelp(" ", cmdOpts);
+			System.exit(-2);
+		}
 
-        if (impExpCl.hasOption("ro")) {
-            config.roFieldExport = true;
-        }
+		if (impExpCl.hasOption("ro")) {
+			config.roFieldExport = true;
+		}
 
-        if (impExpCl.hasOption("replay")) {
-            config.replay = true;
-        }
+		if (impExpCl.hasOption("replay")) {
+			config.replay = true;
+		}
 
-        if (impExpCl.hasOption("names")) {
-            config.nameResolver = true;
-        }
+		if (impExpCl.hasOption("names")) {
+			config.nameResolver = true;
+		}
 
-        if (impExpCl.hasOption("debug")) {
-            String optVal = impExpCl.getOptionValue("debug");
-            if (optVal != null) {
-                config.debugLevel = Integer.parseInt(optVal);
-                d.setLevel(config.debugLevel);
-            } else {
-                config.debugLevel = 99;
-            }
-        }
+		if (impExpCl.hasOption("debug")) {
+			String optVal = impExpCl.getOptionValue("debug");
+			if (optVal != null) {
+				config.debugLevel = Integer.parseInt(optVal);
+				d.setLevel(config.debugLevel);
+			} else {
+				config.debugLevel = 99;
+			}
+		}
 
-        /**
-         * If we are doing a diff, we don't want to think about import/export via the
-         * normal route. We need to export the board again into a temporary sheet and
-         * then
-         * scan it for differences between it and the original.
-         * We then can use the diff to create a 'reset' changes sheet. Any cards in
-         * excess of
-         * those in the original can be moved to the archive lane
-         */
-        if (impExpCl.hasOption("diff")) {
-            d.p(Debug.INFO, "Setting to diff mode.\n");
-            config.diffMode = impExpCl.getOptionValue("diff");
-            setToDiff = true;
-            setToExport = false;
-            if (impExpCl.hasOption("move")) {
-                config.archive = impExpCl.getOptionValue("move");
-            }
-        } else {
-            if (impExpCl.hasOption("replay")) {
-                if (impExpCl.hasOption("transfer") || impExpCl.hasOption("export") || impExpCl.hasOption("import")) {
-                    d.p(Debug.INFO, "Invalid options specified (-r with another). Defaulting to Replay mode.\n");
-                } else {
-                    d.p(Debug.INFO, "Setting to Replay mode.\n");
-                }
-                config.replay = true;
-            }
-            /**
-             * Import takes precedence if option present, then export, then transfer
-             */
-            else if (impExpCl.hasOption("import")) {
-                if (impExpCl.hasOption("transfer") || impExpCl.hasOption("export")) {
-                    d.p(Debug.INFO, "Invalid options specified (-i with another). Defaulting to Import mode.\n");
-                } else {
-                    d.p(Debug.INFO, "Setting to Import mode.\n");
-                }
-                setToExport = false;
-                setToImport = true;
-            } else {
-                if (impExpCl.hasOption("export")) {
-                    if (impExpCl.hasOption("transfer")) {
-                        d.p(Debug.INFO, "Invalid options specified (-e and -t) Defaulting to Export mode\n");
-                    }
-                } else if (impExpCl.hasOption("transfer")) {
-                    d.p(Debug.INFO, "Setting to Dual mode\n");
-                    setToImport = true;
-                }
-            }
-        }
+		/**
+		 * If we are doing a compare, we don't want to think about import/export via the
+		 * normal route. We need to export the board again into a temporary sheet and
+		 * then
+		 * scan it for differences between it and the original.
+		 * We then can use the compare to create a 'reset' changes sheet. Any cards in
+		 * excess of
+		 * those in the original can be moved to the archive lane
+		 */
+		if (impExpCl.hasOption("compare")) {
+			d.p(Debug.INFO, "Setting to compare mode.\n");
+			config.diffMode = impExpCl.getOptionValue("compare");
+			setToDiff = true;
+			config.exporter = false;
+			if (impExpCl.hasOption("move")) {
+				config.archive = impExpCl.getOptionValue("move");
+			}
+		} else {
+			if (impExpCl.hasOption("replay")) {
+				if (impExpCl.hasOption("export") || impExpCl.hasOption("import")) {
+					d.p(Debug.INFO, "Invalid options specified (-r with another). Defaulting to Replay mode.\n");
+				} else {
+					d.p(Debug.INFO, "Setting to Replay mode.\n");
+				}
+				config.replay = true;
+			}
+			/**
+			 * Import takes precedence if option present, then export, then transfer
+			 */
+			else { 
+				if (impExpCl.hasOption("import")) config.importer = true;
+				if (impExpCl.hasOption("export")) config.exporter = true;
+				if (impExpCl.hasOption("delete")) config.deleteCards = true;
+				if (impExpCl.hasOption("remake")) config.remakeBoard = true;
+				if (impExpCl.hasOption("layout")) config.updateLayout = true;
+				if (impExpCl.hasOption("remove")) config.eraseBoard = true;
+			}
+		}
 
-        config.xlsxfn = impExpCl.getOptionValue("filename");
+		config.xlsxfn = impExpCl.getOptionValue("filename");
 
-        // We now need to check for all the other unique options
+		// We now need to check for all the other unique options
 
-        if (impExpCl.hasOption("group")) {
-            config.group = Integer.parseInt(impExpCl.getOptionValue("group"));
-        }
-        if (impExpCl.hasOption("archived")) {
-            config.exportArchived = true;
-        }
-        if (impExpCl.hasOption("tasks")) {
-            config.exportTasks = true;
-        }
-        if (impExpCl.hasOption("comments")) {
-            config.exportComments = true;
-        }
-        if (impExpCl.hasOption("attachments")) {
-            config.exportAttachments = true;
-        }
-        if (impExpCl.hasOption("origin")) {
-            config.addComment = true;
-        }
+		if (impExpCl.hasOption("group")) {
+			config.group = Integer.parseInt(impExpCl.getOptionValue("group"));
+		}
+		if (impExpCl.hasOption("archived")) {
+			config.exportArchived = true;
+		}
+		if (impExpCl.hasOption("tasks")) {
+			config.exportTasks = true;
+		}
+		if (impExpCl.hasOption("comments")) {
+			config.exportComments = true;
+		}
+		if (impExpCl.hasOption("attachments")) {
+			config.exportAttachments = true;
+		}
+		if (impExpCl.hasOption("origin")) {
+			config.addComment = true;
+		}
 
-    }
+	}
 
-    /**
-     * Check if the XLSX file provided has the correct sheets and we can parse the
-     * details we need
-     */
-    public static void checkXlsx() {
-        // Check we can open the file
-        FileInputStream xlsxfis = null;
-        try {
-            xlsxfis = new FileInputStream(new File(config.xlsxfn));
-        } catch (FileNotFoundException e) {
-            d.p(Debug.ERROR, "(4) %s", e.getMessage());
+	/**
+	 * Check if the XLSX file provided has the correct sheets and we can parse the
+	 * details we need
+	 */
+	public static void checkXlsx() {
+		// Check we can open the file
+		FileInputStream xlsxfis = null;
+		try {
+			xlsxfis = new FileInputStream(new File(config.xlsxfn));
+		} catch (FileNotFoundException e) {
+			d.p(Debug.ERROR, "(-3) %s", e.getMessage());
 
-            System.exit(6);
+			System.exit(-3);
 
-        }
-        try {
-            config.wb = new XSSFWorkbook(xlsxfis);
-            xlsxfis.close();
-        } catch (IOException e) {
-            d.p(Debug.ERROR, "(5) %s", e.getMessage());
-            System.exit(7);
-        }
+		}
+		try {
+			config.wb = new XSSFWorkbook(xlsxfis);
+			xlsxfis.close();
+		} catch (IOException e) {
+			d.p(Debug.ERROR, "(-4) %s", e.getMessage());
+			System.exit(-4);
+		}
 
-        configSht = config.wb.getSheet("Config");
-        if (configSht == null) {
-            d.p(Debug.ERROR, "%s", "Did not detect required sheet in the spreadsheet: \"Config\"");
-            System.exit(8);
-        }
-    }
+		configSht = config.wb.getSheet("Config");
+		if (configSht == null) {
+			d.p(Debug.ERROR, "%s", "Did not detect required sheet in the spreadsheet: \"Config\"");
+			System.exit(-5);
+		}
+	}
 
-    private static Boolean parseRow(Row drRow, Configuration cfg, Field[] p, HashMap<String, Object> fieldMap,
-            ArrayList<String> cols) {
-        String cv = drRow.getCell((int) (fieldMap.get(cols.get(0)))).getStringCellValue();
-        if (cv != null) {
+	public static InternalConfig setConfig(InternalConfig config, Row row, HashMap<String, Integer> fieldMap) {
 
-            for (int i = 0; i < cols.size(); i++) {
-                String idx = cols.get(i);
-                Object obj = fieldMap.get(idx);
-                String val = obj.toString();
-                try {
-                    Cell cell = drRow.getCell(Integer.parseInt(val));
+		config.source = new AccessConfig(
+				row.getCell(fieldMap.get(InternalConfig.SOURCE_URL_COLUMN)).getStringCellValue(),
+				row.getCell(fieldMap.get(InternalConfig.SOURCE_BOARDNAME_COLUMN)).getStringCellValue(),
+				row.getCell(fieldMap.get(InternalConfig.SOURCE_APIKEY_COLUMN)).getStringCellValue());
+		config.destination = new AccessConfig(
+				row.getCell(fieldMap.get(InternalConfig.DESTINATION_URL_COLUMN)).getStringCellValue(),
+				row.getCell(fieldMap.get(InternalConfig.DESTINATION_BOARDNAME_COLUMN)).getStringCellValue(),
+				row.getCell(fieldMap.get(InternalConfig.DESTINATION_APIKEY_COLUMN)).getStringCellValue());
 
-                    if (cell != null) {
-                        switch (cell.getCellType()) {
-                            case STRING:
-                                // When you copy'n'paste on WIndows, it sometimes picks up the whitespace too -
-                                // so remove it.
-                                p[i].set(cfg,
-                                        (cell != null ? drRow.getCell(Integer.parseInt(val)).getStringCellValue().trim()
-                                                : ""));
-                                break;
-                            case NUMERIC:
-                                p[i].set(cfg, (cell != null ? drRow.getCell(Integer.parseInt(val)).getNumericCellValue()
-                                        : ""));
-                                break;
-                            default:
-                                break;
-                        }
-                    } else {
-                        p[i].set(cfg, (p[i].getType().equals(String.class)) ? "" : 0.0);
-                    }
+		if (config.ignoreCards) {
+			// Find if column "Import Ignore" exists
+			Integer ignCol = XlUtils.findColumnFromSheet(config.wb.getSheet("Config"), ColNames.IGNORE_LIST);
+			if (ignCol != null) {
+				Cell cl = row.getCell(ignCol);
+				if (cl != null) {
+					String typesString = row.getCell(ignCol).getStringCellValue();
+					// Does the cell have anything in it?
+					if (typesString != null) {
+						config.ignTypes = typesString.split(",");
+						// Trim all whitespace that the user might have left in
+						for (int i = 0; i < config.ignTypes.length; i++) {
+							config.ignTypes[i] = config.ignTypes[i].trim();
+						}
+					}
+				}
+			}
+		}
+		return config;
+	}
 
-                } catch (IllegalArgumentException | IllegalAccessException e) {
-                    d.p(Debug.ERROR, "Conversion error on \"%s\": Verify cell type in Excel\n %s\n", idx,
-                            e.getMessage());
-                    System.exit(12);
-                }
+	private static HashMap<String, Integer> chkConfigFromFile() {
+		// Make the contents of the file lower case before comparing with these.
 
-            }
-            return true;
-        }
-        return false;
-    }
+		Field[] p = (new Access()).getClass().getDeclaredFields();
 
-    private static void getConfigFromFile() {
-        // Make the contents of the file lower case before comparing with these.
-        Field[] p = (new Configuration()).getClass().getDeclaredFields();
+		// Use fields as the ones we need to have in the spreadsheet for both src and
+		// dst
+		ArrayList<String> cols = new ArrayList<String>();
+		for (int i = 0; i < p.length; i++) {
+			p[i].setAccessible(true); // Set this up for later
+			cols.add("src" + p[i].getName());
+			cols.add("dst" + p[i].getName());
+		}
+		cols.add(InternalConfig.DESTINATION_TID_COLUMN);
 
-        ArrayList<String> cols = new ArrayList<String>();
-        for (int i = 0; i < p.length; i++) {
-            p[i].setAccessible(true); // Set this up for later
-            cols.add(p[i].getName().toLowerCase());
-        }
-        HashMap<String, Object> fieldMap = new HashMap<>();
+		HashMap<String, Integer> fieldMap = new HashMap<>();
 
-        // Assume that the titles are the first row
-        Iterator<Row> ri = configSht.iterator();
-        if (!ri.hasNext()) {
-            d.p(Debug.ERROR, "%s", "Did not detect any header info on Config sheet (first row!)");
-            System.exit(9);
-        }
-        Row hdr = ri.next();
-        Iterator<Cell> cptr = hdr.cellIterator();
+		// Assume that the titles are the first row
+		Iterator<Row> ri = configSht.iterator();
+		if (!ri.hasNext()) {
+			d.p(Debug.ERROR, "%s", "Did not detect any header info on Config sheet (first row!)");
+			System.exit(-6);
+		}
+		Row hdr = ri.next();
+		Iterator<Cell> cptr = hdr.cellIterator();
 
-        while (cptr.hasNext()) {
-            Cell cell = cptr.next();
-            Integer idx = cell.getColumnIndex();
-            String cellName = cell.getStringCellValue().trim().toLowerCase();
-            if (cols.contains(cellName)) {
-                fieldMap.put(cellName, idx); // Store the column index of the field
-            }
-        }
+		while (cptr.hasNext()) {
+			Cell cell = cptr.next();
+			Integer idx = cell.getColumnIndex();
+			String cellName = cell.getStringCellValue().trim();
+			if (cols.contains(cellName)) {
+				fieldMap.put(cellName, idx); // Store the column index of the field
+			}
+		}
 
-        if (fieldMap.size() != cols.size()) {
-            d.p(Debug.ERROR, "%s", "Did not detect correct columns on Config sheet: " + cols.toString());
-            System.exit(10);
-        }
+		if (fieldMap.size() != cols.size()) {
+			d.p(Debug.ERROR, "%s", "Did not detect correct columns on Config sheet: " + cols.toString());
+			System.exit(-7);
+		}
 
-        if (!ri.hasNext()) {
-            d.p(Debug.ERROR, "%s",
-                    "Did not detect any field info on Config sheet (first cell must be non-blank, e.g. url to a real host)");
-            System.exit(11);
-        }
+		if (!ri.hasNext()) {
+			d.p(Debug.ERROR, "%s",
+					"Did not detect any potential transfer info on Config sheet (first cell must be non-blank, e.g. url to a real host)");
+			System.exit(-8);
+		}
 
-        while (ri.hasNext() && ((config.source.url == null) || (config.destination.url == null))) {
-            Row rtc = ri.next();
-            if (rtc.getCell(0).getStringCellValue().equals("src")) {
-                if (config.source.url == null) {
-                    parseRow(rtc, config.source, p, fieldMap, cols);
-                }
-            }
-            if (rtc.getCell(0).getStringCellValue().equals("dst")) {
-                if (config.destination.url == null) {
-                    parseRow(rtc, config.destination, p, fieldMap, cols);
-                }
-            }
-        }
-
-        // Creds are now found and set. If not, you're buggered.
-
-        /**
-         * We can opt to use username/password or apikey.
-         **/
-        if ((config.source.url != null) && setToExport) {
-            if (((config.source.apiKey == null) || (config.source.boardId == null))
-                    && ((config.source.username == null) || (config.source.password == null))) {
-                d.p(Debug.ERROR, "%s", "Did not detect enough source info: apikey or username/password pair");
-                System.exit(13);
-            }
-        }
-        if ((config.destination.url != null) && setToImport) {
-            if (((config.destination.apiKey == null) || (config.destination.boardId == null))
-                    && ((config.destination.username == null) || (config.destination.password == null))) {
-                d.p(Debug.ERROR, "%s", "Did not detect enough destination info: apikey or username/password pair");
-                System.exit(13);
-            }
-        }
-
-        return;
-    }
+		return fieldMap;
+	}
 }

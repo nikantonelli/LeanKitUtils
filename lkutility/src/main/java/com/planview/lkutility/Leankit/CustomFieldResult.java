@@ -1,4 +1,4 @@
-package com.planview.lkutility.leankit;
+package com.planview.lkutility.Leankit;
 
 public class CustomFieldResult {
     public Integer limit;
