@@ -152,7 +152,8 @@ Fields that are valid for an item in a board sheet (connected to a 'Create' in t
 * title
 * type
 
-The External Link field is supplied as a pair of data (Label and URL) separated by a "," character, e.g. MyWikiPage,https://sharepoint.planview.com/someLink
+The External Link field is supplied as a pair of data (Label and URL) separated by a "," character, e.g. <br>
+My Wiki Page,https://sharepoint.planview.com/someLink
 
 ## Pseudo Fields
 
