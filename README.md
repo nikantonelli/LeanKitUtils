@@ -65,9 +65,6 @@ Option | Argument | Description
   * If you want to import, then the 'dst' info is needed  (but all columns must exists)
   * If you want to copy multiple boards from one system to another and there are parent/child relationships between cards on different boards, then you need to ensure that you export in the correct order. This is so the program can find the items and make the equations up so that the parent links are recreated properly on import. An example of this is when you have a Portfolio board with Initiatives on that have Epics as children on an Agile Release Train board, that itself has Features as children on a Team board (that may or may not have stories). You must export in the order, Portfolio, ART, Team. 
 * If you want to merge boards together into one destination board, you can concatenate multiple changes sheet together, leaving the board item sheets as they are. E.g. copy sheets called "C_My_Team_Board" and "C_Your_Team_Board" (created by the exporter) into one sheet called "C_Combined" and then set the src board name to "Combined" to run the importer. Remember! You will have issues with Lanes if the layouts of the boards are incompatible.  You can use the -l to overwrite the source layout onto the destination.
-
-WIP limits are overridden automatically with a default message. This is a fixed _feature_
-
 * All items that cannot be put into a correct lane will end up in the default drop lane - this can get messy. To recover, you can delete all the items in the default drop lane that aren't supposed to be there and set the value in the Group column in the Changes sheet to something memorable (e.g. 99) for those items you want to recreate and modify. Then rerun the importer with the -g option with that group number.
 * To run both the importer and exporter sequentially, for example, you can use the following command line:
  
@@ -120,6 +117,7 @@ If your destination system does not have the correct users set up, the users are
 The importer will take the spreadsheet field as a comma separated list of users.
 
 ## Lanes and WIP Limits
+WIP limits are overridden automatically with a default message. This is a fixed _feature_.
 
 Lanes hierarchy is represented as a set of strings separated by the "^" character
 To add/move a card to a lane which might cause the WIP limit to be exceeded, add an override comment to the lane field. To do this, add a "`" and then the override comment itself,
@@ -153,6 +151,8 @@ Fields that are valid for an item in a board sheet (connected to a 'Create' in t
 * tags
 * title
 * type
+
+The External Link field is supplied as a pair of data (Label and URL) separated by a "," character, e.g. MyWikiPage,https://sharepoint.planview.com/someLink
 
 ## Pseudo Fields
 
