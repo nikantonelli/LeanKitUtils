@@ -49,9 +49,7 @@ public class BoardCreator {
 
 			if ((srcBrd != null) && (dstBrd == null)) {
 				dstBrd = LkUtils.duplicateBoard(cfg);
-				if (dstBrd != null) {
-					d.p(Debug.INFO, "Duplication of board. id: %s, title: \"%s\"\n", dstBrd.id, dstBrd.title);
-				} else {
+				if (dstBrd == null) {
 					d.p(Debug.ERROR, "Cannot duplicate locally from \"%s\" to \"%s\"\n",
 							cfg.source.getBoardName(),
 							cfg.destination.getBoardName());

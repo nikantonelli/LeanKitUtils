@@ -124,13 +124,12 @@ public class Importer {
 			}
 			String field = change.getCell(cc.field).getStringCellValue();
 			// Check import requirements against command line
-			if (change.getCell(cc.action).getStringCellValue() == "Modify") {
+			if (change.getCell(cc.action).getStringCellValue().equals("Modify")) {
 				if (((field == "attachments") && !cfg.exportAttachments)
 						|| ((field == "Task") && !cfg.exportTasks)
 						|| ((field == "comments") && !cfg.exportComments)) {
-					d.p(Debug.WARN, "Ignoring action \"%s\" on item \"%s\", not set to import %s\n",
-							change.getCell(cc.action).getStringCellValue(), item.getCell(titleCol).getStringCellValue(),
-							field);
+					d.p(Debug.WARN, "Ignoring action \"Modify\" on item \"%s\", not set to import %s\n",
+							item.getCell(titleCol).getStringCellValue(), field);
 					continue; // Break out and try next change
 				}
 			}
@@ -142,17 +141,18 @@ public class Importer {
 						&& !(change.getCell(cc.action).getStringCellValue().equals("Modify")
 								&& field.equals("Task"))
 						&& !cfg.replay) {
-					d.p(Debug.WARN, "Ignoring action \"%s\" on item \"%s\" (no ID present in item row: %d)\n",
-							change.getCell(cc.action).getStringCellValue(), item.getCell(titleCol).getStringCellValue(),
-							item.getRowNum());
+					d.p(Debug.WARN, "Ignoring action \"Create\" on item \"%s\" (no ID present in item row: %d)\n",
+							item.getCell(titleCol).getStringCellValue(), item.getRowNum());
 					continue; // Break out and try next change
 				}
 			} else {
-				// Check if this is a 'create' operation. If it is, ignore and continue past.
-				if (change.getCell(cc.action).getStringCellValue().equals("Create") && !cfg.replay) {
+				/** Check if this is a 'create' operation. If it is, and the main program hasn't already got rid of the cards,
+				 *  ignore and continue past.
+				 */
+				if (change.getCell(cc.action).getStringCellValue().equals("Create") && !cfg.replay && !cfg.eraseBoard && !cfg.deleteCards) {
 					d.p(Debug.WARN,
-							"Ignoring action \"%s\" on item \"%s\" (attempting create on existing ID in item row: %d)\n",
-							change.getCell(cc.action).getStringCellValue(), item.getCell(titleCol).getStringCellValue(),
+							"Ignoring action \"Create\" on item \"%s\" (attempting create on existing ID in item row: %d)\n",
+							item.getCell(titleCol).getStringCellValue(),
 							item.getRowNum());
 					continue; // Break out and try next change
 				}

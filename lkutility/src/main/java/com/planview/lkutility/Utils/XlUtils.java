@@ -62,6 +62,9 @@ public class XlUtils {
 	 }
 
 	public static InternalConfig setConfig(InternalConfig config, Row row, HashMap<String, Integer> fieldMap) {
+
+		d.setLevel(config.debugLevel);
+
 		config.source = new AccessConfig(
 				row.getCell(fieldMap.get(InternalConfig.SOURCE_URL_COLUMN)).getStringCellValue(),
 				row.getCell(fieldMap.get(InternalConfig.SOURCE_BOARDNAME_COLUMN)).getStringCellValue(),
@@ -409,31 +412,6 @@ public class XlUtils {
 		}
 	}
 
-	// private static ArrayList<Lane> findLanesFromParentId(Lane[] lanes, String id)
-	// {
-	// ArrayList<Lane> ln = new ArrayList<>();
-	// for (int i = 0; i < lanes.length; i++) {
-	// if (lanes[i].parentLaneId != null) {
-	// if (lanes[i].parentLaneId.equals(id)) {
-	// ln.add(lanes[i]);
-	// }
-	// }
-	// }
-	// return ln;
-	// }
-
-	// private static ArrayList<String> getParentLaneIds( ArrayList<Lane> allLanes,
-	// ArrayList<Lane> lanes){
-	// ArrayList<String> foundName = new ArrayList<>();
-	// Iterator<Lane> lIter = lanes.iterator();
-	// while (lIter.hasNext()) {
-	// Lane lane = lIter.next();
-	// if (lane.name.equals(laneName)){
-	// foundName.add(findLaneFromId(allLanes, lane.parentLaneId);
-	// }
-	// }
-	// return foundName;
-	// }
 
 	/**
 	 * If cardId is null, we assume this is a card on a board If non-null, then this
