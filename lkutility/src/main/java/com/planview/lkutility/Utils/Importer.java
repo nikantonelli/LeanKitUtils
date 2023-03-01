@@ -149,7 +149,7 @@ public class Importer {
 				/** Check if this is a 'create' operation. If it is, and the main program hasn't already got rid of the cards,
 				 *  ignore and continue past.
 				 */
-				if (change.getCell(cc.action).getStringCellValue().equals("Create") && !cfg.replay && !cfg.eraseBoard && !cfg.deleteCards) {
+				if (change.getCell(cc.action).getStringCellValue().equals("Create") && !cfg.replay && !cfg.eraseBoard && !cfg.deleteCards && !cfg.deleteXlsx) {
 					d.p(Debug.WARN,
 							"Ignoring action \"Create\" on item \"%s\" (attempting create on existing ID in item row: %d)\n",
 							item.getCell(titleCol).getStringCellValue(),

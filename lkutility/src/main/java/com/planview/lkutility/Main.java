@@ -95,7 +95,7 @@ public class Main {
 	
 					// Now we need to check/reset the destination board if needed
 	
-					if (config.deleteCards  && !config.remakeBoard) {
+					if ((config.deleteCards || config.deleteXlsx)  && !config.remakeBoard) {
 						CardDeleter cd = new CardDeleter(config);
 						cd.go();
 					}
@@ -168,7 +168,11 @@ public class Main {
 		removeOpt.setRequired(false);
 		cmdOpts.addOption(removeOpt);
 
-		Option eraseOpt = new Option("d", "delete", false, "Delete cards on target boards");
+		Option deleteOpt = new Option("X", "xlsx", false, "Delete cards on target boards (from spreadsheet)");
+		deleteOpt.setRequired(false);
+		cmdOpts.addOption(deleteOpt);
+
+		Option eraseOpt = new Option("d", "delete", false, "Delete all cards on target boards");
 		eraseOpt.setRequired(false);
 		cmdOpts.addOption(eraseOpt);
 
@@ -227,6 +231,10 @@ public class Main {
 
 		if (impExpCl.hasOption("replay")) {
 			config.replay = true;
+		}
+
+		if (impExpCl.hasOption("xlsx")) {
+			config.deleteXlsx = true;
 		}
 
 		if (impExpCl.hasOption("names")) {

@@ -73,6 +73,7 @@ public class InternalConfig {
 	public Boolean roFieldExport = false;
 	public Boolean nameResolver = false;
 	public String diffMode;
+	public Boolean deleteXlsx = false;
 
 }
 

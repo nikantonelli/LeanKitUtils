@@ -8,7 +8,23 @@ public class Card implements Comparable<Card> {
             customIconId, customIconLabel, iconPath, color, wipOverrideComment;
     public CustomId customId;
     public Connections connections;
-    public ExternalLink externalLink;
+    public String getId() {
+		return id;
+	}
+
+	public void setId(String id) {
+		this.id = id;
+	}
+
+	public String getTitle() {
+		return title;
+	}
+
+	public void setTitle(String title) {
+		this.title = title;
+	}
+
+	public ExternalLink externalLink;
     public String[] tags, assignedUserIds;
     public Integer commentsCount, childCommentsCount, size, index, scoreOverride;
     public Double confidenceTotal, scoreTotal;

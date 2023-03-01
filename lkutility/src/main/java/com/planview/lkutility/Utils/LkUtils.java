@@ -207,7 +207,7 @@ public class LkUtils {
 		return brd;
 	}
 
-	public static ArrayList<Card> getCardIdsFromBoard(InternalConfig iCfg, AccessConfig accessCfg) {
+	public static ArrayList<Card> getCardsFromBoard(InternalConfig iCfg, AccessConfig accessCfg) {
 		LeanKitAccess lka = new LeanKitAccess(accessCfg, iCfg.debugLevel);
 		Board brd = getBoardByTitle(iCfg, accessCfg);
 		ArrayList<Card> cards = null;

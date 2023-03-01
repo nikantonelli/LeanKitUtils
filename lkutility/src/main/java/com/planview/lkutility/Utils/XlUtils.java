@@ -46,7 +46,7 @@ public class XlUtils {
 	 * First put all the spreadsheet related routines here:
 	 */
 
-	 public static boolean notIgnoreType(InternalConfig cfg,  String type){
+	public static boolean notIgnoreType(InternalConfig cfg, String type) {
 		// Demo reset use
 		boolean runAction = true;
 		if (cfg.ignTypes != null) {
@@ -59,7 +59,7 @@ public class XlUtils {
 			}
 		}
 		return runAction;
-	 }
+	}
 
 	public static InternalConfig setConfig(InternalConfig config, Row row, HashMap<String, Integer> fieldMap) {
 
@@ -74,7 +74,7 @@ public class XlUtils {
 				row.getCell(fieldMap.get(InternalConfig.DESTINATION_BOARDNAME_COLUMN)).getStringCellValue(),
 				row.getCell(fieldMap.get(InternalConfig.DESTINATION_APIKEY_COLUMN)).getStringCellValue());
 
-		if (config.ignoreCards){
+		if (config.ignoreCards) {
 			// Find if column "Import Ignore" exists
 			Integer ignCol = XlUtils.findColumnFromSheet(config.wb.getSheet("Config"), ColNames.IGNORE_LIST);
 			if (ignCol != null) {
@@ -84,8 +84,8 @@ public class XlUtils {
 					// Does the cell have anything in it?
 					if (typesString != null) {
 						config.ignTypes = typesString.split(",");
-						//Trim all whitespace that the user might have left in
-						for (int i = 0; i < config.ignTypes.length; i++){
+						// Trim all whitespace that the user might have left in
+						for (int i = 0; i < config.ignTypes.length; i++) {
 							config.ignTypes[i] = config.ignTypes[i].trim();
 						}
 					}
@@ -95,9 +95,9 @@ public class XlUtils {
 		return config;
 	}
 
-	public static String validateSheetName( String longSheetName) {
+	public static String validateSheetName(String longSheetName) {
 		String shortName = longSheetName.replaceAll("[^a-zA-Z0-9]", "_");
-		if (longSheetName.length() > 32){
+		if (longSheetName.length() > 32) {
 			shortName = longSheetName.substring(0, 15) + ".." + longSheetName.substring(longSheetName.length() - 14);
 		}
 		return shortName;
@@ -412,7 +412,6 @@ public class XlUtils {
 		}
 	}
 
-
 	/**
 	 * If cardId is null, we assume this is a card on a board If non-null, then this
 	 * is a task on a card
@@ -461,7 +460,7 @@ public class XlUtils {
 										for (int j = 0; j < boardUsers.size(); j++) {
 											if (realUser.id.equals(boardUsers.get(j).userId)) {
 												usersToPut.add(realUser.id);
-												usernames += (i != 0)?",":"" + users[i] ;
+												usernames += (i != 0) ? "," : "" + users[i];
 											}
 										}
 									} else {
@@ -476,7 +475,7 @@ public class XlUtils {
 									bba.boardIds = (String[]) ArrayUtils.add(bids, brd.id);
 									bba.userIds = usersToPut.toArray(new String[0]);
 									bba.boardRole = "boardUser";
-								
+
 									d.p(Debug.INFO, "Adding users \"%s\" to board \"%s\"\n", usernames, brd.title);
 									LkUtils.updateBoardUsers(cfg, accessCfg, bba);
 									flds.put("assignedUserIds", usersToPut.toArray());
@@ -556,7 +555,10 @@ public class XlUtils {
 							flds.put("laneType", laneType);
 						}
 					} else {
-						String[] bits = laneType.split(InternalConfig.SPLIT_WIP_REGEX_CHAR);	//This is NOT the LANE split, just the Excel spreadsheet one for wipLimit
+						String[] bits = laneType.split(InternalConfig.SPLIT_WIP_REGEX_CHAR); // This is NOT the LANE
+																								// split, just the Excel
+																								// spreadsheet one for
+																								// wipLimit
 						if (fieldLst.has("boardId")) {
 							lane = LkUtils.getLaneFromBoardId(cfg, accessCfg,
 									item.getCell(fieldLst.getInt("boardId")).getStringCellValue(), bits[0]);
@@ -690,7 +692,7 @@ public class XlUtils {
 		while (rIter.hasNext()) {
 			Row row = rIter.next();
 			// Get the sheet with the same name as the board
-			XSSFSheet st = cfg.wb.getSheet(XlUtils.validateSheetName( row.getCell(sCol).getStringCellValue()));
+			XSSFSheet st = cfg.wb.getSheet(XlUtils.validateSheetName(row.getCell(sCol).getStringCellValue()));
 			if (st != null) {
 				Row targ = findRowByStringValue(st, ColNames.TITLE, parentId);
 				if (targ != null) {
@@ -703,6 +705,7 @@ public class XlUtils {
 		}
 		return null;
 	}
+
 	public static Integer firstColumnFromSheet(XSSFSheet sht, String name) {
 		Iterator<Row> row = sht.iterator();
 		if (!row.hasNext()) {
@@ -715,6 +718,7 @@ public class XlUtils {
 		}
 		return col;
 	}
+
 	public static Integer firstColumnFromName(Row firstRow, String name) {
 		Iterator<Cell> frtc = firstRow.iterator();
 		// First, find the column that the "Day Delta" info is in
@@ -735,7 +739,7 @@ public class XlUtils {
 		}
 		return dayCol;
 	}
-	
+
 	public static Integer firstRowIdxByStringValue(XSSFSheet itemSht, String fieldName, String value) {
 		for (int rowIndex = 1; rowIndex <= itemSht.getLastRowNum(); rowIndex++) {
 			Row row = itemSht.getRow(rowIndex);
@@ -757,5 +761,30 @@ public class XlUtils {
 			}
 		}
 		return null;
+	}
+
+	public static ArrayList<Card> getDstCards(InternalConfig cfg) {
+		ArrayList<Card> cards = new ArrayList<>();
+		XSSFSheet itemSht = cfg.wb.getSheet(XlUtils.validateSheetName(cfg.source.getBoardName()));
+		if (itemSht != null) {
+			Integer idCol = firstColumnFromSheet(itemSht, ColNames.ID);
+			Integer titleCol = firstColumnFromSheet(itemSht, ColNames.TITLE);
+
+			for (int rowIndex = 1; rowIndex <= itemSht.getLastRowNum(); rowIndex++) {
+				Row row = itemSht.getRow(rowIndex);
+				Cell idCell = row.getCell(idCol);
+				Cell titleCell = row.getCell(titleCol);
+				if ((idCell != null) && (titleCell != null)
+						&& (idCell.getCellType().equals(CellType.STRING))
+						&& (titleCell.getCellType().equals(CellType.STRING))) {
+					Card cd = new Card();
+					cd.setId(row.getCell(idCol).getStringCellValue());
+					cd.setTitle(row.getCell(titleCol).getStringCellValue());
+					cards.add(cd);
+				}
+			}
+		}
+
+		return cards;
 	}
 }

@@ -190,7 +190,7 @@ public class Exporter {
         /**
          * Read all the normal cards on the board - up to a limit?
          */
-        ArrayList<Card> cards = LkUtils.getCardIdsFromBoard(cfg, cfg.source);
+        ArrayList<Card> cards = LkUtils.getCardsFromBoard(cfg, cfg.source);
         Collections.sort(cards);
         /**
          * Write all the cards out to the cfg.itemSheet
