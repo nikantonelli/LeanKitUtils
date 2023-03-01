@@ -42,6 +42,7 @@ Option | Argument | Description
 -R |  | (R)emove target boards completely (delete)
 -l |  | Replace (l)ayout on target board
 -d |  | (d)elete all cards on the target boards
+-X |  | delete all cards on the target boards listed in the ID column of (X)lsx file
 -P |  | Ex(P)ort read-only fields (Not Imported!)
 -c |  | Run in (c)ompare mode (Needs previous export data)
 -m |  | Lane to modify unwanted cards with (for compare only)
@@ -53,7 +54,6 @@ Option | Argument | Description
 -T |  | Include _Tasks_ in export/import
 -C |  | Include  _Comments_ in export/import
 -S |  | Include a comment in export containing link to original _Source_ (will not get imported if -C not used)
--P |  | Export some Read Only fields (which will not be imported)
  
 ## Features and Usage
  
