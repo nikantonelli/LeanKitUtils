@@ -27,6 +27,7 @@ public class Diff {
     public Diff(InternalConfig config) {
         cfg = config;
         d.setLevel(cfg.debugLevel);
+		d.setMsgr(cfg.msg);
     }
 
     public void go() {

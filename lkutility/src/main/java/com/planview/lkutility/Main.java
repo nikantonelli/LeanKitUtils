@@ -28,6 +28,8 @@ import com.planview.lkutility.System.AccessConfig;
 import com.planview.lkutility.System.ColNames;
 import com.planview.lkutility.System.Debug;
 import com.planview.lkutility.System.InternalConfig;
+import com.planview.lkutility.System.LanguageMessages;
+import com.planview.lkutility.System.Messages;
 import com.planview.lkutility.Utils.BoardArchiver;
 import com.planview.lkutility.Utils.BoardCreator;
 import com.planview.lkutility.Utils.BoardDeleter;
@@ -61,7 +63,11 @@ public class Main {
 	static InternalConfig config = new InternalConfig();
 
 	public static void main(String[] args) {
+		config.msg = new Messages(System.getProperty("user.language"));
+
 		d = new Debug();
+		d.setMsgr(config.msg);
+		d.p(Debug.ALWAYS, config.msg.getMsg(LanguageMessages.START_PROGRAM), new Date());
 		getCommandLine(args);
 
 		checkXlsx();
@@ -133,9 +139,10 @@ public class Main {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		d.p(Debug.ALWAYS, "Finished at: %s\n", new Date());
+		d.p(Debug.ALWAYS, config.msg.getMsg(LanguageMessages.FINISH_PROGRAM), new Date());
 	}
 
+	
 	public static void getCommandLine(String[] args) {
 
 		CommandLineParser p = new DefaultParser();
@@ -160,7 +167,8 @@ public class Main {
 
 		cmdOpts.addRequiredOption("f", "filename", true, "XLSX Spreadsheet (must contain API config!)");
 
-		Option remakeOpt = new Option("r", "remake", false, "Remake target boards by archiving old and adding new");
+		//Option remakeOpt = new Option("r", "remake", false, "Remake target boards by archiving old and adding new");
+		Option remakeOpt = new Option("r", config.msg.getMsg(LanguageMessages.REMAKE_OPTION), false, config.msg.getMsg(LanguageMessages.REMAKE_OPTION_MSG));
 		remakeOpt.setRequired(false);
 		cmdOpts.addOption(remakeOpt);
 
@@ -171,6 +179,10 @@ public class Main {
 		Option deleteOpt = new Option("X", "xlsx", false, "Delete cards on target boards (from spreadsheet)");
 		deleteOpt.setRequired(false);
 		cmdOpts.addOption(deleteOpt);
+
+		Option langOpt = new Option("L", "language", true, "Language, langue, sprache, idioma, etc.");
+		langOpt.setRequired(false);
+		cmdOpts.addOption(langOpt);
 
 		Option eraseOpt = new Option("d", "delete", false, "Delete all cards on target boards");
 		eraseOpt.setRequired(false);
@@ -236,6 +248,7 @@ public class Main {
 		if (impExpCl.hasOption("xlsx")) {
 			config.deleteXlsx = true;
 		}
+
 
 		if (impExpCl.hasOption("names")) {
 			config.nameResolver = true;

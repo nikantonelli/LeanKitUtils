@@ -64,6 +64,7 @@ public class XlUtils {
 	public static InternalConfig setConfig(InternalConfig config, Row row, HashMap<String, Integer> fieldMap) {
 
 		d.setLevel(config.debugLevel);
+		d.setMsgr(config.msg);
 
 		config.source = new AccessConfig(
 				row.getCell(fieldMap.get(InternalConfig.SOURCE_URL_COLUMN)).getStringCellValue(),
@@ -109,12 +110,12 @@ public class XlUtils {
 		// Check for daft stuff.
 		if (sht == null) {
 			d.p(Debug.WARN, "getRowsByStringValue() passed null sheet\n");
-			return new ArrayList<>();
+			return list;
 		}
 		Integer cellIdx = findColumnFromSheet(sht, name);
 		if (cellIdx < 0) {
-			d.p(Debug.WARN, "getRowsByStringValue() passed incorrect field name\n");
-			return new ArrayList<>();
+			d.p(Debug.WARN, "getRowsByStringValue() passed incorrect field name \"%s\"\n", name);
+			return list;
 		}
 
 		Iterator<Row> iRow = sht.iterator();

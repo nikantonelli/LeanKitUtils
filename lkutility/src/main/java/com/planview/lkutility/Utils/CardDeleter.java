@@ -18,6 +18,7 @@ public class CardDeleter {
 	public CardDeleter(InternalConfig config) {
 		cfg = config;
 		d.setLevel(config.debugLevel);
+		d.setMsgr(cfg.msg);
 	}
 
 	public void go() {

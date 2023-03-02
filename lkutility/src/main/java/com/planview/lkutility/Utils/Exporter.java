@@ -72,6 +72,7 @@ public class Exporter {
     public Exporter(InternalConfig config) {
         cfg = config;
         d.setLevel(cfg.debugLevel);
+		d.setMsgr(cfg.msg);
     }
 
     public void go() {

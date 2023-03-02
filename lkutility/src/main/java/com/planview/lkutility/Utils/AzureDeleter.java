@@ -12,6 +12,7 @@ public class AzureDeleter {
 	public int go(InternalConfig cfg, String[] adoDeletes) {
 		config = cfg;
 		d.setLevel(config.debugLevel);
+		d.setMsgr(cfg.msg);
 
 		//Check that we have both user and token as ADO is non-standard.
 		if ((config.ado.getUser() != null) && (config.ado.getApiKey() != null)){

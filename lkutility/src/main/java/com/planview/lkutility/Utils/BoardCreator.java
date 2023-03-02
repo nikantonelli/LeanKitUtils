@@ -25,7 +25,8 @@ public class BoardCreator {
 
 	public BoardCreator(InternalConfig config) {
 		cfg = config;
-		d.setLevel(config.debugLevel);
+		d.setLevel(cfg.debugLevel);
+		d.setMsgr(cfg.msg);
 	}
 
 	public Boolean go() {
