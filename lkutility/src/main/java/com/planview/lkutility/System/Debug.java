@@ -10,9 +10,9 @@ public class Debug {
 	public final static int VERBOSE = 4;
 
 	private Integer debugPrint = 0;
-	private Messages msgr;
+	private Languages msgr;
 
-	public void setMsgr(Messages msgr) {
+	public void setMsgr(Languages msgr) {
 		this.msgr = msgr;
 	}
 
@@ -35,28 +35,28 @@ public class Debug {
 		String lp = null;
 		switch (level) {
 			case INFO: {
-				lp = (msgr == null) ? "INFO: ": msgr.getMsg(LanguageMessages.INFO);
+				lp = (msgr == null) ? "INFO: ": msgr.getMsg(LMS.INFO);
 				break;
 			}
 			case ERROR: {
-				lp = (msgr == null) ? "ERROR: ": msgr.getMsg(LanguageMessages.ERROR);
+				lp = (msgr == null) ? "ERROR: ": msgr.getMsg(LMS.ERROR);
 				break;
 			}
 			case WARN: {
-				lp = (msgr == null) ? "WARN: ": msgr.getMsg(LanguageMessages.WARN);
+				lp = (msgr == null) ? "WARN: ": msgr.getMsg(LMS.WARN);
 				break;
 			}
 			case DEBUG: {
-				lp = (msgr == null) ? "DEBUG: ": msgr.getMsg(LanguageMessages.DEBUG);
+				lp = (msgr == null) ? "DEBUG: ": msgr.getMsg(LMS.DEBUG);
 				break;
 			}
 			case VERBOSE: {
-				lp = (msgr == null) ? "VERBOSE: ": msgr.getMsg(LanguageMessages.VERBOSE);
+				lp = (msgr == null) ? "VERBOSE: ": msgr.getMsg(LMS.VERBOSE);
 				break;
 			}
 			case ALWAYS:
 			default: {
-				lp = (msgr == null) ? "NOTE: ": msgr.getMsg(LanguageMessages.NOTE);
+				lp = (msgr == null) ? "NOTE: ": msgr.getMsg(LMS.NOTE);
 			}
 		}
 		if (level <= debugPrint) {

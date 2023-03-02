@@ -76,7 +76,7 @@ public class InternalConfig {
 	public Boolean nameResolver = false;
 	public String diffMode;
 	public Boolean deleteXlsx = false;
-	public Messages msg;
+	public Languages msg;
 
 }
 

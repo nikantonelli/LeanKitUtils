@@ -29,8 +29,8 @@ import com.planview.lkutility.System.AccessConfig;
 import com.planview.lkutility.System.ColNames;
 import com.planview.lkutility.System.Debug;
 import com.planview.lkutility.System.InternalConfig;
-import com.planview.lkutility.System.LanguageMessages;
-import com.planview.lkutility.System.Messages;
+import com.planview.lkutility.System.LMS;
+import com.planview.lkutility.System.Languages;
 import com.planview.lkutility.Utils.BoardArchiver;
 import com.planview.lkutility.Utils.BoardCreator;
 import com.planview.lkutility.Utils.BoardDeleter;
@@ -47,7 +47,7 @@ public class Main {
 	 * This defaults to true so we behave as an exporter if it is not otherwise
 	 * specified. If the command line contains a -i flag, this is set to false.
 	 */
-	
+
 	static Boolean setToDiff = false;
 
 	/**
@@ -64,12 +64,13 @@ public class Main {
 	static InternalConfig config = new InternalConfig();
 
 	public static void main(String[] args) {
-		String locale = Locale.getDefault().getLanguage();
-		config.msg = new Messages(System.getProperty("user.language"));
+		//Must be here to set a default for config.msg (used later on)
+		//Will set to English if user.language is not set or unknown
+		config.msg = new Languages(System.getProperty("user.language"));
 
 		d = new Debug();
 		d.setMsgr(config.msg);
-		d.p(Debug.ALWAYS, config.msg.getMsg(LanguageMessages.START_PROGRAM), new Date());
+		d.p(Debug.ALWAYS, config.msg.getMsg(LMS.START_PROGRAM), new Date());
 		getCommandLine(args);
 
 		checkXlsx();
@@ -90,50 +91,50 @@ public class Main {
 						Importer impt = new Importer(config);
 						impt.go();
 					} else {
-						d.p(Debug.ERROR, " Replay sheet not found. Run with -c before (or with) -a\n");
+						d.p(Debug.ERROR, config.msg.getMsg(LMS.REPLAY_SHEET_NOT_FOUND));
 						System.exit(-1);
 					}
 				} else if (!setToDiff) {
 					Boolean ok = true;
-					if (config.exporter ) {
+					if (config.exporter) {
 						// 2 & 3 (Exporter does check for board)
 						Exporter exp = new Exporter(config);
 						exp.go();
 					}
-	
+
 					// Now we need to check/reset the destination board if needed
-	
-					if ((config.deleteCards || config.deleteXlsx)  && !config.remakeBoard) {
+
+					if ((config.deleteCards || config.deleteXlsx) && !config.remakeBoard) {
 						CardDeleter cd = new CardDeleter(config);
 						cd.go();
 					}
-	
+
 					if (config.remakeBoard && !config.eraseBoard) {
 						BoardArchiver ba = new BoardArchiver(config);
 						ba.go();
 					}
-	
+
 					if (config.eraseBoard) {
 						BoardDeleter bd = new BoardDeleter(config);
 						bd.go();
 					}
-	
-					if ((config.remakeBoard) || (config.updateLayout)){
-						BoardCreator bd = new BoardCreator (config);
+
+					if ((config.remakeBoard) || (config.updateLayout)) {
+						BoardCreator bd = new BoardCreator(config);
 						ok = bd.go();
 					}
-	
-					if (ok && config.importer ){
+
+					if (ok && config.importer) {
 						Importer imp = new Importer(config);
 						imp.go();
 					}
-				}else {
+				} else {
 					if (setToDiff == true) {
 						Diff diff = new Diff(config);
 						diff.go();
 					}
 				}
-				
+
 			}
 		}
 		try {
@@ -141,10 +142,9 @@ public class Main {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		d.p(Debug.ALWAYS, config.msg.getMsg(LanguageMessages.FINISH_PROGRAM), new Date());
+		d.p(Debug.ALWAYS, config.msg.getMsg(LMS.FINISH_PROGRAM), new Date());
 	}
 
-	
 	public static void getCommandLine(String[] args) {
 
 		CommandLineParser p = new DefaultParser();
@@ -169,13 +169,16 @@ public class Main {
 
 		cmdOpts.addRequiredOption("f", "filename", true, "XLSX Spreadsheet (must contain API config!)");
 
-		//Option remakeOpt = new Option("r", "remake", false, "Remake target boards by archiving old and adding new");
-		Option remakeOpt = new Option("r", config.msg.getMsg(LanguageMessages.REMAKE_OPTION), false, config.msg.getMsg(LanguageMessages.REMAKE_OPTION_MSG));
+		// Option remakeOpt = new Option("r", "remake", false, "Remake target boards by
+		// archiving old and adding new");
+		Option remakeOpt = new Option("r", config.msg.getMsg(LMS.REMAKE_OPTION), false,
+				config.msg.getMsg(LMS.REMAKE_OPTION_MSG));
 		remakeOpt.setRequired(false);
 		cmdOpts.addOption(remakeOpt);
 
-		Option removeOpt = new Option("R", config.msg.getMsg(LanguageMessages.REMOVE_OPTION), false, config.msg.getMsg(LanguageMessages.REMOVE_OPTION_MSG));
-		//Option removeOpt = new Option("R", "remove", false, "Remove target boards");
+		Option removeOpt = new Option("R", config.msg.getMsg(LMS.REMOVE_OPTION), false,
+				config.msg.getMsg(LMS.REMOVE_OPTION_MSG));
+		// Option removeOpt = new Option("R", "remove", false, "Remove target boards");
 		removeOpt.setRequired(false);
 		cmdOpts.addOption(removeOpt);
 
@@ -235,7 +238,7 @@ public class Main {
 
 		} catch (ParseException e) {
 			// Not expecting to ever come here, but compiler needs something....
-			d.p(Debug.ERROR, "(-2): %s\n", e.getMessage());
+			d.p(Debug.ERROR, config.msg.getMsg(LMS.COMMANDLINE_ERROR), e.getMessage());
 			hf.printHelp(" ", cmdOpts);
 			System.exit(-2);
 		}
@@ -252,6 +255,14 @@ public class Main {
 			config.deleteXlsx = true;
 		}
 
+		if (impExpCl.hasOption("language")) {
+			String optVal = impExpCl.getOptionValue("language");
+			if (optVal != null) {
+				d.p(Debug.ALWAYS, config.msg.getMsg(LMS.SETTING_LANGUAGE), optVal);
+				config.msg = new Languages(optVal);
+				d.setMsgr(config.msg);
+			}
+		}
 
 		if (impExpCl.hasOption("names")) {
 			config.nameResolver = true;
@@ -277,7 +288,7 @@ public class Main {
 		 * those in the original can be moved to the archive lane
 		 */
 		if (impExpCl.hasOption("compare")) {
-			d.p(Debug.INFO, "Setting to compare mode.\n");
+			d.p(Debug.INFO, config.msg.getMsg(LMS.SET_COMPARE_MODE));
 			config.diffMode = impExpCl.getOptionValue("compare");
 			setToDiff = true;
 			config.exporter = false;
@@ -287,7 +298,7 @@ public class Main {
 		} else {
 			if (impExpCl.hasOption("replay")) {
 				if (impExpCl.hasOption("export") || impExpCl.hasOption("import")) {
-					d.p(Debug.INFO, "Invalid options specified (-r with another). Defaulting to Replay mode.\n");
+					d.p(Debug.INFO, config.msg.getMsg(LMS.INVALID_OPTIONS));
 				} else {
 					d.p(Debug.INFO, "Setting to Replay mode.\n");
 				}
@@ -296,13 +307,19 @@ public class Main {
 			/**
 			 * Import takes precedence if option present, then export, then transfer
 			 */
-			else { 
-				if (impExpCl.hasOption("import")) config.importer = true;
-				if (impExpCl.hasOption("export")) config.exporter = true;
-				if (impExpCl.hasOption("delete")) config.deleteCards = true;
-				if (impExpCl.hasOption("remake")) config.remakeBoard = true;
-				if (impExpCl.hasOption("layout")) config.updateLayout = true;
-				if (impExpCl.hasOption("remove")) config.eraseBoard = true;
+			else {
+				if (impExpCl.hasOption("import"))
+					config.importer = true;
+				if (impExpCl.hasOption("export"))
+					config.exporter = true;
+				if (impExpCl.hasOption("delete"))
+					config.deleteCards = true;
+				if (impExpCl.hasOption(config.msg.getMsg(LMS.REMAKE_OPTION)))
+					config.remakeBoard = true;
+				if (impExpCl.hasOption("layout"))
+					config.updateLayout = true;
+				if (impExpCl.hasOption(config.msg.getMsg(LMS.REMOVE_OPTION)))
+					config.eraseBoard = true;
 			}
 		}
 
