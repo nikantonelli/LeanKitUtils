@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Locale;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -63,6 +64,7 @@ public class Main {
 	static InternalConfig config = new InternalConfig();
 
 	public static void main(String[] args) {
+		String locale = Locale.getDefault().getLanguage();
 		config.msg = new Messages(System.getProperty("user.language"));
 
 		d = new Debug();
@@ -172,7 +174,8 @@ public class Main {
 		remakeOpt.setRequired(false);
 		cmdOpts.addOption(remakeOpt);
 
-		Option removeOpt = new Option("R", "remove", false, "Remove target boards");
+		Option removeOpt = new Option("R", config.msg.getMsg(LanguageMessages.REMOVE_OPTION), false, config.msg.getMsg(LanguageMessages.REMOVE_OPTION_MSG));
+		//Option removeOpt = new Option("R", "remove", false, "Remove target boards");
 		removeOpt.setRequired(false);
 		cmdOpts.addOption(removeOpt);
 

@@ -12,5 +12,7 @@ public class LanguageMessages {
 	public final static Integer FINISH_PROGRAM = 8;
 	public final static Integer REMAKE_OPTION_MSG = 9;
 	public static final Integer REMAKE_OPTION = 10;
+	public static final Integer REMOVE_OPTION = 11;
+	public static final Integer REMOVE_OPTION_MSG = 12;
 
 }
