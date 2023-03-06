@@ -19,6 +19,7 @@ import org.apache.poi.xssf.usermodel.XSSFSheet;
 import com.planview.lkutility.System.ColNames;
 import com.planview.lkutility.System.Debug;
 import com.planview.lkutility.System.InternalConfig;
+import com.planview.lkutility.System.LMS;
 
 public class Diff {
     Debug d = new Debug();
@@ -50,7 +51,7 @@ public class Diff {
          * ..2....src sheet..dst URL
          * ..3....src URL....dst URL
          */
-        d.p(Debug.ALWAYS, "Starting diff at: %s\n", new Date());
+        d.p(LMS.ALWAYS, "Starting diff at: %s\n", new Date());
         
         Integer firstShtIdx = cfg.wb.getSheetIndex(cfg.source.getBoardName()); // First item sheets go in here
         Integer firstChgIdx = cfg.wb.getSheetIndex(InternalConfig.CHANGES_SHEET_NAME + cfg.source.getBoardName());
@@ -66,12 +67,12 @@ public class Diff {
             found = true;
         }
         if (!found) {
-            d.p(Debug.ERROR, "diff: incorrect sheets found for src board: %s\n", cfg.source.getBoardName());
+            d.p(LMS.ERROR, "diff: incorrect sheets found for src board: %s\n", cfg.source.getBoardName());
 			System.exit(-20);
         }
 
         if ((firstChgIdx == null) || (firstShtIdx == null)) {
-            d.p(Debug.ERROR, " Cannot locate required data to compare\n");
+            d.p(LMS.ERROR, " Cannot locate required data to compare\n");
             System.exit(-21);
         }
 
@@ -90,7 +91,7 @@ public class Diff {
             }
         }
         if (found) {
-            d.p(Debug.INFO, "Saved sheets found for dst board: %s (to fetch new data)\n", cfg.destination.getBoardName());
+            d.p(LMS.INFO, "Saved sheets found for dst board: %s (to fetch new data)\n", cfg.destination.getBoardName());
         }
 
         /**
@@ -136,7 +137,7 @@ public class Diff {
             }
         }
         if (!found) {
-            d.p(Debug.ERROR, "Oops! fetch of new data for board: %s failed\n", cfg.destination.getBoardName());
+            d.p(LMS.ERROR, "Oops! fetch of new data for board: %s failed\n", cfg.destination.getBoardName());
             // Don't need to undo anything as we haven't written the file out yet.
             System.exit(-22);
         } else {
@@ -398,7 +399,7 @@ public class Diff {
                                 break;
                             }
                             default: {
-                                d.p(Debug.ERROR, "Default called in error for dstCell type\n");
+                                d.p(LMS.ERROR, "Default called in error for dstCell type\n");
                                 break;
                             }
                         }
@@ -424,7 +425,7 @@ public class Diff {
                                         break;
                                     }
                                     default: {
-                                        d.p(Debug.DEBUG, "Unknown srcCell type %s\n", srcCell.getCellType().toString());
+                                        d.p(LMS.DEBUG, "Unknown srcCell type %s\n", srcCell.getCellType().toString());
                                         dr.createCell(localCellIdx++);
                                         break;
                                     }

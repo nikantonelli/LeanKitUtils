@@ -3,6 +3,7 @@ package com.planview.lkutility.Utils;
 import com.planview.lkutility.Azure.AzureAccess;
 import com.planview.lkutility.System.Debug;
 import com.planview.lkutility.System.InternalConfig;
+import com.planview.lkutility.System.LMS;
 
 public class AzureDeleter {
 	InternalConfig config;
@@ -24,9 +25,9 @@ public class AzureDeleter {
 		for (int i = 0; i < adoDeletes.length; i++) {
 			String url = adoDeletes[i];
 			if ( null != aAcc.deleteTicket(url)) {
-				d.p(Debug.INFO, "Deleted %s\n", url);
+				d.p(LMS.INFO, "Deleted %s\n", url);
 			} else {
-				d.p(Debug.INFO, "Failed to delete %s\n", url);
+				d.p(LMS.INFO, "Failed to delete %s\n", url);
 			}
 		}
 		return 0;

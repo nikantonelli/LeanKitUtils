@@ -26,6 +26,7 @@ import com.planview.lkutility.Network.NetworkAccess;
 import com.planview.lkutility.System.AccessConfig;
 import com.planview.lkutility.System.ColNames;
 import com.planview.lkutility.System.Debug;
+import com.planview.lkutility.System.LMS;
 
 public class LeanKitAccess extends NetworkAccess {
 
@@ -41,7 +42,7 @@ public class LeanKitAccess extends NetworkAccess {
 		if (!config.getUrl().startsWith("http")) {
 			config.setUrl("https://" + config.getUrl());
 		} else if (config.getUrl().startsWith("http://")) {
-			d.p(Debug.WARN, "http access to leankit not supported. Switching to https");
+			d.p(LMS.WARN, "http access to leankit not supported. Switching to https");
 			config.setUrl("https://" + config.getUrl().substring(7));
 		}
 
@@ -67,7 +68,7 @@ public class LeanKitAccess extends NetworkAccess {
 		// Convert to a type to return to caller.
 		ArrayList<T> items = new ArrayList<T>();
 		if (jresp.has("error") || jresp.has("statusCode")) {
-			d.p(Debug.ERROR, "\"%s\" gave response: \"%s\"\n", reqUrl, jresp.toString());
+			d.p(LMS.ERROR, "\"%s\" gave response: \"%s\"\n", reqUrl, jresp.toString());
 			System.exit(-9);
 			return null;
 		} else if (jresp.has("pageMeta")) {
@@ -103,7 +104,7 @@ public class LeanKitAccess extends NetworkAccess {
 					fieldName = "comments";
 					break;
 				default:
-					d.p(Debug.ERROR, "Unsupported item type requested from server API: %s\n", bd);
+					d.p(LMS.ERROR, "Unsupported item type requested from server API: %s\n", bd);
 					System.exit(-10);
 			}
 			// Got something to return
@@ -129,7 +130,7 @@ public class LeanKitAccess extends NetworkAccess {
 			 * and limit params
 			 */
 			// Length here may be limited to 200 by the API paging.
-			d.p(Debug.VERBOSE, "Received %d %s (out of %d)\n", accumulatedCount,
+			d.p(LMS.VERBOSE, "Received %d %s (out of %d)\n", accumulatedCount,
 					fieldName.substring(0,
 							((accumulatedCount > 1) ? fieldName.length() : fieldName.length() - 1)),
 					totalRecords);
@@ -210,7 +211,7 @@ public class LeanKitAccess extends NetworkAccess {
 					break;
 				}
 				default: {
-					d.p(Debug.ERROR, "oops! don't recognise requested item type \"%s\"\n",
+					d.p(LMS.ERROR, "oops! don't recognise requested item type \"%s\"\n",
 							expectedResponseType.getSimpleName());
 					System.exit(-11);
 				}
@@ -416,7 +417,7 @@ public class LeanKitAccess extends NetworkAccess {
 		try {
 			reqUrl = "/io/board?search=" + URLEncoder.encode(BoardName, "UTF-8");
 		} catch (UnsupportedEncodingException e) {
-			d.p(Debug.ERROR, "Cannot encode board name %s\n", BoardName);
+			d.p(LMS.ERROR, "Cannot encode board name %s\n", BoardName);
 			System.exit(-12);
 		}
 		ArrayList<Board> boards = read(Board.class);
@@ -457,7 +458,7 @@ public class LeanKitAccess extends NetworkAccess {
 		switch (typeStr[0]) {
 			case "image/jpeg":
 			default: {
-				d.p(Debug.INFO, "Downloaded attachment type: %s\n", typeStr[0]);
+				d.p(LMS.INFO, "Downloaded attachment type: %s\n", typeStr[0]);
 				try {
 					return EntityUtils.toByteArray(he);
 				} catch (IOException e) {
@@ -666,7 +667,7 @@ public class LeanKitAccess extends NetworkAccess {
 				case "Parent": {
 					if ((values.get("value") == null) || (values.get("value").toString() == "")
 							|| (values.get("value").toString() == "0")) {
-						d.p(Debug.WARN, "Trying to set parent of %s to value \"%s\"\n", card.id,
+						d.p(LMS.WARN, "Trying to set parent of %s to value \"%s\"\n", card.id,
 								values.get("value").toString());
 					} else if (values.get("value").toString().startsWith("-")) {
 						JSONObject upd2 = new JSONObject();
@@ -743,7 +744,7 @@ public class LeanKitAccess extends NetworkAccess {
 					JSONObject upd = new JSONObject();
 					String[] bits = values.get("value").toString().split(",");
 					if (bits.length != 2) {
-						d.p(Debug.WARN, "Could not extract externalLink from %s (possible ',' in label?)",
+						d.p(LMS.WARN, "Could not extract externalLink from %s (possible ',' in label?)",
 								values.get("value").toString());
 						break;
 					}

@@ -2,6 +2,7 @@ package com.planview.lkutility.Utils;
 import com.planview.lkutility.Jira.JiraAccess;
 import com.planview.lkutility.System.Debug;
 import com.planview.lkutility.System.InternalConfig;
+import com.planview.lkutility.System.LMS;
 
 public class JiraDeleter {
 	InternalConfig config;
@@ -23,7 +24,7 @@ public class JiraDeleter {
 		for (int i = 0; i < adoDeletes.length; i++) {
 			String url = adoDeletes[i];
 			jAcc.deleteTicket(url);
-			d.p(Debug.INFO, "Delete attempted %s\n", url);	
+			d.p(LMS.INFO, "Delete attempted %s\n", url);	
 		}
 		return 0;
 	}

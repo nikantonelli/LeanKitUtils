@@ -9,6 +9,7 @@ import com.planview.lkutility.Leankit.ExternalLink;
 import com.planview.lkutility.Leankit.LeanKitAccess;
 import com.planview.lkutility.System.Debug;
 import com.planview.lkutility.System.InternalConfig;
+import com.planview.lkutility.System.LMS;
 
 public class CardDeleter {
 	private static final int MAX_ID_ARRAY_SIZE = 200;
@@ -55,7 +56,7 @@ public class CardDeleter {
 								adoDeletes = (String[]) ArrayUtils.add(adoDeletes, url);
 							}
 						} else {
-							d.p(Debug.INFO, "Ignoring non-https externalLink \"%s\"\n", url);
+							d.p(LMS.INFO, "Ignoring non-https externalLink \"%s\"\n", url);
 						}
 					}
 				}
@@ -83,7 +84,7 @@ public class CardDeleter {
 					break;
 				}
 				ids = (String[]) ArrayUtils.add(ids, apDeletes[i + j]);
-				d.p(Debug.INFO, "Deleting card from AgilePlace \"%s\" (%s)\n", cards.get(i + j).title,
+				d.p(LMS.INFO, "Deleting card from AgilePlace \"%s\" (%s)\n", cards.get(i + j).title,
 						cards.get(i + j).id);
 			}
 			i += j;

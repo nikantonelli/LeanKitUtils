@@ -64,14 +64,14 @@ public class Main {
 	static InternalConfig config = new InternalConfig();
 
 	public static void main(String[] args) {
-		//Must be here to set a default for config.msg (used later on)
-		//Will set to English if user.language is not set or unknown
+		// Must be here to set a default for config.msg (used later on)
+		// Will set to English if user.language is not set or unknown
 		config.msg = new Languages(System.getProperty("user.language"));
 
 		d = new Debug();
 		d.setMsgr(config.msg);
-		d.p(Debug.ALWAYS, config.msg.getMsg(LMS.START_PROGRAM), new Date());
 		getCommandLine(args);
+		d.p(LMS.ALWAYS, config.msg.getMsg(LMS.START_PROGRAM), new Date());
 
 		checkXlsx();
 		HashMap<String, Integer> fieldMap = chkConfigFromFile();
@@ -91,7 +91,7 @@ public class Main {
 						Importer impt = new Importer(config);
 						impt.go();
 					} else {
-						d.p(Debug.ERROR, config.msg.getMsg(LMS.REPLAY_SHEET_NOT_FOUND));
+						d.p(LMS.ERROR, config.msg.getMsg(LMS.REPLAY_SHEET_NOT_FOUND));
 						System.exit(-1);
 					}
 				} else if (!setToDiff) {
@@ -142,7 +142,7 @@ public class Main {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		d.p(Debug.ALWAYS, config.msg.getMsg(LMS.FINISH_PROGRAM), new Date());
+		d.p(LMS.ALWAYS, config.msg.getMsg(LMS.FINISH_PROGRAM), new Date());
 	}
 
 	public static void getCommandLine(String[] args) {
@@ -151,28 +151,42 @@ public class Main {
 		HelpFormatter hf = new HelpFormatter();
 		CommandLine impExpCl = null;
 
+		/**
+		 * 
+		 * OPTIONS LETTER IS CONSTANT ACROSS LANGUAGES!
+		 * Helps with portability
+		 * 
+		 */
 		Options cmdOpts = new Options();
-		Option impO = new Option("i", "import", false, "run importer");
-		Option expO = new Option("e", "export", false, "run exporter");
-		Option diffO = new Option("c", "compare", false,
-				"compare dst URL to a previous transfer");
-		diffO.setRequired(false);
-		Option repO = new Option("a", "replay", false,
-				"auto-run the reset of the destination during diff");
-		repO.setRequired(false);
+		
+		cmdOpts.addRequiredOption("f", config.msg.getMsg(LMS.FILE_OPTION), true, config.msg.getMsg(LMS.FILE_OPTION_MSG));
+		//cmdOpts.addRequiredOption("f", "filename", true, "XLSX Spreadsheet (must contain API config!)");
+
+		Option impO = new Option("i", config.msg.getMsg(LMS.IMPORT_OPTION), false,
+				config.msg.getMsg(LMS.IMPORT_OPTION_MSG));
+		//Option impO = new Option("i", "import", false, "run importer");
 		impO.setRequired(false);
-		expO.setRequired(false);
 		cmdOpts.addOption(impO);
+		
+		Option expO = new Option("e", config.msg.getMsg(LMS.EXPORT_OPTION), false,
+				config.msg.getMsg(LMS.EXPORT_OPTION_MSG));
+		//Option expO = new Option("e", "export", false, "run exporter");
+		expO.setRequired(false);
 		cmdOpts.addOption(expO);
+		
+		Option diffO = new Option("c", config.msg.getMsg(LMS.COMPARE_OPTION), false,
+				config.msg.getMsg(LMS.COMPARE_OPTION_MSG));
+		diffO.setRequired(false);
 		cmdOpts.addOption(diffO);
+		
+		Option repO = new Option("a", config.msg.getMsg(LMS.REPLAY_OPTION), false,
+				config.msg.getMsg(LMS.REPLAY_OPTION_MSG));
+		repO.setRequired(false);
 		cmdOpts.addOption(repO);
 
-		cmdOpts.addRequiredOption("f", "filename", true, "XLSX Spreadsheet (must contain API config!)");
-
-		// Option remakeOpt = new Option("r", "remake", false, "Remake target boards by
-		// archiving old and adding new");
 		Option remakeOpt = new Option("r", config.msg.getMsg(LMS.REMAKE_OPTION), false,
 				config.msg.getMsg(LMS.REMAKE_OPTION_MSG));
+		//Option remakeOpt = new Option("r", "remake", false, "Remake target boards by archiving old and adding new");
 		remakeOpt.setRequired(false);
 		cmdOpts.addOption(remakeOpt);
 
@@ -182,63 +196,90 @@ public class Main {
 		removeOpt.setRequired(false);
 		cmdOpts.addOption(removeOpt);
 
-		Option deleteOpt = new Option("X", "xlsx", false, "Delete cards on target boards (from spreadsheet)");
+		Option deleteOpt = new Option("X", config.msg.getMsg(LMS.DELETE_X_OPTION), false,
+				config.msg.getMsg(LMS.DELETE_X_OPTION_MSG));
+		//Option deleteOpt = new Option("X", "xlsx", false, "Delete cards on target boards (from spreadsheet)");
 		deleteOpt.setRequired(false);
 		cmdOpts.addOption(deleteOpt);
 
-		Option langOpt = new Option("L", "language", true, "Language, langue, sprache, idioma, etc.");
+		Option langOpt = new Option("L", config.msg.getMsg(LMS.LANGUAGE_OPTION), true,
+				config.msg.getMsg(LMS.LANGUAGE_OPTION_MSG));
+		//Option langOpt = new Option("L", "language", true, "Language, langue, sprache, idioma, etc.");
 		langOpt.setRequired(false);
 		cmdOpts.addOption(langOpt);
 
-		Option eraseOpt = new Option("d", "delete", false, "Delete all cards on target boards");
+		Option eraseOpt = new Option("d", config.msg.getMsg(LMS.DELETE_OPTION), false,
+				config.msg.getMsg(LMS.DELETE_OPTION_MSG));
+		//Option eraseOpt = new Option("d", "delete", false, "Delete all cards on target boards");
 		eraseOpt.setRequired(false);
 		cmdOpts.addOption(eraseOpt);
 
-		Option tasktopOpt = new Option("t", "tasktop", false, "Follow External Links to delete remote artifacts");
+		Option tasktopOpt = new Option("t", config.msg.getMsg(LMS.TASKTOP_OPTION), false,
+				config.msg.getMsg(LMS.TASKTOP_OPTION_MSG));
+		//Option tasktopOpt = new Option("t", "tasktop", false, "Follow External Links to delete remote artifacts");
 		tasktopOpt.setRequired(false);
 		cmdOpts.addOption(tasktopOpt);
 
-		Option groupOpt = new Option("g", "group", true, "Identifier of group to process (if present)");
+		Option groupOpt = new Option("g", config.msg.getMsg(LMS.GROUP_OPTION), true,
+				config.msg.getMsg(LMS.GROUP_OPTION_MSG));
+		//Option groupOpt = new Option("g", "group", true, "Identifier of group to process (if present)");
 		groupOpt.setRequired(false);
 		cmdOpts.addOption(groupOpt);
 
-		Option moveOpt = new Option("m", "move", true, "Lane to modify unwanted cards with (for compare only)");
+		Option moveOpt = new Option("m", config.msg.getMsg(LMS.MOVE_OPTION), true,
+				config.msg.getMsg(LMS.MOVE_OPTION_MSG));
+		//Option moveOpt = new Option("m", "move", true, "Lane to modify unwanted cards with (for compare only)");
 		moveOpt.setRequired(false);
 		cmdOpts.addOption(moveOpt);
 
-		Option dbp = new Option("x", "debug", true,
-				"Print out loads of helpful stuff: 0 - Error, 1 - And Warnings, 2 - And Info, 3 - And Debugging, 4 - And Network");
+		Option dbp = new Option("x", config.msg.getMsg(LMS.DEBUG_OPTION), true,
+				config.msg.getMsg(LMS.DEBUG_OPTION_MSG));
+		//Option dbp = new Option("x", "debug", true, "Print out loads of helpful stuff: 0 - Error, 1 - And Warnings, 2 - And Info, 3 - And Debugging, 4 - And Network");
 		dbp.setRequired(false);
 		cmdOpts.addOption(dbp);
-		Option archiveOpt = new Option("O", "archived", false, "Include older Archived cards in export (if present)");
+
+		Option archiveOpt = new Option("O", config.msg.getMsg(LMS.ARCHIVED_OPTION), false,
+				config.msg.getMsg(LMS.ATTACHMENTS_OPTION_MSG));
+		//Option archiveOpt = new Option("O", "archived", false, "Include older Archived cards in export (if present)");
 		archiveOpt.setRequired(false);
 		cmdOpts.addOption(archiveOpt);
-		Option tasksOpt = new Option("T", "tasks", false, "Include Task cards in export (if present)");
+		
+		Option tasksOpt = new Option("T", config.msg.getMsg(LMS.TASKS_OPTION), false,
+				config.msg.getMsg(LMS.TASKS_OPTION_MSG));
+		//Option tasksOpt = new Option("T", "tasks", false, "Include Task cards in export (if present)");
 		tasksOpt.setRequired(false);
 		cmdOpts.addOption(tasksOpt);
-		Option attsOpt = new Option("A", "attachments", false,
-				"Export card attachments in local filesystem (if present)");
+
+		Option attsOpt = new Option("A", config.msg.getMsg(LMS.ATTACHMENTS_OPTION), false,
+				config.msg.getMsg(LMS.ATTACHMENTS_OPTION_MSG));
+		//Option attsOpt = new Option("A", "attachments", false, "Export card attachments in local filesystem (if present)");
 		attsOpt.setRequired(false);
 		cmdOpts.addOption(attsOpt);
-		Option comsOpt = new Option("C", "comments", false, "Export card comments in local filesystem (if present)");
+
+		Option comsOpt = new Option("C", config.msg.getMsg(LMS.COMMENTS_OPTION), false,
+				config.msg.getMsg(LMS.COMMENTS_OPTION_MSG));
+		//Option comsOpt = new Option("C", "comments", false, "Export card comments in local filesystem (if present)");
 		comsOpt.setRequired(false);
 		cmdOpts.addOption(comsOpt);
-		Option originOpt = new Option("S", "origin", false, "Add comment for source artifact recording");
+
+		Option originOpt = new Option("S", config.msg.getMsg(LMS.ORIGIN_OPTION), false,
+				config.msg.getMsg(LMS.ORIGIN_OPTION_MSG));
+		//Option originOpt = new Option("S", "origin", false, "Add comment for source artifact recording");
 		originOpt.setRequired(false);
 		cmdOpts.addOption(originOpt);
-		Option readOnlyOpt = new Option("P", "ro", false, "Export Read Only fields (Not Imported!)");
+
+		Option readOnlyOpt = new Option("P", config.msg.getMsg(LMS.RO_OPTION), false,
+				config.msg.getMsg(LMS.RO_OPTION_MSG));
+		//Option readOnlyOpt = new Option("P", "ro", false, "Export Read Only fields (Not Imported!)");
 		readOnlyOpt.setRequired(false);
 		cmdOpts.addOption(readOnlyOpt);
-		Option nameResolver = new Option("n", "names", false, "Debug Use Only!");
-		nameResolver.setRequired(false);
-		cmdOpts.addOption(nameResolver);
 
 		try {
 			impExpCl = p.parse(cmdOpts, args, true);
 
 		} catch (ParseException e) {
 			// Not expecting to ever come here, but compiler needs something....
-			d.p(Debug.ERROR, config.msg.getMsg(LMS.COMMANDLINE_ERROR), e.getMessage());
+			d.p(LMS.ERROR, config.msg.getMsg(LMS.COMMANDLINE_ERROR), e.getMessage());
 			hf.printHelp(" ", cmdOpts);
 			System.exit(-2);
 		}
@@ -258,7 +299,7 @@ public class Main {
 		if (impExpCl.hasOption("language")) {
 			String optVal = impExpCl.getOptionValue("language");
 			if (optVal != null) {
-				d.p(Debug.ALWAYS, config.msg.getMsg(LMS.SETTING_LANGUAGE), optVal);
+				d.p(LMS.ALWAYS, config.msg.getMsg(LMS.SETTING_LANGUAGE), optVal);
 				config.msg = new Languages(optVal);
 				d.setMsgr(config.msg);
 			}
@@ -288,7 +329,7 @@ public class Main {
 		 * those in the original can be moved to the archive lane
 		 */
 		if (impExpCl.hasOption("compare")) {
-			d.p(Debug.INFO, config.msg.getMsg(LMS.SET_COMPARE_MODE));
+			d.p(LMS.INFO, config.msg.getMsg(LMS.SET_COMPARE_MODE));
 			config.diffMode = impExpCl.getOptionValue("compare");
 			setToDiff = true;
 			config.exporter = false;
@@ -298,9 +339,9 @@ public class Main {
 		} else {
 			if (impExpCl.hasOption("replay")) {
 				if (impExpCl.hasOption("export") || impExpCl.hasOption("import")) {
-					d.p(Debug.INFO, config.msg.getMsg(LMS.INVALID_OPTIONS));
+					d.p(LMS.INFO, config.msg.getMsg(LMS.INVALID_OPTIONS));
 				} else {
-					d.p(Debug.INFO, "Setting to Replay mode.\n");
+					d.p(LMS.INFO, config.msg.getMsg(LMS.SET_REPLAY_MODE));
 				}
 				config.replay = true;
 			}
@@ -358,7 +399,7 @@ public class Main {
 		try {
 			xlsxfis = new FileInputStream(new File(config.xlsxfn));
 		} catch (FileNotFoundException e) {
-			d.p(Debug.ERROR, "(-3) %s", e.getMessage());
+			d.p(LMS.ERROR, "(-3) %s", e.getMessage());
 
 			System.exit(-3);
 
@@ -367,13 +408,13 @@ public class Main {
 			config.wb = new XSSFWorkbook(xlsxfis);
 			xlsxfis.close();
 		} catch (IOException e) {
-			d.p(Debug.ERROR, "(-4) %s", e.getMessage());
+			d.p(LMS.ERROR, "(-4) %s", e.getMessage());
 			System.exit(-4);
 		}
 
 		configSht = config.wb.getSheet("Config");
 		if (configSht == null) {
-			d.p(Debug.ERROR, "%s", "Did not detect required sheet in the spreadsheet: \"Config\"");
+			d.p(LMS.ERROR, "(-5) Did not detect required sheet in the spreadsheet: \"Config\"");
 			System.exit(-5);
 		}
 	}
@@ -430,7 +471,7 @@ public class Main {
 		// Assume that the titles are the first row
 		Iterator<Row> ri = configSht.iterator();
 		if (!ri.hasNext()) {
-			d.p(Debug.ERROR, "%s", "Did not detect any header info on Config sheet (first row!)");
+			d.p(LMS.ERROR, "%s", "Did not detect any header info on Config sheet (first row!)");
 			System.exit(-6);
 		}
 		Row hdr = ri.next();
@@ -446,12 +487,12 @@ public class Main {
 		}
 
 		if (fieldMap.size() != cols.size()) {
-			d.p(Debug.ERROR, "%s", "Did not detect correct columns on Config sheet: " + cols.toString());
+			d.p(LMS.ERROR, "%s", "Did not detect correct columns on Config sheet: " + cols.toString());
 			System.exit(-7);
 		}
 
 		if (!ri.hasNext()) {
-			d.p(Debug.ERROR, "%s",
+			d.p(LMS.ERROR, "%s",
 					"Did not detect any potential transfer info on Config sheet (first cell must be non-blank, e.g. url to a real host)");
 			System.exit(-8);
 		}

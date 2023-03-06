@@ -38,6 +38,7 @@ import com.planview.lkutility.System.Changes;
 import com.planview.lkutility.System.ColNames;
 import com.planview.lkutility.System.Debug;
 import com.planview.lkutility.System.InternalConfig;
+import com.planview.lkutility.System.LMS;
 import com.planview.lkutility.System.SupportedXlsxFields;
 
 /**
@@ -77,7 +78,7 @@ public class Exporter {
 
     public void go() {
 
-        d.p(Debug.ALWAYS, "Starting Export of \"%s\" at: %s\n", cfg.source.getBoardName(), new Date());
+        d.p(LMS.ALWAYS, "Starting Export of \"%s\" at: %s\n", cfg.source.getBoardName(), new Date());
         doExport(setUpNewSheets(cleanSheets()));
     }
 
@@ -235,12 +236,12 @@ public class Exporter {
                 Integer childRow = XlUtils.firstRowIdxByStringValue(cfg.itemSheet, ColNames.SOURCE_ID, pc.childId);
 
                 if ((parentRow == null) || (childRow == null)) {
-                    d.p(Debug.WARN, "Ignoring parent/child relationship for: %s/%s. Is parent archived?\n",
+                    d.p(LMS.WARN, "Ignoring parent/child relationship for: %s/%s. Is parent archived?\n",
                             pc.parentId, pc.childId);
                 } else {
                     Integer col = XlUtils.findColumnFromSheet(cfg.itemSheet, ColNames.TITLE);
 						String letter = CellReference.convertNumToColString(col);
-						d.p(Debug.INFO, "Creating parent/child relationship for: %s/%s\n",
+						d.p(LMS.INFO, "Creating parent/child relationship for: %s/%s\n",
 								pc.parentId, pc.childId);createChangeRow(chgRowIdx++, childRow, "Modify", "Parent",
 								"='" + XlUtils.validateSheetName(pc.boardName) + "'!" + letter + (parentRow + 1));
                     chgRowIdx++;
@@ -267,7 +268,7 @@ public class Exporter {
         Integer item = itmRow;
 
         Row iRow = cfg.itemSheet.createRow(itmRow);
-        d.p(Debug.INFO, "Creating row %d for id: %s (%s)\n", itmRow, c.id,
+        d.p(LMS.INFO, "Creating row %d for id: %s (%s)\n", itmRow, c.id,
                 (c.customId.value != null) ? c.customId.value : c.title);
         // We need to keep a separate counter for the fields we actually write out
         Integer fieldCounter = 1;
@@ -313,7 +314,7 @@ public class Exporter {
                                 File af = new File("attachments/" + c.id + "/" + atts[j].name);
                                 FileOutputStream fw = new FileOutputStream(af);
                                 byte[] data = (byte[]) LkUtils.getAttachment(cfg, cfg.source, c.id, atts[j].id);
-                                d.p(Debug.INFO, "Saving attachment %s\n", af.getPath());
+                                d.p(LMS.INFO, "Saving attachment %s\n", af.getPath());
                                 fw.write(data, 0, data.length);
                                 fw.flush();
                                 fw.close();
@@ -389,7 +390,7 @@ public class Exporter {
                                 Lane taskLane = (Lane) fv;
                                 if (taskLane.laneType.equals("untyped")) {
                                     String lane = LkUtils.getLanePathFromId(cfg, cfg.source, ((Lane) fv).id);
-                                    d.p(Debug.ERROR,
+                                    d.p(LMS.ERROR,
                                             "Invalid card type - check \"Task\" setting on \"%s\". Opting to use lane \"%s\"\n",
                                             c.type.title, lane);
                                     iRow.createCell(fieldCounter, CellType.STRING)

@@ -22,6 +22,7 @@ import com.planview.lkutility.System.ChangesColumns;
 import com.planview.lkutility.System.ColNames;
 import com.planview.lkutility.System.Debug;
 import com.planview.lkutility.System.InternalConfig;
+import com.planview.lkutility.System.LMS;
 import com.planview.lkutility.System.SupportedXlsxFields;
 
 public class Importer {
@@ -39,7 +40,7 @@ public class Importer {
 
 	public void go() {
 
-		d.p(Debug.ALWAYS, "Starting Import to \"%s\" at: %s\n", cfg.destination.getBoardName(), new Date());
+		d.p(LMS.ALWAYS, "Starting Import to \"%s\" at: %s\n", cfg.destination.getBoardName(), new Date());
 		/**
 		 * cfg might contain the sheet info for the importer if it came from the
 		 * exporter directly
@@ -50,7 +51,7 @@ public class Importer {
 		}
 
 		if (null == cfg.changesSheet) {
-			d.p(Debug.ERROR, "Cannot find required Changes sheet in file: %s\n", cfg.xlsxfn);
+			d.p(LMS.ERROR, "Cannot find required Changes sheet in file: %s\n", cfg.xlsxfn);
 			System.exit(-23);
 		}
 		ChangesColumns cc = XlUtils.checkChangeSheetColumns(cfg.changesSheet);
@@ -76,10 +77,10 @@ public class Importer {
 		}
 
 		if (todaysChanges.size() == 0) {
-			d.p(Debug.INFO, "No actions to take for group %d\n", cfg.group);
+			d.p(LMS.INFO, "No actions to take for group %d\n", cfg.group);
 			return;
 		} else {
-			d.p(Debug.INFO, "%d actions to take for group %d\n", todaysChanges.size(), cfg.group);
+			d.p(LMS.INFO, "%d actions to take for group %d\n", todaysChanges.size(), cfg.group);
 		}
 		// Now scan through the changes doing the actions
 		Iterator<Row> cItor = todaysChanges.iterator();
@@ -89,7 +90,7 @@ public class Importer {
 			// Get the item that this change refers to
 			// First check the validity of the info
 			if ((change.getCell(cc.row) == null) || (change.getCell(cc.action) == null)) {
-				d.p(Debug.WARN, "Cannot decode change info in row \"%d\" - skipping\n", change.getRowNum());
+				d.p(LMS.WARN, "Cannot decode change info in row \"%d\" - skipping\n", change.getRowNum());
 				continue;
 			}
 
@@ -106,7 +107,7 @@ public class Importer {
 			Integer typeCol = XlUtils.firstColumnFromSheet(iSht, "type");
 
 			if ((idCol == null) || (titleCol == null)) {
-				d.p(Debug.WARN, "Cannot locate \"ID\" and \"title\" columns needed in sheet \"%s\" - skipping\n",
+				d.p(LMS.WARN, "Cannot locate \"ID\" and \"title\" columns needed in sheet \"%s\" - skipping\n",
 						iSht.getSheetName());
 				continue;
 			}
@@ -114,14 +115,14 @@ public class Importer {
 			// Check title is present for a Create
 			if ((change.getCell(cc.action).getStringCellValue().equals("Create"))
 					&& ((item.getCell(titleCol) == null) || (item.getCell(titleCol).getStringCellValue().isEmpty()))) {
-				d.p(Debug.WARN,
+				d.p(LMS.WARN,
 						"Required \"title\" column/data missing in sheet \"%s\", row: %d for a Create - skipping\n",
 						iSht.getSheetName(), item.getRowNum());
 				continue;
 			}
 
 			if ((typeCol == null) || (item.getCell(typeCol) == null)) {
-				d.p(Debug.WARN, "Cannot locate \"type\" column on row:  %d  - using default for board\n",
+				d.p(LMS.WARN, "Cannot locate \"type\" column on row:  %d  - using default for board\n",
 						item.getRowNum());
 			}
 			String field = change.getCell(cc.field).getStringCellValue();
@@ -130,7 +131,7 @@ public class Importer {
 				if (((field == "attachments") && !cfg.exportAttachments)
 						|| ((field == "Task") && !cfg.exportTasks)
 						|| ((field == "comments") && !cfg.exportComments)) {
-					d.p(Debug.WARN, "Ignoring action \"Modify\" on item \"%s\", not set to import %s\n",
+					d.p(LMS.WARN, "Ignoring action \"Modify\" on item \"%s\", not set to import %s\n",
 							item.getCell(titleCol).getStringCellValue(), field);
 					continue; // Break out and try next change
 				}
@@ -143,7 +144,7 @@ public class Importer {
 						&& !(change.getCell(cc.action).getStringCellValue().equals("Modify")
 								&& field.equals("Task"))
 						&& !cfg.replay) {
-					d.p(Debug.WARN, "Ignoring action \"Create\" on item \"%s\" (no ID present in item row: %d)\n",
+					d.p(LMS.WARN, "Ignoring action \"Create\" on item \"%s\" (no ID present in item row: %d)\n",
 							item.getCell(titleCol).getStringCellValue(), item.getRowNum());
 					continue; // Break out and try next change
 				}
@@ -152,7 +153,7 @@ public class Importer {
 				 *  ignore and continue past.
 				 */
 				if (change.getCell(cc.action).getStringCellValue().equals("Create") && !cfg.replay && !cfg.eraseBoard && !cfg.deleteCards && !cfg.deleteXlsx) {
-					d.p(Debug.WARN,
+					d.p(LMS.WARN,
 							"Ignoring action \"Create\" on item \"%s\" (attempting create on existing ID in item row: %d)\n",
 							item.getCell(titleCol).getStringCellValue(),
 							item.getRowNum());
@@ -170,16 +171,16 @@ public class Importer {
 				item.getCell(idCol).setCellValue(id);
 				XSSFFormulaEvaluator.evaluateAllFormulaCells(cfg.wb);
 
-				d.p(Debug.INFO, "Create card \"%s\" (changes row %s)\n", id, change.getRowNum());
+				d.p(LMS.INFO, "Create card \"%s\" (changes row %s)\n", id, change.getRowNum());
 			} else {
 				id = doAction(change, item);
-				d.p(Debug.INFO, "Mod: \"%s\" on card \"%s\" (changes row %s)\n",
+				d.p(LMS.INFO, "Mod: \"%s\" on card \"%s\" (changes row %s)\n",
 						field, id, change.getRowNum());
 			}
 
 			if (id == null) {
 
-				d.p(Debug.WARN, "%s",
+				d.p(LMS.WARN, "%s",
 						"Got null back from doAction(). Most likely card deleted, but ID still in spreadsheet!\n");
 			} else {
 				XlUtils.writeFile(cfg, cfg.xlsxfn, cfg.wb);
@@ -246,7 +247,7 @@ public class Importer {
 			Card card = LkUtils.createCard(cfg, cfg.destination, flds); // Change from human readable to API fields on
 			// the way
 			if (card == null) {
-				d.p(Debug.ERROR, "Could not create card on board \"%s\" with details: \"%s\"\n", flds.get("boardId"),
+				d.p(LMS.ERROR, "Could not create card on board \"%s\" with details: \"%s\"\n", flds.get("boardId"),
 						flds.toString());
 				System.exit(-25);
 			}
@@ -258,7 +259,7 @@ public class Importer {
 			Card newCard = null;
 
 			if (card == null) {
-				d.p(Debug.WARN, "Could not locate card \"%s\"\n", item.getCell(idCol).getStringCellValue());
+				d.p(LMS.WARN, "Could not locate card \"%s\"\n", item.getCell(idCol).getStringCellValue());
 			} else {
 				// Don't need this when modifying an existing item.
 				if (fieldLst.has("boardId")) {
@@ -405,7 +406,7 @@ public class Importer {
 
 				newCard = LkUtils.updateCard(cfg, cfg.destination, card.id, fld);
 				if (newCard == null) {
-					d.p(Debug.ERROR, "Could not modify card \"%s\" on board %s with details: %s", card.id,
+					d.p(LMS.ERROR, "Could not modify card \"%s\" on board %s with details: %s", card.id,
 							cfg.destination.getBoardName(), fld.toString());
 					System.exit(-26);
 				}

@@ -4,15 +4,26 @@ import java.util.HashMap;
 
 public class Languages {
 
-	String language;
+	private String language;
+
+	public String getLanguage() {
+		return language;
+	}
+
+	private final String known_languages = "en, fr, de";
+	
 	HashMap<Integer, String> msg;
+
+	public String getKnown_languages() {
+		return known_languages;
+	}
 
 	public Languages(){
 		msg = new EnglishLang().getMap();
 	}
 
 	public Languages(String lang){
-		language = lang;
+
 		switch(lang){
 			case "fr": {
 				msg = new FrenchLang().getMap();
@@ -23,7 +34,8 @@ public class Languages {
 				break;
 			}
 			default: {
-				System.out.println("Unknown language. Defaulting to English\n");
+				System.out.printf("Unknown language: %s (%s) Defaulting to English (en)\n", lang, known_languages);
+				lang = "en";
 			}
 			//Fallthrough
 			case "en":{
@@ -31,12 +43,30 @@ public class Languages {
 				break;
 			}
 		}
-
+		language = lang;
 	}
 
 	public String getMsg(Integer msgID){
 		String returnMsg = msg.get(msgID);
-		return (returnMsg == null) ? "Unknown error , unbekannter Fehler , erreur inconnue \n" : returnMsg;
+		if (returnMsg == null){
+			switch (language) {
+				case "fr":{
+					returnMsg = "Message d'erreur inconnu\n";
+					break;
+				}
+				case "de":{
+					returnMsg = "Unbekannte Fehlermeldung\n";
+					break;
+				}
+				default:
+				case "en":{
+					returnMsg = "Unknown Error Message\n";
+					break;
+				}
+				
+			}
+		}
+		return returnMsg;
 	}
 	
 }

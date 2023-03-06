@@ -32,6 +32,7 @@ import org.apache.http.util.EntityUtils;
 
 import com.planview.lkutility.System.AccessConfig;
 import com.planview.lkutility.System.Debug;
+import com.planview.lkutility.System.LMS;
 
 public class NetworkAccess {
 	protected AccessConfig config = null;
@@ -54,7 +55,7 @@ public class NetworkAccess {
 		if (!config.getUrl().startsWith("http")) {
 			config.setUrl("https://" + config.getUrl());
 		} else if (config.getUrl().startsWith("http://")) {
-			d.p(Debug.WARN, "http access not supported. Switching to https");
+			d.p(LMS.WARN, "http access not supported. Switching to https");
 			config.setUrl("https://" + config.getUrl().substring(7));
 		}
 	}
@@ -121,22 +122,22 @@ public class NetworkAccess {
 
 			for (int i = 0; i < reqHdrs.size(); i++) {
 				request.addHeader(reqHdrs.get(i).getName(), reqHdrs.get(i).getValue());
-				d.p(Debug.VERBOSE, "Adding Header \"%s\" as \"%s\"\n", reqHdrs.get(i).getName(),
+				d.p(LMS.VERBOSE, "Adding Header \"%s\" as \"%s\"\n", reqHdrs.get(i).getName(),
 						reqHdrs.get(i).getValue());
 			}
 			// Add the user credentials to the request
 			if ((config.getApiKey() != null) && (config.getUser() == null)) {
 				// Standard API key handling
 				request.addHeader("Authorization", "Bearer " + config.getApiKey());
-				d.p(Debug.VERBOSE, "Adding Bearer starting with \"%s...\"\n", config.getApiKey().substring(0, 5));
+				d.p(LMS.VERBOSE, "Adding Bearer starting with \"%s...\"\n", config.getApiKey().substring(0, 5));
 			} else if ((config.getApiKey() != null) && (config.getUser() != null)) {
 				// ADO TOKEN handling
 				String token = config.getUser() + ":" + config.getApiKey();
 				token = Base64.getEncoder().encodeToString(token.getBytes());
 				request.addHeader("Authorization", "Basic " + token);
-				d.p(Debug.VERBOSE, "Adding Basic starting with \"%s...\"\n", config.getApiKey().substring(0, 5));
+				d.p(LMS.VERBOSE, "Adding Basic starting with \"%s...\"\n", config.getApiKey().substring(0, 5));
 			} else {
-				d.p(Debug.ERROR, "No valid apiKey provided\n");
+				d.p(LMS.ERROR, "No valid apiKey provided\n");
 				System.exit(-13);
 			}
 
@@ -149,12 +150,12 @@ public class NetworkAccess {
 				bldr = "?" + bldr.substring(1);
 			}
 			request.setURI(new URI(config.getUrl() + reqUrl + bldr));
-			d.p(Debug.VERBOSE, "%s\n", request.toString());
+			d.p(LMS.VERBOSE, "%s\n", request.toString());
 			if (reqEnt != null) {
-				d.p(Debug.VERBOSE, "Content: %s\n", IOUtils.toString(reqEnt.getContent(), "UTF-8"));
+				d.p(LMS.VERBOSE, "Content: %s\n", IOUtils.toString(reqEnt.getContent(), "UTF-8"));
 			}
 			httpResponse = client.execute(request);
-			d.p(Debug.VERBOSE, "%s\n", httpResponse.getStatusLine());
+			d.p(LMS.VERBOSE, "%s\n", httpResponse.getStatusLine());
 
 			Boolean entityTaken = false;
 			switch (httpResponse.getStatusLine().getStatusCode()) {
@@ -171,19 +172,19 @@ public class NetworkAccess {
 					break;
 				}
 				case 400: {
-					d.p(Debug.WARN, "Bad request: %s\n", request.toString());
+					d.p(LMS.WARN, "Bad request: %s\n", request.toString());
 					break;
 				}
 				case 401: {
-					d.p(Debug.ERROR, "Unauthorised. Check Credentials in spreadsheet: %s\n", request.toString());
+					d.p(LMS.ERROR, "Unauthorised. Check Credentials in spreadsheet: %s\n", request.toString());
 					System.exit(-14);
 				}
 				case 403: {
-					d.p(Debug.WARN, "Forbidden by server: %s\n", request.toString());
+					d.p(LMS.WARN, "Forbidden by server: %s\n", request.toString());
 					break;
 				}
 				case 405: {
-					d.p(Debug.WARN, "Method not Allowed: %s\n", request.toString());
+					d.p(LMS.WARN, "Method not Allowed: %s\n", request.toString());
 					break;
 				}
 				case 429: { // Flow control
@@ -193,28 +194,28 @@ public class NetworkAccess {
 					LocalDateTime serverTime = LocalDateTime.parse(httpResponse.getFirstHeader("date").getValue(),
 							DateTimeFormatter.RFC_1123_DATE_TIME);
 					Long timeDiff = ChronoUnit.MILLIS.between(serverTime, retryAfter);
-					d.p(Debug.INFO, "Received 429 status. waiting %.2f seconds\n", ((1.0 * timeDiff) / 1000.0));
+					d.p(LMS.INFO, "Received 429 status. waiting %.2f seconds\n", ((1.0 * timeDiff) / 1000.0));
 					EntityUtils.consumeQuietly(httpResponse.getEntity());
 					try {
 						TimeUnit.MILLISECONDS.sleep(timeDiff);
 					} catch (InterruptedException e) {
-						d.p(Debug.ERROR, "(L2) %s\n", e.getMessage());
+						d.p(LMS.ERROR, "(L2) %s\n", e.getMessage());
 						System.exit(-15);
 					}
 					result = processRawRequest();
 					break;
 				}
 				case 422: { // Unprocessable Parameter
-					d.p(Debug.WARN, "Parameter Error in request: %s \n%s\n", request.toString(),
+					d.p(LMS.WARN, "Parameter Error in request: %s \n%s\n", request.toString(),
 							EntityUtils.toString(httpResponse.getEntity()));
 					break;
 				}
 				case 404: { // Item not found
-					d.p(Debug.WARN, "Item not found: %s\n", httpResponse.toString());
+					d.p(LMS.WARN, "Item not found: %s\n", httpResponse.toString());
 					break;
 				}
 				case 409: { // Conflict
-					d.p(Debug.WARN, "Conflict Error in request: %s \n%s\n", request.toString(),
+					d.p(LMS.WARN, "Conflict Error in request: %s \n%s\n", request.toString(),
 							EntityUtils.toString(httpResponse.getEntity()));
 					break;
 				}
@@ -224,19 +225,19 @@ public class NetworkAccess {
 				case 503: // Service unavailable
 				case 504: // Gateway timeout
 				{
-					d.p(Debug.ERROR, "Received %d status. retrying in 5 seconds\n",
+					d.p(LMS.ERROR, "Received %d status. retrying in 5 seconds\n",
 							httpResponse.getStatusLine().getStatusCode());
 					try {
 						EntityUtils.consumeQuietly(httpResponse.getEntity());
 						Thread.sleep(5000);
 					} catch (InterruptedException e) {
-						d.p(Debug.WARN, "(L1) %s\n", e.getMessage());
+						d.p(LMS.WARN, "(L1) %s\n", e.getMessage());
 					}
 					result = processRawRequest();
 					break;
 				}
 				default: {
-					d.p(Debug.ERROR, "Network fault: %s\n", httpResponse.toString());
+					d.p(LMS.ERROR, "Network fault: %s\n", httpResponse.toString());
 					System.exit(-16);
 					break;
 				}
@@ -246,7 +247,7 @@ public class NetworkAccess {
 																		// 'feature'
 			}
 		} catch (IOException e) {
-			d.p(Debug.ERROR, "(L3) %s\n", e.getMessage());
+			d.p(LMS.ERROR, "(L3) %s\n", e.getMessage());
 			try {
 				if (httpResponse != null) {
 					EntityUtils.consumeQuietly(httpResponse.getEntity());

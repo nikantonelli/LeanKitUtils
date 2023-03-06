@@ -38,6 +38,7 @@ import com.planview.lkutility.System.ColNames;
 import com.planview.lkutility.System.Configuration;
 import com.planview.lkutility.System.Debug;
 import com.planview.lkutility.System.InternalConfig;
+import com.planview.lkutility.System.LMS;
 
 public class XlUtils {
 	public static Debug d = new Debug(); // Use setLevel in your top level code
@@ -109,12 +110,12 @@ public class XlUtils {
 
 		// Check for daft stuff.
 		if (sht == null) {
-			d.p(Debug.WARN, "getRowsByStringValue() passed null sheet\n");
+			d.p(LMS.WARN, "getRowsByStringValue() passed null sheet\n");
 			return list;
 		}
 		Integer cellIdx = findColumnFromSheet(sht, name);
 		if (cellIdx < 0) {
-			d.p(Debug.WARN, "getRowsByStringValue() passed incorrect field name \"%s\"\n", name);
+			d.p(LMS.WARN, "getRowsByStringValue() passed incorrect field name \"%s\"\n", name);
 			return list;
 		}
 
@@ -179,7 +180,7 @@ public class XlUtils {
 
 		if ((cc.group == null) || (cc.row == null) || (cc.action == null) || (cc.field == null)
 				|| (cc.value == null)) {
-			d.p(Debug.ERROR,
+			d.p(LMS.ERROR,
 					"Could not find all required columns in %s sheet: \"%s\", \"%s\", \"%s\", \"%s\", \"%s\"\n",
 					changesSht.getSheetName(),
 					ColNames.GROUP,
@@ -279,7 +280,7 @@ public class XlUtils {
 					}
 
 				} catch (IllegalArgumentException | IllegalAccessException e) {
-					d.p(Debug.ERROR, "Conversion error on \"%s\": Verify cell type in Excel\n %s\n", idx,
+					d.p(LMS.ERROR, "Conversion error on \"%s\": Verify cell type in Excel\n %s\n", idx,
 							e.getMessage());
 					System.exit(-27);
 				}
@@ -383,14 +384,14 @@ public class XlUtils {
 						oStr = null;
 						loopCnt = 0;
 					} catch (IOException e) {
-						d.p(Debug.WARN, "%s while closing file %s\n", e, xlsxfn);
+						d.p(LMS.WARN, "%s while closing file %s\n", e, xlsxfn);
 					}
 				} catch (IOException e) {
-					d.p(Debug.WARN, "%s while writing file %s\n", e, xlsxfn);
+					d.p(LMS.WARN, "%s while writing file %s\n", e, xlsxfn);
 					oStr.close(); // If this fails, just give up!
 				}
 			} catch (IOException e) {
-				d.p(Debug.WARN, "%s while opening/closing file %s\n", e, xlsxfn);
+				d.p(LMS.WARN, "%s while opening/closing file %s\n", e, xlsxfn);
 			}
 			if (loopCnt == 0) {
 				break;
@@ -401,7 +402,7 @@ public class XlUtils {
 			then.add(Calendar.SECOND, 5);
 			Long timeDiff = then.getTimeInMillis() - now.getTimeInMillis();
 			if (donePrint) {
-				d.p(Debug.WARN, "File \"%s\" in use. Please close to let this program continue\n", xlsxfn);
+				d.p(LMS.WARN, "File \"%s\" in use. Please close to let this program continue\n", xlsxfn);
 				donePrint = false;
 			}
 			try {
@@ -465,7 +466,7 @@ public class XlUtils {
 											}
 										}
 									} else {
-										d.p(Debug.WARN, "Cannot locate assignedUser: %s on system \"%s\"\n", users[i],
+										d.p(LMS.WARN, "Cannot locate assignedUser: %s on system \"%s\"\n", users[i],
 												accessCfg.getUrl());
 									}
 								}
@@ -477,7 +478,7 @@ public class XlUtils {
 									bba.userIds = usersToPut.toArray(new String[0]);
 									bba.boardRole = "boardUser";
 
-									d.p(Debug.INFO, "Adding users \"%s\" to board \"%s\"\n", usernames, brd.title);
+									d.p(LMS.INFO, "Adding users \"%s\" to board \"%s\"\n", usernames, brd.title);
 									LkUtils.updateBoardUsers(cfg, accessCfg, bba);
 									flds.put("assignedUserIds", usersToPut.toArray());
 								}
