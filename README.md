@@ -10,6 +10,9 @@ If you wish, you can create your own spreadsheet and import a particular set of 
 
 ## Changes
 
+- Version 2.1 added some i18n support (English, French, German)  NOTE: not yet complete!. 
+  - Picks up from System.getProperty("user.language")
+
 - Version 2.0 Import of large sections of code updates from 'replicator' utility
  1. Reworked command line options
  2. New board archive/create/delete/update features
