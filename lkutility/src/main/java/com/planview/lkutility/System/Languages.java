@@ -47,6 +47,7 @@ public class Languages {
 	}
 
 	public String getMsg(Integer msgID){
+		if (msg == null) return "";
 		String returnMsg = msg.get(msgID);
 		if (returnMsg == null){
 			switch (language) {

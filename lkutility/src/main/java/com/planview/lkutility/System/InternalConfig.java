@@ -1,7 +1,5 @@
 package com.planview.lkutility.System;
 
-import java.util.HashMap;
-
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -76,7 +74,7 @@ public class InternalConfig {
 	public Boolean nameResolver = false;
 	public String diffMode;
 	public Boolean deleteXlsx = false;
-	public Languages msg;
+	public Languages msgr;
 
 }
 

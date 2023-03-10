@@ -49,7 +49,7 @@ public class Debug {
 			}
 			case LMS.ALWAYS:
 			default: {
-				lp = (msgr == null) ? "NOTE: " : msgr.getMsg(LMS.NOTE);
+				lp = (msgr == null) ? "NOTE: " : msgr.getMsg(LMS.ALWAYS);
 			}
 		}
 		if (level <= debugPrint) {

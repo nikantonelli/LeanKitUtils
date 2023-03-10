@@ -12,7 +12,7 @@ public class JiraDeleter {
 	public int go(InternalConfig cfg, String[] adoDeletes) {
 		config = cfg;
 		d.setLevel(config.debugLevel);
-		d.setMsgr(cfg.msg);
+		d.setMsgr(cfg.msgr);
 
 		//Check that we have both user and token as ADO is non-standard.
 		if (config.ado.getApiKey() != null){
@@ -24,7 +24,7 @@ public class JiraDeleter {
 		for (int i = 0; i < adoDeletes.length; i++) {
 			String url = adoDeletes[i];
 			jAcc.deleteTicket(url);
-			d.p(LMS.INFO, "Delete attempted %s\n", url);	
+			d.p(LMS.INFO, config.msgr.getMsg(LMS.JIRA_DELETE), url);	
 		}
 		return 0;
 	}

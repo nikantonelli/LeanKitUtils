@@ -19,7 +19,7 @@ public class CardDeleter {
 	public CardDeleter(InternalConfig config) {
 		cfg = config;
 		d.setLevel(config.debugLevel);
-		d.setMsgr(cfg.msg);
+		d.setMsgr(cfg.msgr);
 	}
 
 	public void go() {
@@ -75,7 +75,7 @@ public class CardDeleter {
 			}
 		}
 
-		LeanKitAccess lka = new LeanKitAccess(cfg.destination, cfg.debugLevel);
+		LeanKitAccess lka = new LeanKitAccess(cfg.destination, cfg.debugLevel, cfg.msgr);
 		for (int i = 0; i < apDeletes.length;) {
 			String[] ids = {};
 			int j = 0;

@@ -33,9 +33,9 @@ public class Importer {
 	public Importer(InternalConfig config) {
 		cfg = config;
 		d.setLevel(cfg.debugLevel);
-		d.setMsgr(cfg.msg);
+		d.setMsgr(cfg.msgr);
 		XlUtils.d.setLevel(cfg.debugLevel);
-		XlUtils.d.setMsgr(cfg.msg);
+		XlUtils.d.setMsgr(cfg.msgr);
 	}
 
 	public void go() {

@@ -65,7 +65,7 @@ public class XlUtils {
 	public static InternalConfig setConfig(InternalConfig config, Row row, HashMap<String, Integer> fieldMap) {
 
 		d.setLevel(config.debugLevel);
-		d.setMsgr(config.msg);
+		d.setMsgr(config.msgr);
 
 		config.source = new AccessConfig(
 				row.getCell(fieldMap.get(InternalConfig.SOURCE_URL_COLUMN)).getStringCellValue(),

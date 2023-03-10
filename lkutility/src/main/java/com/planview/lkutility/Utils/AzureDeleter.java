@@ -13,7 +13,7 @@ public class AzureDeleter {
 	public int go(InternalConfig cfg, String[] adoDeletes) {
 		config = cfg;
 		d.setLevel(config.debugLevel);
-		d.setMsgr(cfg.msg);
+		d.setMsgr(cfg.msgr);
 
 		//Check that we have both user and token as ADO is non-standard.
 		if ((config.ado.getUser() != null) && (config.ado.getApiKey() != null)){
@@ -25,9 +25,9 @@ public class AzureDeleter {
 		for (int i = 0; i < adoDeletes.length; i++) {
 			String url = adoDeletes[i];
 			if ( null != aAcc.deleteTicket(url)) {
-				d.p(LMS.INFO, "Deleted %s\n", url);
+				d.p(LMS.INFO, config.msgr.getMsg(LMS.AZURE_DELETE), url);
 			} else {
-				d.p(LMS.INFO, "Failed to delete %s\n", url);
+				d.p(LMS.INFO, config.msgr.getMsg(LMS.AZURE_DELETE_FAIL), url);
 			}
 		}
 		return 0;

@@ -27,7 +27,7 @@ public class BoardCreator {
 	public BoardCreator(InternalConfig config) {
 		cfg = config;
 		d.setLevel(cfg.debugLevel);
-		d.setMsgr(cfg.msg);
+		d.setMsgr(cfg.msgr);
 	}
 
 	public Boolean go() {
@@ -52,10 +52,10 @@ public class BoardCreator {
 			if ((srcBrd != null) && (dstBrd == null)) {
 				dstBrd = LkUtils.duplicateBoard(cfg);
 				if (dstBrd == null) {
-					d.p(LMS.ERROR, "Cannot duplicate locally from \"%s\" to \"%s\"\n",
+					d.p(LMS.ERROR, "(-17) " + cfg.msgr.getMsg(LMS.BOARD_COPY_ERROR),
 							cfg.source.getBoardName(),
 							cfg.destination.getBoardName());
-							System.exit(-17);
+					System.exit(-17);
 				}
 			}
 		} else {
@@ -70,16 +70,18 @@ public class BoardCreator {
 		}
 
 		if (srcBrd == null) {
-			d.p(LMS.INFO, "Cannot locate board title: \"%s\"\n", cfg.source.getBoardName());
+			d.p(LMS.WARN, cfg.msgr.getMsg(LMS.BOARD_NOT_FOUND_ERROR),
+					cfg.source.getBoardName());
 			return false;
 		}
 
 		if (dstBrd == null) {
-			d.p(LMS.ERROR, "Could not create/locate destination board \"%s\"\n",
+			d.p(LMS.WARN, "(-18) %s %s", cfg.msgr.getMsg(LMS.BOARD_CREATE_ERROR),
 					cfg.destination.getBoardName());
-					System.exit(-18);
+			System.exit(-18);
 		} else {
-			d.p(LMS.INFO, "Board Available for update on \"%s\". id: %s, title: \"%s\"\n", cfg.destination.getUrl(), dstBrd.id,
+			d.p(LMS.INFO, "Board Available for update on \"%s\". id: %s, title: \"%s\"\n", cfg.destination.getUrl(),
+					dstBrd.id,
 					cfg.destination.getBoardName());
 		}
 		details.put("allowUsersToDeleteCards", srcBrd.allowUsersToDeleteCards);
@@ -302,7 +304,8 @@ public class BoardCreator {
 			try {
 				d.p(LMS.VERBOSE, "Layout: %s\n", om.writeValueAsString(newLayout));
 			} catch (JsonProcessingException e) {
-				d.p(LMS.ERROR, "Layout conversion failed : %s\n", cfg.source.getBoardName());
+				d.p(LMS.ERROR, "(-17) %s %s", cfg.msgr.getMsg(LMS.LAYOUT_CONV_ERROR),
+						cfg.source.getBoardName());
 				System.exit(-19);
 			}
 			newLayout = LkUtils.updateBoardLayout(cfg, cfg.destination, newLayout);

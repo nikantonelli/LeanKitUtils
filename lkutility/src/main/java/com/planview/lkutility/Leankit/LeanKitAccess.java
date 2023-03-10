@@ -25,14 +25,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.planview.lkutility.Network.NetworkAccess;
 import com.planview.lkutility.System.AccessConfig;
 import com.planview.lkutility.System.ColNames;
-import com.planview.lkutility.System.Debug;
 import com.planview.lkutility.System.LMS;
+import com.planview.lkutility.System.Languages;
 
 public class LeanKitAccess extends NetworkAccess {
 
-	public LeanKitAccess(AccessConfig configp, Integer debugLevel) {
+	public LeanKitAccess(AccessConfig configp, Integer debugLevel, Languages msgR) {
 		config = configp;
 		d.setLevel(debugLevel);
+		d.setMsgr(msgR);
+		msgr = msgR;
 
 		// Check URL has a trailing '/' and remove
 		if (config.getUrl().endsWith("/")) {
@@ -42,7 +44,7 @@ public class LeanKitAccess extends NetworkAccess {
 		if (!config.getUrl().startsWith("http")) {
 			config.setUrl("https://" + config.getUrl());
 		} else if (config.getUrl().startsWith("http://")) {
-			d.p(LMS.WARN, "http access to leankit not supported. Switching to https");
+			d.p(LMS.WARN, msgr.getMsg(LMS.NO_HTTP));
 			config.setUrl("https://" + config.getUrl().substring(7));
 		}
 
@@ -68,7 +70,7 @@ public class LeanKitAccess extends NetworkAccess {
 		// Convert to a type to return to caller.
 		ArrayList<T> items = new ArrayList<T>();
 		if (jresp.has("error") || jresp.has("statusCode")) {
-			d.p(LMS.ERROR, "\"%s\" gave response: \"%s\"\n", reqUrl, jresp.toString());
+			d.p(LMS.ERROR, "(-9) %s", msgr.getMsg(LMS.STATUSCODE_ERROR), reqUrl, jresp.toString());
 			System.exit(-9);
 			return null;
 		} else if (jresp.has("pageMeta")) {
@@ -104,7 +106,7 @@ public class LeanKitAccess extends NetworkAccess {
 					fieldName = "comments";
 					break;
 				default:
-					d.p(LMS.ERROR, "Unsupported item type requested from server API: %s\n", bd);
+					d.p(LMS.ERROR, "(-10) %s", msgr.getMsg(LMS.UNKNOWN_API_TYPE_ERROR), bd);
 					System.exit(-10);
 			}
 			// Got something to return
@@ -130,7 +132,7 @@ public class LeanKitAccess extends NetworkAccess {
 			 * and limit params
 			 */
 			// Length here may be limited to 200 by the API paging.
-			d.p(LMS.VERBOSE, "Received %d %s (out of %d)\n", accumulatedCount,
+			d.p(LMS.VERBOSE, msgr.getMsg(LMS.RECEIVED_DATA), accumulatedCount,
 					fieldName.substring(0,
 							((accumulatedCount > 1) ? fieldName.length() : fieldName.length() - 1)),
 					totalRecords);
@@ -211,7 +213,7 @@ public class LeanKitAccess extends NetworkAccess {
 					break;
 				}
 				default: {
-					d.p(LMS.ERROR, "oops! don't recognise requested item type \"%s\"\n",
+					d.p(LMS.ERROR, "(11) %s", msgr.getMsg(LMS.UNRECOGNISED_TYPE),
 							expectedResponseType.getSimpleName());
 					System.exit(-11);
 				}
@@ -417,7 +419,7 @@ public class LeanKitAccess extends NetworkAccess {
 		try {
 			reqUrl = "/io/board?search=" + URLEncoder.encode(BoardName, "UTF-8");
 		} catch (UnsupportedEncodingException e) {
-			d.p(LMS.ERROR, "Cannot encode board name %s\n", BoardName);
+			d.p(LMS.ERROR, "(-12) %s %s\n", msgr.getMsg(LMS.CANNOT_ENCODE_BOARD), BoardName);
 			System.exit(-12);
 		}
 		ArrayList<Board> boards = read(Board.class);
@@ -458,7 +460,7 @@ public class LeanKitAccess extends NetworkAccess {
 		switch (typeStr[0]) {
 			case "image/jpeg":
 			default: {
-				d.p(LMS.INFO, "Downloaded attachment type: %s\n", typeStr[0]);
+				d.p(LMS.INFO, msgr.getMsg(LMS.DOWNLOAD_ATT_TYPE), typeStr[0]);
 				try {
 					return EntityUtils.toByteArray(he);
 				} catch (IOException e) {
@@ -516,7 +518,7 @@ public class LeanKitAccess extends NetworkAccess {
 		File atchmt = new File(filename);
 		FileBody fb = new FileBody(atchmt);
 		MultipartEntityBuilder mpeb = MultipartEntityBuilder.create().setMode(HttpMultipartMode.BROWSER_COMPATIBLE)
-				.addTextBody("Description", "Auto-generated from Script").addPart("file", fb);
+				.addTextBody("Description", msgr.getMsg(LMS.AUTO_FROM_SCRIPT)).addPart("file", fb);
 		reqEnt = mpeb.build();
 		return processRequest();
 	}
@@ -667,7 +669,7 @@ public class LeanKitAccess extends NetworkAccess {
 				case "Parent": {
 					if ((values.get("value") == null) || (values.get("value").toString() == "")
 							|| (values.get("value").toString() == "0")) {
-						d.p(LMS.WARN, "Trying to set parent of %s to value \"%s\"\n", card.id,
+						d.p(LMS.WARN, msgr.getMsg(LMS.SETTING_PARENT), card.id,
 								values.get("value").toString());
 					} else if (values.get("value").toString().startsWith("-")) {
 						JSONObject upd2 = new JSONObject();
@@ -744,7 +746,7 @@ public class LeanKitAccess extends NetworkAccess {
 					JSONObject upd = new JSONObject();
 					String[] bits = values.get("value").toString().split(",");
 					if (bits.length != 2) {
-						d.p(LMS.WARN, "Could not extract externalLink from %s (possible ',' in label?)",
+						d.p(LMS.WARN, msgr.getMsg(LMS.EXTLINK_ERROR),
 								values.get("value").toString());
 						break;
 					}

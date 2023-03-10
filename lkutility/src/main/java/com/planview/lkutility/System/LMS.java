@@ -5,6 +5,8 @@ public class LMS {
 	/*
 	 * Could use enums, but thats adds a bit of faff with no real gain (unless you
 	 * are careless) and I like the different 'sections' here
+	 * If you get it wrong, then you get a duplicate key exception on startup
+	 * 
 	 */
 
 	// Debugger numbers have to be int as they are in a switch statement (constant
@@ -18,8 +20,23 @@ public class LMS {
 
 	// System
 	public final static Integer NOTE = 101;
+
+	//System Failure
 	public static final Integer COMMANDLINE_ERROR = 102;
 	public static final Integer SHEET_NOTFOUND_ERROR = 103;
+	public static final Integer REPLAY_SHEET_NOT_FOUND = 104;
+	public static final Integer SHT_HDR_ERROR = 105;
+	public static final Integer SHT_COL_ERROR = 106;
+	public static final Integer SHT_ITR_ERROR = 106;
+	public static final Integer STATUSCODE_ERROR = 107;
+	public static final Integer UNKNOWN_API_TYPE_ERROR = 108;
+	public static final Integer APIKEY_ERROR = 109;
+	public static final Integer UNRECOGNISED_TYPE = 110;
+	public static final Integer CREDS_ERROR = 111;
+	public static final Integer NETWORK_FAULT_ERROR = 112;
+	public static final Integer BOARD_COPY_ERROR = 113;
+	public static final Integer BOARD_CREATE_ERROR = 114;
+	public static final Integer LAYOUT_CONV_ERROR = 115;
 
 	// Command line options
 	public static final Integer REMAKE_OPTION = 1001;
@@ -62,14 +79,26 @@ public class LMS {
 	public static final Integer ORIGIN_OPTION_MSG = 1038;
 	public static final Integer RO_OPTION = 1039;
 	public static final Integer RO_OPTION_MSG = 1040;
+	public static final Integer LAYOUT_OPTION = 1041;
+	public static final Integer LAYOUT_OPTION_MSG = 1042;
 
 	// Output Messages
 	public final static Integer START_PROGRAM = 2001;
 	public final static Integer FINISH_PROGRAM = 2002;
 	public static final Integer SETTING_LANGUAGE = 2003;
-	public static final Integer REPLAY_SHEET_NOT_FOUND = 2004;
+	public static final Integer SETTING_PARENT = 2004;
 	public static final Integer SET_COMPARE_MODE = 2005;
 	public static final Integer INVALID_OPTIONS = 2006;
 	public static final Integer SET_REPLAY_MODE = 2007;
-
+	public static final Integer EXTLINK_ERROR = 2008;
+	public static final Integer NEED_SECURE_MODE = 2009;
+	public static final Integer BOARD_NOT_FOUND_ERROR = 2010;
+	public static final Integer AZURE_DELETE = 2011;
+	public static final Integer AZURE_DELETE_FAIL = 2012;
+	public static final Integer JIRA_DELETE = 2013;
+	public static final Integer NO_HTTP = 2014;
+	public static final Integer RECEIVED_DATA = 2015;
+	public static final Integer CANNOT_ENCODE_BOARD = 2016;
+	public static final Integer DOWNLOAD_ATT_TYPE = 2017;
+	public static final Integer AUTO_FROM_SCRIPT = 2018;
 }

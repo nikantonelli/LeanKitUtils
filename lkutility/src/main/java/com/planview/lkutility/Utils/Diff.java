@@ -28,7 +28,7 @@ public class Diff {
     public Diff(InternalConfig config) {
         cfg = config;
         d.setLevel(cfg.debugLevel);
-		d.setMsgr(cfg.msg);
+		d.setMsgr(cfg.msgr);
     }
 
     public void go() {
@@ -67,7 +67,7 @@ public class Diff {
             found = true;
         }
         if (!found) {
-            d.p(LMS.ERROR, "diff: incorrect sheets found for src board: %s\n", cfg.source.getBoardName());
+            d.p(LMS.ERROR, "(-20) %s", "diff: incorrect sheets found for src board: %s\n", cfg.source.getBoardName());
 			System.exit(-20);
         }
 
@@ -399,7 +399,7 @@ public class Diff {
                                 break;
                             }
                             default: {
-                                d.p(LMS.ERROR, "Default called in error for dstCell type\n");
+                                d.p(LMS.WARN, "Default called in error for dstCell type\n");
                                 break;
                             }
                         }

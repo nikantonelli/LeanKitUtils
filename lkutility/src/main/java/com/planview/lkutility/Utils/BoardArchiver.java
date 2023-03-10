@@ -20,7 +20,7 @@ public class BoardArchiver {
 	public BoardArchiver(InternalConfig config) {
 		cfg = config;
 		d.setLevel(config.debugLevel);
-		d.setMsgr(cfg.msg);
+		d.setMsgr(cfg.msgr);
 	}
 
 	public void go() {

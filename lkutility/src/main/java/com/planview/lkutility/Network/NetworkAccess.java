@@ -33,6 +33,7 @@ import org.apache.http.util.EntityUtils;
 import com.planview.lkutility.System.AccessConfig;
 import com.planview.lkutility.System.Debug;
 import com.planview.lkutility.System.LMS;
+import com.planview.lkutility.System.Languages;
 
 public class NetworkAccess {
 	protected AccessConfig config = null;
@@ -40,6 +41,8 @@ public class NetworkAccess {
 	protected String reqUrl = null;
 	protected HttpEntity reqEnt = null;
 	protected Debug d = new Debug();
+
+	protected Languages msgr = null;
 
 	PoolingHttpClientConnectionManager cm = null;
 
@@ -55,7 +58,7 @@ public class NetworkAccess {
 		if (!config.getUrl().startsWith("http")) {
 			config.setUrl("https://" + config.getUrl());
 		} else if (config.getUrl().startsWith("http://")) {
-			d.p(LMS.WARN, "http access not supported. Switching to https");
+			d.p(LMS.WARN, msgr.getMsg(LMS.NEED_SECURE_MODE));
 			config.setUrl("https://" + config.getUrl().substring(7));
 		}
 	}
@@ -137,7 +140,7 @@ public class NetworkAccess {
 				request.addHeader("Authorization", "Basic " + token);
 				d.p(LMS.VERBOSE, "Adding Basic starting with \"%s...\"\n", config.getApiKey().substring(0, 5));
 			} else {
-				d.p(LMS.ERROR, "No valid apiKey provided\n");
+				d.p(LMS.ERROR, "(-13) %s", msgr.getMsg(LMS.APIKEY_ERROR));
 				System.exit(-13);
 			}
 
@@ -176,7 +179,7 @@ public class NetworkAccess {
 					break;
 				}
 				case 401: {
-					d.p(LMS.ERROR, "Unauthorised. Check Credentials in spreadsheet: %s\n", request.toString());
+					d.p(LMS.ERROR, "(-14) %s", msgr.getMsg(LMS.CREDS_ERROR));
 					System.exit(-14);
 				}
 				case 403: {
@@ -199,7 +202,7 @@ public class NetworkAccess {
 					try {
 						TimeUnit.MILLISECONDS.sleep(timeDiff);
 					} catch (InterruptedException e) {
-						d.p(LMS.ERROR, "(L2) %s\n", e.getMessage());
+						d.p(LMS.ERROR, "(-15) %s\n", e.getMessage());
 						System.exit(-15);
 					}
 					result = processRawRequest();
@@ -225,7 +228,7 @@ public class NetworkAccess {
 				case 503: // Service unavailable
 				case 504: // Gateway timeout
 				{
-					d.p(LMS.ERROR, "Received %d status. retrying in 5 seconds\n",
+					d.p(LMS.WARN, "Received %d status. retrying in 5 seconds\n",
 							httpResponse.getStatusLine().getStatusCode());
 					try {
 						EntityUtils.consumeQuietly(httpResponse.getEntity());
@@ -237,7 +240,7 @@ public class NetworkAccess {
 					break;
 				}
 				default: {
-					d.p(LMS.ERROR, "Network fault: %s\n", httpResponse.toString());
+					d.p(LMS.ERROR, "(-16) %s", msgr.getMsg(LMS.NETWORK_FAULT_ERROR));
 					System.exit(-16);
 					break;
 				}
@@ -247,7 +250,7 @@ public class NetworkAccess {
 																		// 'feature'
 			}
 		} catch (IOException e) {
-			d.p(LMS.ERROR, "(L3) %s\n", e.getMessage());
+			d.p(LMS.WARN, "(L3) %s\n", e.getMessage());
 			try {
 				if (httpResponse != null) {
 					EntityUtils.consumeQuietly(httpResponse.getEntity());
