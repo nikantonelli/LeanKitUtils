@@ -124,6 +124,8 @@ public class FrenchLang {
 							"La feuille requise n'a pas été détectée dans la feuille de calcul: \"Config\""),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.SHT_HDR_ERROR,
 							"N'a détecté aucune information d'en-tête sur la feuille de configuration (première ligne!)"),
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.SHT_COL_ERROR,
+							"N'a pas détecté les colonnes correctes sur la feuille de configuration"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.SHT_ITR_ERROR,
 							"N'a détecté aucune information de transfert potentiel sur la feuille de configuration (la première cellule doit être non vide, par exemple l'URL vers un hôte réel)"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.REPLAY_SHEET_NOT_FOUND,
@@ -145,9 +147,9 @@ public class FrenchLang {
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.RECEIVED_DATA,
 							"Reçu %d %s (sur %d)\n"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.UNRECOGNISED_TYPE,
-							"Oops! ne reconnaît pas le type d'élément demandé: %s\n"),
+							"Oops! ne reconnaît pas le type d'élément demandé:"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.CANNOT_ENCODE_BOARD,
-							"Impossible d'encoder le nom de la carte\n"),
+							"Impossible d'encoder le nom de la carte"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.DOWNLOAD_ATT_TYPE,
 							"Le type de pièce jointe téléchargée est: %s\n"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.AUTO_FROM_SCRIPT,
@@ -156,20 +158,48 @@ public class FrenchLang {
 							"Tentative de définition du parent de %s sur la valeur \"%s\"\n"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.EXTLINK_ERROR,
 							"Impossible d'extraire le lien externe de %s (possible ',' dans l'étiquette ?)"),
+
+					// NetworkAccess.java output messages
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.NEED_SECURE_MODE,
 							"Accès http non pris en charge. Basculement vers https"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.APIKEY_ERROR,
-							"Aucune clé API valide fournie\n"),
+							"Aucune clé API valide fournie"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.CREDS_ERROR,
-							"Non autorisé. Vérifier les informations d'identification dans la feuille de calcul: %s\n"),
+							"Non autorisé. Vérifier les informations d'identification dans la feuille de calcul:"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.NETWORK_FAULT_ERROR,
-							"Défaut réseau: %s\n"),
+							"Défaut réseau"),
+
+					// BoardCreator.java output messages
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.BOARD_COPY_ERROR,
 							"Impossible de dupliquer localement de \"%s\" à \"%s\"\n"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.BOARD_NOT_FOUND_ERROR,
 							"Impossible de localiser le tableau avec le titre: \"%s\"\n"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.BOARD_CREATE_ERROR,
 							"Impossible de créer/localiser le tableau de destination"),
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.LAYOUT_CONV_ERROR,
+							"La conversion de la mise en page a échoué: "),
+
+					// Importer.java output messages
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.IMP_NO_CHG_SHT,
+							"Impossible de trouver la feuille de modifications requise dans le fichier: %s\n"),
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.IMP_CREATE_FAIL,
+							"Impossible de créer la carte à bord \"%s\" avec les détails: \"%s\"\n"),
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.IMP_MOD_FAIL,
+							"Impossible de modifier la carte \"%s\" sur la tableau %s avec les détails: %s"),
+
+					// Diff.java Output Messages
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.DIFF_NOT_FOUND,
+							"Feuilles introuvables pour la tableau src:"),
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.DIFF_FETCH_ERROR,
+							"Oops! récupération de nouvelles données pour la tableau: %s a échoué\n"),
+
+					// Exporter.java Output Messages
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.EXP_INVALID_TYPE,
+							"Type de carte non valide - vérifiez le paramètre \"Tâche\" sur \"%s\". Choisir d'utiliser la voie \"%s\"\n"),
+
+					// XlUtils.java Output Messages
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.XLUTILS_COLS_ERROR,
+							"Impossible de trouver toutes les colonnes requises dans la feuille"),
 
 					// AzureDeleter.java Output Messages
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.AZURE_DELETE,

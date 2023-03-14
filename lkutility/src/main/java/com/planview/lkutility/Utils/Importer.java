@@ -51,10 +51,10 @@ public class Importer {
 		}
 
 		if (null == cfg.changesSheet) {
-			d.p(LMS.ERROR, "Cannot find required Changes sheet in file: %s\n", cfg.xlsxfn);
+			d.p(LMS.ERROR, cfg.msgr.getMsg(LMS.IMP_NO_CHG_SHT), cfg.xlsxfn);
 			System.exit(-23);
 		}
-		ChangesColumns cc = XlUtils.checkChangeSheetColumns(cfg.changesSheet);
+		ChangesColumns cc = XlUtils.checkChangeSheetColumns(cfg);
 		if (cc == null) {
 			System.exit(-24);
 		}
@@ -190,7 +190,7 @@ public class Importer {
 
 	private String doAction(Row change, Row item) {
 
-		ChangesColumns cc = XlUtils.checkChangeSheetColumns(cfg.changesSheet);
+		ChangesColumns cc = XlUtils.checkChangeSheetColumns(cfg );
 		String cf = change.getCell(cc.row).getCellFormula();
 		CellReference ca = new CellReference(cf);
 		XSSFSheet iSht = cfg.wb.getSheet(ca.getSheetName());
@@ -247,7 +247,7 @@ public class Importer {
 			Card card = LkUtils.createCard(cfg, cfg.destination, flds); // Change from human readable to API fields on
 			// the way
 			if (card == null) {
-				d.p(LMS.ERROR, "Could not create card on board \"%s\" with details: \"%s\"\n", flds.get("boardId"),
+				d.p(LMS.ERROR, cfg.msgr.getMsg(LMS.IMP_CREATE_FAIL), flds.get("boardId"),
 						flds.toString());
 				System.exit(-25);
 			}
@@ -406,7 +406,7 @@ public class Importer {
 
 				newCard = LkUtils.updateCard(cfg, cfg.destination, card.id, fld);
 				if (newCard == null) {
-					d.p(LMS.ERROR, "Could not modify card \"%s\" on board %s with details: %s", card.id,
+					d.p(LMS.ERROR, cfg.msgr.getMsg(LMS.IMP_MOD_FAIL), card.id,
 							cfg.destination.getBoardName(), fld.toString());
 					System.exit(-26);
 				}

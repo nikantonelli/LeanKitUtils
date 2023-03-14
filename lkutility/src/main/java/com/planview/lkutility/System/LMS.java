@@ -18,10 +18,7 @@ public class LMS {
 	public final static int DEBUG = 3;
 	public final static int VERBOSE = 4;
 
-	// System
-	public final static Integer NOTE = 101;
-
-	//System Failure
+	//Program failures
 	public static final Integer COMMANDLINE_ERROR = 102;
 	public static final Integer SHEET_NOTFOUND_ERROR = 103;
 	public static final Integer REPLAY_SHEET_NOT_FOUND = 104;
@@ -82,7 +79,7 @@ public class LMS {
 	public static final Integer LAYOUT_OPTION = 1041;
 	public static final Integer LAYOUT_OPTION_MSG = 1042;
 
-	// Output Messages
+	// Output Messages - warnings, debug, verbose, info
 	public final static Integer START_PROGRAM = 2001;
 	public final static Integer FINISH_PROGRAM = 2002;
 	public static final Integer SETTING_LANGUAGE = 2003;
@@ -101,4 +98,22 @@ public class LMS {
 	public static final Integer CANNOT_ENCODE_BOARD = 2016;
 	public static final Integer DOWNLOAD_ATT_TYPE = 2017;
 	public static final Integer AUTO_FROM_SCRIPT = 2018;
+	public static final Integer STARTING_DIFF = 2019;
+	public static final Integer STARTING_IMPORT = 2020;
+	public static final Integer STARTING_EXPORT = 2021;
+	public static final Integer STARTING_CREATOR = 2022;
+	public static final Integer STARTING_DELETER = 2023;
+	public static final Integer ENDING_DIFF = 2024;
+	public static final Integer ENDING_IMPORT = 2025;
+	public static final Integer ENDING_EXPORT = 2026;
+	public static final Integer ENDING_CREATOR = 2027;
+	public static final Integer ENDING_DELETER = 2028;
+	public static final Integer DIFF_NOT_FOUND = 2029;
+	public static final Integer DIFF_FETCH_ERROR = 2030;
+	public static final Integer EXP_INVALID_TYPE = 2031;
+	public static final Integer XLUTILS_COLS_ERROR = 2032;
+	public static final Integer XLUTILS_CONV_ERROR = 2033;
+	public static final Integer IMP_NO_CHG_SHT = 2034;
+	public static final Integer IMP_CREATE_FAIL = 2035;
+	public static final Integer IMP_MOD_FAIL = 2036;
 }

@@ -304,7 +304,7 @@ public class BoardCreator {
 			try {
 				d.p(LMS.VERBOSE, "Layout: %s\n", om.writeValueAsString(newLayout));
 			} catch (JsonProcessingException e) {
-				d.p(LMS.ERROR, "(-17) %s %s", cfg.msgr.getMsg(LMS.LAYOUT_CONV_ERROR),
+				d.p(LMS.ERROR, "(-17) %s %s\n", cfg.msgr.getMsg(LMS.LAYOUT_CONV_ERROR),
 						cfg.source.getBoardName());
 				System.exit(-19);
 			}

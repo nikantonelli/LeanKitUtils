@@ -394,7 +394,7 @@ public class Main {
 		try {
 			xlsxfis = new FileInputStream(new File(config.xlsxfn));
 		} catch (FileNotFoundException e) {
-			d.p(LMS.ERROR, "(-3) %s", e.getMessage());
+			d.p(LMS.ERROR, "(-3) %s\n", e.getMessage());
 
 			System.exit(-3);
 
@@ -403,13 +403,13 @@ public class Main {
 			config.wb = new XSSFWorkbook(xlsxfis);
 			xlsxfis.close();
 		} catch (IOException e) {
-			d.p(LMS.ERROR, "(-4) %s", e.getMessage());
+			d.p(LMS.ERROR, "(-4) %s\n", e.getMessage());
 			System.exit(-4);
 		}
 
 		configSht = config.wb.getSheet("Config");
 		if (configSht == null) {
-			d.p(LMS.ERROR, "(-5) %s", config.msgr.getMsg(LMS.SHEET_NOTFOUND_ERROR));
+			d.p(LMS.ERROR, "(-5) %s\n", config.msgr.getMsg(LMS.SHEET_NOTFOUND_ERROR));
 			System.exit(-5);
 		}
 	}
@@ -466,7 +466,7 @@ public class Main {
 		// Assume that the titles are the first row
 		Iterator<Row> ri = configSht.iterator();
 		if (!ri.hasNext()) {
-			d.p(LMS.ERROR, "(-6) %s", config.msgr.getMsg(LMS.SHT_HDR_ERROR));
+			d.p(LMS.ERROR, "(-6) %s\n", config.msgr.getMsg(LMS.SHT_HDR_ERROR));
 			System.exit(-6);
 		}
 		Row hdr = ri.next();
@@ -482,12 +482,12 @@ public class Main {
 		}
 
 		if (fieldMap.size() != cols.size()) {
-			d.p(LMS.ERROR, "(-7) %s - %s", config.msgr.getMsg(LMS.SHT_COL_ERROR), cols.toString());
+			d.p(LMS.ERROR, "(-7) %s - %s\n", config.msgr.getMsg(LMS.SHT_COL_ERROR), cols.toString());
 			System.exit(-7);
 		}
 
 		if (!ri.hasNext()) {
-			d.p(LMS.ERROR, "(-8) %s", config.msgr.getMsg(LMS.SHT_ITR_ERROR));
+			d.p(LMS.ERROR, "(-8) %s\n", config.msgr.getMsg(LMS.SHT_ITR_ERROR));
 			System.exit(-8);
 		}
 

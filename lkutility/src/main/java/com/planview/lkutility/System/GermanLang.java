@@ -124,6 +124,8 @@ public class GermanLang {
 							"Erforderliches Blatt in der Tabelle nicht erkannt: \"Config\""),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.SHT_HDR_ERROR,
 							"Keine Kopfzeileninformationen auf dem Konfigurationsblatt (erste Zeile!)"),
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.SHT_COL_ERROR,
+							"Korrekte Spalten auf dem Konfigurationsblatt nicht erkannt"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.SHT_ITR_ERROR,
 							"Keine potenziellen Übertragungsinformationen auf dem Konfigurationsblatt erkannt (erste Zelle darf nicht leer sein, z. B. URL zu einem echten Host)"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.REPLAY_SHEET_NOT_FOUND,
@@ -145,9 +147,9 @@ public class GermanLang {
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.RECEIVED_DATA,
 							"%d %s (von  %d) erhalten\n"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.UNRECOGNISED_TYPE,
-							"Hoppla! Erkenne den angeforderten Elementtyp nicht: %s\n"),
+							"Hoppla! Erkenne den angeforderten Elementtyp nicht:"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.CANNOT_ENCODE_BOARD,
-							"Boardname kann nicht kodiert werden\n"),
+							"Boardname kann nicht kodiert werden"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.DOWNLOAD_ATT_TYPE,
 							"Heruntergeladener Anhangstyp ist:  %s\n"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.AUTO_FROM_SCRIPT,
@@ -156,20 +158,48 @@ public class GermanLang {
 							"Es wird versucht, das übergeordnete Element von %s auf den Wert \"%s\" zu setzen \n"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.EXTLINK_ERROR,
 							"ExternalLink konnte nicht aus %s extrahiert werden (mögliches ',' im Label?)"),
+
+					// NetworkAccess.java output messages
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.NEED_SECURE_MODE,
 							"http-Zugriff nicht unterstützt. Umstellung auf https"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.APIKEY_ERROR,
-							"Kein gültiger apiKey angegeben\n"),
+							"Kein gültiger apiKey angegeben"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.CREDS_ERROR,
-							"Unbefugt. Überprüfen Sie die Anmeldeinformationen in der Tabelle: %s\n"),
+							"Unbefugt. Überprüfen Sie die Anmeldeinformationen in der Tabelle:"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.NETWORK_FAULT_ERROR,
-							"Netzwerkfehler: %s\n"),
+							"Netzwerkfehler"),
+
+					// BoardCreator.java output messages
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.BOARD_COPY_ERROR,
 							"Kann nicht lokal von \"%s\" nach \"%s\" duplizieren\n"),
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.LAYOUT_CONV_ERROR,
+							"Layoutkonvertierung fehlgeschlagen: "),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.BOARD_NOT_FOUND_ERROR,
 							"Board mit Titel kann nicht gefunden werden: \"%s\"\n"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.BOARD_CREATE_ERROR,
 							"Zieltafel konnte nicht erstellt/gefunden werden"),
+
+					// Importer.java output messages
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.IMP_NO_CHG_SHT,
+							"Erforderliches Änderungsblatt kann in Datei nicht gefunden werden: %s\n"),
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.IMP_CREATE_FAIL,
+							"Karte an Bord von \"%s\" mit Details konnte nicht erstellt werden: \"%s\"\n"),
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.IMP_MOD_FAIL,
+							"Die Karte %s an Bord von %s konnte nicht geändert werden, mit Details: %s"),
+
+					// Diff.java Output Messages
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.DIFF_NOT_FOUND,
+							"Blätter für src-Board nicht gefunden:"),
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.DIFF_FETCH_ERROR,
+							"Hoppla! Abruf neuer Daten für Board: %s fehlgeschlagen\n"),
+
+					// Exporter.java Output Messages
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.EXP_INVALID_TYPE,
+							"Ungültiger Kartentyp - überprüfen Sie die Aufgabe-Einstellung auf \"%s\". Sich für die Verwendung der Fahrspur \"%s\" entscheiden\n"),
+
+					// XlUtils.java Output Messages
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.XLUTILS_COLS_ERROR,
+							"Es konnten nicht alle erforderlichen Spalten im Blatt gefunden werden"),
 
 					// AzureDeleter.java Output Messages
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.AZURE_DELETE,

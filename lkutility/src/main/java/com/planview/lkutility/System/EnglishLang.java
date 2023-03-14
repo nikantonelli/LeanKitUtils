@@ -118,6 +118,8 @@ public class EnglishLang {
 							"Did not detect required sheet in the spreadsheet: \"Config\""),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.SHT_HDR_ERROR,
 							"Did not detect any header info on Config sheet (first row!)"),
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.SHT_COL_ERROR,
+							"Did not detect correct columns on Config sheet"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.SHT_ITR_ERROR,
 							"Did not detect any potential transfer info on Config sheet (first cell must be non-blank, e.g. url to a real host)"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.REPLAY_SHEET_NOT_FOUND,
@@ -139,7 +141,7 @@ public class EnglishLang {
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.RECEIVED_DATA,
 							"Received %d %s (out of %d)\n"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.UNRECOGNISED_TYPE,
-							"oops! don't recognise requested item type \"%s\"\n"),
+							"oops! don't recognise requested item type:"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.CANNOT_ENCODE_BOARD,
 							"Cannot encode board name"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.DOWNLOAD_ATT_TYPE,
@@ -150,21 +152,49 @@ public class EnglishLang {
 							"Trying to set parent of %s to value \"%s\"\n"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.EXTLINK_ERROR,
 							"Could not extract externalLink from %s (possible ',' in label?)"),
+
+					// NetworkAccess.java output messages
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.NEED_SECURE_MODE,
 							"http access not supported. Switching to https"),
 
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.APIKEY_ERROR,
-							"No valid apiKey provided\n"),
+							"No valid apiKey provided"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.CREDS_ERROR,
-							"Unauthorised. Check Credentials in spreadsheet: %s\n"),
+							"Unauthorised. Check Credentials in spreadsheet:"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.NETWORK_FAULT_ERROR,
-							"Network fault: %s\n"),
+							"Network fault"),
+
+					// BoardCreator.java output messages
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.BOARD_COPY_ERROR,
 							"Cannot duplicate locally from \"%s\" to \"%s\"\n"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.BOARD_NOT_FOUND_ERROR,
 							"Cannot locate board with title: \"%s\"\n"),
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.BOARD_CREATE_ERROR,
 							"Could not create/locate destination board "),
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.LAYOUT_CONV_ERROR,
+							"Layout conversion failed: "),
+
+					// Importer.java output messages
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.IMP_NO_CHG_SHT,
+							"Cannot find required Changes sheet in file: %s\n"),
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.IMP_CREATE_FAIL,
+							"Could not create card on board \"%s\" with details: \"%s\"\n"),
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.IMP_MOD_FAIL,
+							"Could not modify card \"%s\" on board %s with details: %s"),
+
+					// Diff.java Output Messages
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.DIFF_NOT_FOUND,
+							"sheets not found for src board:"),
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.DIFF_FETCH_ERROR,
+							"Oops! fetch of new data for board: %s failed\n"),
+
+					// Exporter.java Output Messages
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.EXP_INVALID_TYPE,
+							"Invalid card type - check \"Task\" setting on \"%s\". Opting to use lane \"%s\"\n"),
+
+					// XlUtils.java Output Messages
+					new AbstractMap.SimpleEntry<Integer, String>(LMS.XLUTILS_COLS_ERROR,
+							"Could not find all required columns in sheet:"),
 
 					// AzureDeleter.java Output Messages
 					new AbstractMap.SimpleEntry<Integer, String>(LMS.AZURE_DELETE,

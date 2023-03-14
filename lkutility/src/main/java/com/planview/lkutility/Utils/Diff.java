@@ -61,22 +61,12 @@ public class Diff {
         Boolean found = false;
 
         String dateNow = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMddHHmmss")); // Sheet names can only
-                                                                                                // be 31 chars.
 
-        if ((firstShtIdx > -1) && (firstChgIdx > -1)) {
-            found = true;
-        }
-        if (!found) {
-            d.p(LMS.ERROR, "(-20) %s", "diff: incorrect sheets found for src board: %s\n", cfg.source.getBoardName());
+        if  ((firstShtIdx == -1) || (firstChgIdx == -1)) {
+            d.p(LMS.ERROR, "(-20) diff: %s %s\n", cfg.msgr.getMsg(LMS.DIFF_NOT_FOUND), cfg.source.getBoardName());
 			System.exit(-20);
         }
 
-        if ((firstChgIdx == null) || (firstShtIdx == null)) {
-            d.p(LMS.ERROR, " Cannot locate required data to compare\n");
-            System.exit(-21);
-        }
-
-        found = false;
         // For all transfer cases, we should be set up to move the dst sheet away if
         // present
         Integer saveShtIdx = -1;
@@ -137,7 +127,7 @@ public class Diff {
             }
         }
         if (!found) {
-            d.p(LMS.ERROR, "Oops! fetch of new data for board: %s failed\n", cfg.destination.getBoardName());
+            d.p(LMS.ERROR, cfg.msgr.getMsg(LMS.DIFF_FETCH_ERROR), cfg.destination.getBoardName());
             // Don't need to undo anything as we haven't written the file out yet.
             System.exit(-22);
         } else {

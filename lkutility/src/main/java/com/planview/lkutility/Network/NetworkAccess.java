@@ -140,7 +140,7 @@ public class NetworkAccess {
 				request.addHeader("Authorization", "Basic " + token);
 				d.p(LMS.VERBOSE, "Adding Basic starting with \"%s...\"\n", config.getApiKey().substring(0, 5));
 			} else {
-				d.p(LMS.ERROR, "(-13) %s", msgr.getMsg(LMS.APIKEY_ERROR));
+				d.p(LMS.ERROR, "(-13) %s\n", msgr.getMsg(LMS.APIKEY_ERROR));
 				System.exit(-13);
 			}
 
@@ -179,7 +179,7 @@ public class NetworkAccess {
 					break;
 				}
 				case 401: {
-					d.p(LMS.ERROR, "(-14) %s", msgr.getMsg(LMS.CREDS_ERROR));
+					d.p(LMS.ERROR, "(-14) %s %s\n", msgr.getMsg(LMS.CREDS_ERROR), request.toString());
 					System.exit(-14);
 				}
 				case 403: {
@@ -240,7 +240,7 @@ public class NetworkAccess {
 					break;
 				}
 				default: {
-					d.p(LMS.ERROR, "(-16) %s", msgr.getMsg(LMS.NETWORK_FAULT_ERROR));
+					d.p(LMS.ERROR, "(-16) %s\n", msgr.getMsg(LMS.NETWORK_FAULT_ERROR));
 					System.exit(-16);
 					break;
 				}

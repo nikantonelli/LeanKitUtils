@@ -35,7 +35,6 @@ import com.planview.lkutility.Leankit.User;
 import com.planview.lkutility.System.AccessConfig;
 import com.planview.lkutility.System.ChangesColumns;
 import com.planview.lkutility.System.ColNames;
-import com.planview.lkutility.System.Configuration;
 import com.planview.lkutility.System.Debug;
 import com.planview.lkutility.System.InternalConfig;
 import com.planview.lkutility.System.LMS;
@@ -168,21 +167,21 @@ public class XlUtils {
 		return changesSheet;
 	}
 
-	public static ChangesColumns checkChangeSheetColumns(XSSFSheet changesSht) {
-		if (changesSht == null)
+	public static ChangesColumns checkChangeSheetColumns(InternalConfig cfg) {
+
+		if (cfg.changesSheet == null)
 			return null;
 		ChangesColumns cc = new ChangesColumns();
-		cc.group = findColumnFromSheet(changesSht, ColNames.GROUP);
-		cc.row = findColumnFromSheet(changesSht, ColNames.ITEM_ROW);
-		cc.action = findColumnFromSheet(changesSht, ColNames.ACTION);
-		cc.field = findColumnFromSheet(changesSht, ColNames.FIELD);
-		cc.value = findColumnFromSheet(changesSht, ColNames.VALUE);
+		cc.group = findColumnFromSheet(cfg.changesSheet, ColNames.GROUP);
+		cc.row = findColumnFromSheet(cfg.changesSheet, ColNames.ITEM_ROW);
+		cc.action = findColumnFromSheet(cfg.changesSheet, ColNames.ACTION);
+		cc.field = findColumnFromSheet(cfg.changesSheet, ColNames.FIELD);
+		cc.value = findColumnFromSheet(cfg.changesSheet, ColNames.VALUE);
 
 		if ((cc.group == null) || (cc.row == null) || (cc.action == null) || (cc.field == null)
 				|| (cc.value == null)) {
-			d.p(LMS.ERROR,
-					"Could not find all required columns in %s sheet: \"%s\", \"%s\", \"%s\", \"%s\", \"%s\"\n",
-					changesSht.getSheetName(),
+			d.p(LMS.ERROR, "%s \"%s\": \"%s\", \"%s\", \"%s\", \"%s\", \"%s\"\n", cfg.msgr.getMsg(LMS.XLUTILS_COLS_ERROR),
+					cfg.changesSheet.getSheetName(),
 					ColNames.GROUP,
 					ColNames.ITEM_ROW,
 					ColNames.ACTION,
@@ -245,50 +244,6 @@ public class XlUtils {
 			return null;
 		}
 		return col;
-	}
-
-	public static Boolean parseRow(Row drRow, Configuration cfg, Field[] p, HashMap<String, Object> fieldMap,
-			ArrayList<String> cols) {
-		String cv = drRow.getCell((int) (fieldMap.get(cols.get(0)))).getStringCellValue();
-		if (cv != null) {
-
-			for (int i = 0; i < cols.size(); i++) {
-				String idx = cols.get(i);
-				Object obj = fieldMap.get(idx);
-				String val = obj.toString();
-				try {
-					Cell cell = drRow.getCell(Integer.parseInt(val));
-
-					if (cell != null) {
-						switch (cell.getCellType()) {
-							case STRING:
-								// When you copy'n'paste on WIndows, it sometimes picks up the whitespace too -
-								// so remove it.
-								p[i].set(cfg,
-										(cell != null ? drRow.getCell(Integer.parseInt(val)).getStringCellValue().trim()
-												: ""));
-								break;
-							case NUMERIC:
-								p[i].set(cfg, (cell != null ? drRow.getCell(Integer.parseInt(val)).getNumericCellValue()
-										: ""));
-								break;
-							default:
-								break;
-						}
-					} else {
-						p[i].set(cfg, (p[i].getType().equals(String.class)) ? "" : 0.0);
-					}
-
-				} catch (IllegalArgumentException | IllegalAccessException e) {
-					d.p(LMS.ERROR, "Conversion error on \"%s\": Verify cell type in Excel\n %s\n", idx,
-							e.getMessage());
-					System.exit(-27);
-				}
-
-			}
-			return true;
-		}
-		return false;
 	}
 
 	public static String findColumnLetterFromSheet(XSSFSheet sht, String name) {

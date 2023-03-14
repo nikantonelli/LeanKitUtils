@@ -70,7 +70,7 @@ public class LeanKitAccess extends NetworkAccess {
 		// Convert to a type to return to caller.
 		ArrayList<T> items = new ArrayList<T>();
 		if (jresp.has("error") || jresp.has("statusCode")) {
-			d.p(LMS.ERROR, "(-9) %s", msgr.getMsg(LMS.STATUSCODE_ERROR), reqUrl, jresp.toString());
+			d.p(LMS.ERROR, "(-9) " + msgr.getMsg(LMS.STATUSCODE_ERROR), reqUrl, jresp.toString());
 			System.exit(-9);
 			return null;
 		} else if (jresp.has("pageMeta")) {
@@ -106,7 +106,7 @@ public class LeanKitAccess extends NetworkAccess {
 					fieldName = "comments";
 					break;
 				default:
-					d.p(LMS.ERROR, "(-10) %s", msgr.getMsg(LMS.UNKNOWN_API_TYPE_ERROR), bd);
+					d.p(LMS.ERROR, "(-10) " + msgr.getMsg(LMS.UNKNOWN_API_TYPE_ERROR), bd);
 					System.exit(-10);
 			}
 			// Got something to return
@@ -213,7 +213,7 @@ public class LeanKitAccess extends NetworkAccess {
 					break;
 				}
 				default: {
-					d.p(LMS.ERROR, "(11) %s", msgr.getMsg(LMS.UNRECOGNISED_TYPE),
+					d.p(LMS.ERROR, "(11) %s %s\n", msgr.getMsg(LMS.UNRECOGNISED_TYPE),
 							expectedResponseType.getSimpleName());
 					System.exit(-11);
 				}
