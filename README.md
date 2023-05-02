@@ -60,32 +60,48 @@ Option | Argument | Description
 -C |  | Include  _Comments_ in export/import
 -S |  | Include a comment in export containing link to original _Source_ (will not get imported if -C not used)
  
+## Example Option combinations
+* To completely remove destination board(s) and remake it with a complete copy of cards, custom fields, custom icons, board levels, layout (not using Portfolios):<br>
+  java -jar lkutility\target\lkutility-2.1-jar-with-dependencies.jar -f "file.xlsx" -e -R -r -l -i
+* To delete all cards on destination board(s) and recreate the cards from a previous export (not using Portfolios):<br>
+  java -jar lkutility\target\lkutility-2.1-jar-with-dependencies.jar -f "file.xlsx" -d -i
+* To update the layout of destination board(s) with changes from their source (not using Portfolios):<br>
+  java -jar lkutility\target\lkutility-2.1-jar-with-dependencies.jar -f "file.xlsx" -l
+* To create a brand new copy of a board (deleting the original) with all the cards, with attachments, tasks, comments, etc (not using Portfolios)<br>
+  java -jar lkutility\target\lkutility-2.1-jar-with-dependencies.jar -f "file.xlsx" -x 3 -e -C -S -T -A -R -r -i
+* To create a master file that generates instructions move Portfolios items to the right place and then import some more features/stories. Export from a completed (connected to Portfolios) board with: <br>
+  java -jar lkutility\target\lkutility-2.1-jar-with-dependencies.jar -f "file.xlsx" -x 3 -e -c<br>
+  Then after you have created the destination board and populated with the new Portfolios items, import and reconnect (the non-ignored items) with:<br>
+  java -jar lkutility\target\lkutility-2.1-jar-with-dependencies.jar -f "file.xlsx" -x 3 -i -c
+  
 ## Features and Usage
  
 * The exporter will create sheets in the Xlsx file that correspond to the boardId that will be needed by the importer (if you progress to that stage). If you run with only the -e option, then there are two sheets created per board: "C_\<boardName\>" and "<boardName\>".
 * The exporter does not export any history (i.e. dates of changes, createdBy, ActualFinish, etc., etc.) information and takes a snapshot of what is there right now. As this app is all about recreating new items afresh, all that data is irrelevant. To get those dates, please use the standard in-built exporter (to csv).
-* You can re-use the same spreadsheet to export multiple boards (with -e option only).
+* You can re-use the same spreadsheet to export multiple boards.
 * If you are running the export in order to run the importer some time later, you must update the src/dst boardIds in the correct sequence. There are a few scenarios:
   * If you want to just export, then the Config sheet only need contain one line containing the 'src' info  (but all columns must exists)
   * If you want to import, then the 'dst' info is needed  (but all columns must exists)
   * If you want to copy multiple boards from one system to another and there are parent/child relationships between cards on different boards, then you need to ensure that you export in the correct order. This is so the program can find the items and make the equations up so that the parent links are recreated properly on import. An example of this is when you have a Portfolio board with Initiatives on that have Epics as children on an Agile Release Train board, that itself has Features as children on a Team board (that may or may not have stories). You must export in the order, Portfolio, ART, Team. 
 * If you want to merge boards together into one destination board, you can concatenate multiple changes sheet together, leaving the board item sheets as they are. E.g. copy sheets called "C_My_Team_Board" and "C_Your_Team_Board" (created by the exporter) into one sheet called "C_Combined" and then set the src board name to "Combined" to run the importer. Remember! You will have issues with Lanes if the layouts of the boards are incompatible.  You can use the -l to overwrite the source layout onto the destination.
 * All items that cannot be put into a correct lane will end up in the default drop lane - this can get messy. To recover, you can delete all the items in the default drop lane that aren't supposed to be there and set the value in the Group column in the Changes sheet to something memorable (e.g. 99) for those items you want to recreate and modify. Then rerun the importer with the -g option with that group number.
-* To run both the importer and exporter sequentially, for example, you can use the following command line:
- 
-java -jar lkutility\target\lkutility-1.3-jar-with-dependencies.jar -f "file.xlsx" -e -i  -A -T -S -C
- 
 * To get an example spreadsheet of what the importer requires, you can run the export (only, using -e) on a board that has parent/child, attachment, comment, etc., data already set up.
 * To get an idea of the progress that the exporter/importer is making, use the option "-x 2". You can increase that to 3 or 4 if you want more info on what the program is doing. In normal running, you do not have to provide the -x option, but it is eerily silent..... until it gets an error.
-* The importer does not check validity of data before performing its work. Any incorrect data might cause the card to not be imported as expected, i.e. incorrect data is ignored where possible.
+* The importer does not check validity of data before performing its work. Any incorrect data might cause the card to not be imported as expected, i.e. incorrect data is ignored where possible, rather than fail the process.
 * Assigned Users are matched by email address and if they exist in the destination are automatically added to the destination board
 
 ## Spreadsheet Row Formats
 
-### Config
-The columns listed in the first row of the Config sheet must be: 'srcUrl', 'srcBoardName',  'srcApiKey', 'dstUrl', dstBoardName', 'dstApiKey', 'Import Ignore', 'ADO User', ' ADO Token', 'JIRA User', 'JIRA Key.
+### Config Sheet
 
-### Changes
+A config sheet is _required_ for the program to operate.
+The columns listed in the first row of the config sheet must be: 'srcUrl', 'srcBoardName',  'srcApiKey', 'dstUrl', dstBoardName', 'dstApiKey', 'Import Ignore', 'ADO User', ' ADO Token', 'JIRA User', 'JIRA Key.
+
+The last five fields need to be present in the columns, but not populated unless you want the program to delete artifacts in ADO or Jira for you if they are connected to cards through the ExternalLink field.
+
+The srcUrl and srcBoardName can be the only ones present if you are doing an export only. The srcBoardName, dstUrl and dstBoardName fields must be present when doing an import. The srcBoardName is used to know which sheet to get the data from for the import to the (new) dstBoardName
+
+### Changes Sheet
 
 Entries in the Changes sheets are instructions to the importer on what to do.
 
@@ -94,7 +110,7 @@ The columns in the Changes sheet need to be listed in the first row and are: "Gr
 The Changes sheet can contain either 'Create' rows or 'Modify' rows. 
 
 Field and Value cells are only used when the Action cell is set to Modify.
-Action cells set to Create instruct the importer to reference the data in the sheet/row named in the Item Sheet/Item Row cell pair.
+Action cells set to Create instruct the importer to reference the data in the sheet/row named in the Board Sheet/Item Row cell pair.
 The Group is compared to that on the command line (-g option) and only those rows matching will be used.
 
 ### Board Sheets
