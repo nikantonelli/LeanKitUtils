@@ -61,18 +61,14 @@ Option | Argument | Description
 -S |  | Include a comment in export containing link to original _Source_ (will not get imported if -C not used)
  
 ## Example Option combinations
-* To completely remove destination board(s) and remake it with a complete copy of cards, custom fields, custom icons, board levels, layout (not using Portfolios):<br>
+* To completely remove destination board(s) and remake it with a complete copy of cards, custom fields, custom icons, board levels, layout:<br>
   java -jar lkutility\target\lkutility-2.1-jar-with-dependencies.jar -f "file.xlsx" -e -R -r -l -i
-* To delete all cards on destination board(s) and recreate the cards from a previous export (not using Portfolios):<br>
+* To delete all cards on destination board(s) and recreate the cards from a previous export:<br>
   java -jar lkutility\target\lkutility-2.1-jar-with-dependencies.jar -f "file.xlsx" -d -i
-* To update the layout of destination board(s) with changes from their source (not using Portfolios):<br>
+* To update the layout of destination board(s) with changes from their source:<br>
   java -jar lkutility\target\lkutility-2.1-jar-with-dependencies.jar -f "file.xlsx" -l
-* To create a brand new copy of a board (deleting the original) with all the cards, with attachments, tasks, comments, etc (not using Portfolios)<br>
+* To create a brand new copy of a board (deleting the original) with all the cards, with attachments, tasks, comments, etc<br>
   java -jar lkutility\target\lkutility-2.1-jar-with-dependencies.jar -f "file.xlsx" -x 3 -e -C -S -T -A -R -r -i
-* To create a master file that generates instructions move Portfolios items to the right place and then import some more features/stories. Export from a completed (connected to Portfolios) board with: <br>
-  java -jar lkutility\target\lkutility-2.1-jar-with-dependencies.jar -f "file.xlsx" -x 3 -e -c<br>
-  Then after you have created the destination board and populated with the new Portfolios items, import and reconnect (the non-ignored items) with:<br>
-  java -jar lkutility\target\lkutility-2.1-jar-with-dependencies.jar -f "file.xlsx" -x 3 -i -c
   
 ## Features and Usage
  
