@@ -24,7 +24,7 @@ public class LMS {
 	public static final Integer REPLAY_SHEET_NOT_FOUND = 104;
 	public static final Integer SHT_HDR_ERROR = 105;
 	public static final Integer SHT_COL_ERROR = 106;
-	public static final Integer SHT_ITR_ERROR = 106;
+	
 	public static final Integer STATUSCODE_ERROR = 107;
 	public static final Integer UNKNOWN_API_TYPE_ERROR = 108;
 	public static final Integer APIKEY_ERROR = 109;
@@ -34,6 +34,7 @@ public class LMS {
 	public static final Integer BOARD_COPY_ERROR = 113;
 	public static final Integer BOARD_CREATE_ERROR = 114;
 	public static final Integer LAYOUT_CONV_ERROR = 115;
+	public static final Integer SHT_ITR_ERROR = 116;
 
 	// Command line options
 	public static final Integer REMAKE_OPTION = 1001;
