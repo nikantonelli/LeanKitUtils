@@ -455,7 +455,7 @@ public class Exporter {
                                 // Increment the row index ready for the item row create
                                 itmRow++;
                                 createChangeRow(chgRow, item, "Modify", "Task",
-                                        "='" + cfg.source.getBoardName() + "'!A" + (itmRow + 1));
+                                        "='" + XlUtils.validateSheetName(cfg.source.getBoardName()) + "'!A" + (itmRow + 1));
 
                                 // Now create the item row itself
                                 // Changes changesMade = new Changes(0,0); //Testing!
