@@ -20,6 +20,7 @@ import org.apache.poi.xssf.usermodel.XSSFSheet;
 
 import com.planview.lkutility.Leankit.Attachment;
 import com.planview.lkutility.Leankit.BlockedStatus;
+import com.planview.lkutility.Leankit.Board;
 import com.planview.lkutility.Leankit.Card;
 import com.planview.lkutility.Leankit.CardType;
 import com.planview.lkutility.Leankit.Comment;
@@ -232,7 +233,7 @@ public class Exporter {
             Integer parentShtIdx = cfg.wb.getSheetIndex(XlUtils.validateSheetName(pc.boardName));
             if (parentShtIdx >= 0) {
                 XSSFSheet pSht = cfg.wb.getSheetAt(parentShtIdx);
-                Integer parentRow = XlUtils.firstRowIdxByStringValue(pSht, ColNames.SOURCE_ID, pc.parentId);
+                Integer parentRow = XlUtils.firstRowIdxByStringValue(pSht, ColNames.TITLE, pc.parentId);
                 Integer childRow = XlUtils.firstRowIdxByStringValue(cfg.itemSheet, ColNames.SOURCE_ID, pc.childId);
 
                 if ((parentRow == null) || (childRow == null)) {
@@ -242,7 +243,8 @@ public class Exporter {
                     Integer col = XlUtils.findColumnFromSheet(cfg.itemSheet, ColNames.TITLE);
 						String letter = CellReference.convertNumToColString(col);
 						d.p(LMS.INFO, "Creating parent/child relationship for: %s/%s\n",
-								pc.parentId, pc.childId);createChangeRow(chgRowIdx++, childRow, "Modify", "Parent",
+								pc.parentId, pc.childId);
+						createChangeRow(chgRowIdx++, childRow, "Modify", "Parent",
 								"='" + XlUtils.validateSheetName(pc.boardName) + "'!" + letter + (parentRow + 1));
                     chgRowIdx++;
                 }
@@ -417,7 +419,9 @@ public class Exporter {
                              */
                             ParentCard[] pcs = (ParentCard[]) fv;
                             for (int j = 0; j < pcs.length; j++) {
-                                parentChild.add(new ParentChild(pcs[j].boardId, pcs[j].cardId, c.id));
+								Card crd = LkUtils.getCard(cfg, cfg.source, pcs[j].cardId);
+								Board brd = LkUtils.getBoardById(cfg, cfg.source, pcs[j].boardId);
+								parentChild.add(new ParentChild(brd.title, crd.title, c.id));
                             }
                         }
                         break;
