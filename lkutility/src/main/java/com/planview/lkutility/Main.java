@@ -305,7 +305,7 @@ public class Main {
 		}
 
 		if (impExpCl.hasOption(config.msgr.getMsg(LMS.DEBUG_OPTION))) {
-			String optVal = impExpCl.getOptionValue(config.msgr.getMsg(LMS.DEBUG));
+			String optVal = impExpCl.getOptionValue(config.msgr.getMsg(LMS.DEBUG_OPTION));
 			if (optVal != null) {
 				config.debugLevel = Integer.parseInt(optVal);
 				d.setLevel(config.debugLevel);

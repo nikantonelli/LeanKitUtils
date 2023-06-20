@@ -367,24 +367,18 @@ public class Importer {
 						}
 
 						case "Parent": {
-							if (cfg.nameResolver) {
-								// Get the parentID originally associated with this card
-								String parentId = change.getCell(cc.value).getStringCellValue();
-								// Find the row with that ID in it
-								Row parentRow = XlUtils.firstRowByStringValue(iSht, "srcID", parentId);
-								//Get the title for that parent
-								String parentTitle = ((String) XlUtils.getCell(parentRow,
-									XlUtils.firstColumnFromSheet(iSht, "title")));
-								//Get the latest version of it regardless of the original
-								Card crd = LkUtils.getCardByTitle(cfg, cfg.destination, parentTitle);
-								if ((crd != null) && (crd.id != null)) {
-									vals.put("value", crd.id);
-									fld.put(field, vals);
-								}
-								break;
+							// Get the parentID originally associated with this card
+							String parentId = change.getCell(cc.value).getStringCellValue();
+							// Find the row with that ID in it
+							Card crd = XlUtils.findCardByTitle(cfg, parentId);
+							if ((crd != null) && (crd.id != null)) {
+								vals.put("value", crd.id);
+								fld.put(field, vals);
 							}
-							// else fall-through and do the usual
+							break;
+
 						}
+
 						// Fall-through from case: "Parent"
 						default: {
 							// Check if this is a standard/custom field and redo the 'put'
