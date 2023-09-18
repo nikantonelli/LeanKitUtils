@@ -67,7 +67,7 @@ Option | Argument | Description
   java -jar lkutility\target\lkutility-2.1-jar-with-dependencies.jar -f "file.xlsx" -d -i
 * To update the layout of destination board(s) with changes from their source:<br>
   java -jar lkutility\target\lkutility-2.1-jar-with-dependencies.jar -f "file.xlsx" -l
-* To create a brand new copy of a board (deleting the original) with all the cards, with attachments, tasks, comments, etc<br>
+* To create a brand new copy of a board (deleting the previous copy) with all the cards, with attachments, tasks, comments, etc<br>
   java -jar lkutility\target\lkutility-2.1-jar-with-dependencies.jar -f "file.xlsx" -x 3 -e -C -S -T -A -R -r -i
   
 ## Features and Usage
