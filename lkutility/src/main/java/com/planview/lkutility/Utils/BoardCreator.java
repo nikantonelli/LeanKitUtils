@@ -136,6 +136,8 @@ public class BoardCreator {
 			enabler.put("customIconFieldLabel", srcBrd.customIconFieldLabel);
 			LkUtils.updateBoard(cfg, cfg.destination, dstBrd.id, enabler);
 
+			
+			enabler.put("sharedBoardRole", srcBrd.sharedBoardRole);
 			LkUtils.enableCustomIcons(cfg, cfg.destination);
 
 			// Get the custom Fields from the destination, if they already exist
