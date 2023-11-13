@@ -96,7 +96,6 @@ public class NetworkAccess {
 					((HttpPost) request).setEntity(reqEnt);
 					break;
 				}
-				
 				case "PUT": {
 					request = new HttpPut(reqUrl);
 					((HttpPut) request).setEntity(reqEnt);
