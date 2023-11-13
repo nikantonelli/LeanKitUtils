@@ -101,6 +101,7 @@ public class NetworkAccess {
 					((HttpPut) request).setEntity(reqEnt);
 					break;
 				}
+				
 				case "DELETE": {
 					// This may be AP specific. If so, need to move out of here
 					if (reqEnt != null) {
